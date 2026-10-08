@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     api_v1_prefix: str = "/api/v1"
 
+    database_file: str = "data/clinical_compass.db"
+
     llm_api_key: str | None = None
 
     model_config = SettingsConfigDict(
@@ -24,6 +26,19 @@ class Settings(BaseSettings):
         extra="ignore",
         case_sensitive=False,
     )
+
+    @property
+    def database_path(self) -> Path:
+        path = Path(self.database_file)
+
+        if path.is_absolute():
+            return path
+
+        return PROJECT_ROOT / path
+
+    @property
+    def database_url(self) -> str:
+        return f"sqlite+pysqlite:///{self.database_path.as_posix()}"
 
 
 @lru_cache
