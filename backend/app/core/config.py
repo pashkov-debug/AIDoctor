@@ -15,6 +15,7 @@ class Settings(BaseSettings):
     app_port: int = 8000
     api_v1_prefix: str = "/api/v1"
     database_url: str = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor"
+    attachments_dir: str = "data/attachments"
     llm_api_key: str | None = None
 
     model_config = SettingsConfigDict(

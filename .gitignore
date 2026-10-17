@@ -35,6 +35,9 @@ htmlcov/
 *.sqlite
 *.sqlite3
 
+# Medical attachments: never commit patient data
+data/attachments/
+
 # Build
 build/
 dist/
