@@ -4,6 +4,7 @@ from app.clinical.scales import (
     get_scale_definition,
 )
 from app.models import QuestionnaireResponse
+from app.repositories.patient import PatientRepository
 from app.repositories.encounter import EncounterRepository
 from app.repositories.history_event import (
     HistoryEventRepository,
@@ -23,6 +24,10 @@ class QuestionnaireEncounterNotFoundError(LookupError):
     pass
 
 
+class QuestionnairePatientNotFoundError(LookupError):
+    pass
+
+
 class QuestionnaireService:
     def __init__(
         self,
@@ -31,6 +36,7 @@ class QuestionnaireService:
         self._session = session
 
         self._encounter_repository = EncounterRepository(session)
+        self._patient_repository = PatientRepository(session)
 
         self._questionnaire_repository = QuestionnaireRepository(session)
 
@@ -87,6 +93,9 @@ class QuestionnaireService:
         *,
         scale_id: str | None = None,
     ) -> QuestionnaireResponseList:
+        if self._patient_repository.get_by_id(patient_id) is None:
+            raise QuestionnairePatientNotFoundError(patient_id)
+
         responses = self._questionnaire_repository.list_by_patient(
             patient_id,
             scale_id=scale_id,
@@ -116,6 +125,7 @@ class QuestionnaireService:
 __all__ = [
     "InvalidScaleResponseError",
     "QuestionnaireEncounterNotFoundError",
+    "QuestionnairePatientNotFoundError",
     "QuestionnaireService",
     "ScaleNotFoundError",
 ]

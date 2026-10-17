@@ -18,6 +18,7 @@ from app.schemas.questionnaire import (
 from app.services.questionnaire import (
     InvalidScaleResponseError,
     QuestionnaireEncounterNotFoundError,
+    QuestionnairePatientNotFoundError,
     QuestionnaireService,
     ScaleNotFoundError,
 )
@@ -85,7 +86,13 @@ def list_questionnaire_responses(
 ) -> QuestionnaireResponseList:
     service = QuestionnaireService(session)
 
-    return service.list_patient_responses(
-        patient_id,
-        scale_id=scale_id,
-    )
+    try:
+        return service.list_patient_responses(
+            patient_id,
+            scale_id=scale_id,
+        )
+    except QuestionnairePatientNotFoundError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Patient not found",
+        ) from exc

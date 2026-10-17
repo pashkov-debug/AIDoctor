@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictInt
 
 
 class QuestionnaireResponseCreate(BaseModel):
@@ -11,7 +11,7 @@ class QuestionnaireResponseCreate(BaseModel):
         max_length=50,
     )
 
-    item_scores: list[int] = Field(
+    item_scores: list[StrictInt] = Field(
         min_length=1,
         max_length=100,
     )

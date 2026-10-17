@@ -182,3 +182,18 @@ def test_questionnaire_creates_history_event(
     }
 
     assert event["source_ref"].startswith("local://questionnaire/")
+
+
+def test_unknown_patient_questionnaire_history_returns_404(client: TestClient) -> None:
+    response = client.get("/api/v1/patients/missing-patient/questionnaires")
+    assert response.status_code == 404
+    assert response.json()["detail"] == "Patient not found"
+
+
+def test_boolean_scale_answer_is_rejected(client: TestClient) -> None:
+    _, encounter = create_patient_and_encounter(client)
+    response = client.post(
+        f"/api/v1/encounters/{encounter['id']}/questionnaires",
+        json={"scale_id": "DEMO_ANX_7", "item_scores": [0, 1, 2, True, 0, 1, 2]},
+    )
+    assert response.status_code == 422
