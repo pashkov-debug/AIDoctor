@@ -11,6 +11,8 @@ from app.models import (
     MedicalObservation,
     Patient,
     QuestionnaireResponse,
+    SafetyAlert,
+    SafetyAlertEvent,
     User,
 )
 
@@ -25,6 +27,8 @@ REGISTERED_MODELS = (
     MedicalAttachment,
     HistoryEvent,
     ContextSnapshot,
+    SafetyAlert,
+    SafetyAlertEvent,
 )
 
 metadata = Base.metadata

@@ -6,6 +6,7 @@ from app.models.history_event import HistoryEvent
 from app.models.medical_record import MedicalAttachment, MedicalObservation
 from app.models.patient import Patient
 from app.models.questionnaire_response import QuestionnaireResponse
+from app.models.safety_alert import SafetyAlert, SafetyAlertEvent
 
 __all__ = [
     "AuthSession",
@@ -17,5 +18,7 @@ __all__ = [
     "MedicalObservation",
     "Patient",
     "QuestionnaireResponse",
+    "SafetyAlert",
+    "SafetyAlertEvent",
     "User",
 ]
