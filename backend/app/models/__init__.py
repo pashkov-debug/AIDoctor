@@ -9,3 +9,7 @@ __all__ = [
     "Patient",
     "QuestionnaireResponse",
 ]
+
+from app.models.access import User, DoctorPatient
+from app.models.auth_session import AuthSession
+from app.models.medical_record import MedicalObservation, MedicalAttachment

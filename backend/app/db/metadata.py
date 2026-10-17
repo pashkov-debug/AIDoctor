@@ -4,12 +4,22 @@ from app.models import (
     HistoryEvent,
     Patient,
     QuestionnaireResponse,
+    User,
+    DoctorPatient,
+    AuthSession,
+    MedicalObservation,
+    MedicalAttachment,
 )
 
 REGISTERED_MODELS = (
     Patient,
     Encounter,
     QuestionnaireResponse,
+    User,
+    DoctorPatient,
+    AuthSession,
+    MedicalObservation,
+    MedicalAttachment,
     HistoryEvent,
 )
 

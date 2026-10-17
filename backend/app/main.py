@@ -1,4 +1,6 @@
 from fastapi import FastAPI
+from app.api.routes.auth import router as auth_router
+from app.api.routes.access import router as access_router
 
 from app.api.routes.encounters import (
     router as encounters_router,
@@ -29,6 +31,8 @@ def create_app() -> FastAPI:
 
     routers = (
         health_router,
+        auth_router,
+        access_router,
         patients_router,
         encounters_router,
         questionnaires_router,

@@ -1,3 +1,5 @@
+from app.api.auth import current_user
+from types import SimpleNamespace
 from collections.abc import Generator
 from pathlib import Path
 
@@ -38,6 +40,7 @@ def client(
             session.close()
 
     app.dependency_overrides[get_db] = override_get_db
+    app.dependency_overrides[current_user] = lambda: SimpleNamespace(id="test-admin", role="admin")
 
     try:
         with TestClient(app) as test_client:

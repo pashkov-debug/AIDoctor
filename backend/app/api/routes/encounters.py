@@ -1,3 +1,6 @@
+from app.api.auth import current_user
+from app.models.access import User
+from app.core.access import require_patient, require_encounter, require_doctor
 from typing import Annotated
 
 from fastapi import (
@@ -20,7 +23,7 @@ from app.services.encounter import (
     EncounterService,
 )
 
-router = APIRouter(
+router = APIRouter(dependencies=[Depends(current_user)],
     tags=["encounters"],
 )
 
@@ -40,7 +43,10 @@ def create_encounter(
     patient_id: str,
     payload: EncounterCreate,
     session: SessionDependency,
+    user: Annotated[User, Depends(current_user)],
 ) -> EncounterRead:
+    require_doctor(user)
+    require_patient(session, user, patient_id)
     service = EncounterService(session)
 
     try:
@@ -64,7 +70,9 @@ def create_encounter(
 def list_patient_encounters(
     patient_id: str,
     session: SessionDependency,
+    user: Annotated[User, Depends(current_user)],
 ) -> EncounterListResponse:
+    require_patient(session, user, patient_id)
     service = EncounterService(session)
 
     try:
@@ -85,7 +93,9 @@ def list_patient_encounters(
 def get_encounter(
     encounter_id: str,
     session: SessionDependency,
+    user: Annotated[User, Depends(current_user)],
 ) -> EncounterRead:
+    require_encounter(session, user, encounter_id)
     service = EncounterService(session)
 
     try:

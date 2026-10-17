@@ -18,6 +18,8 @@ class Settings(BaseSettings):
 
     database_file: str = "data/clinical_compass.db"
 
+    database_url_override: str | None = None
+
     llm_api_key: str | None = None
 
     model_config = SettingsConfigDict(
@@ -38,7 +40,7 @@ class Settings(BaseSettings):
 
     @property
     def database_url(self) -> str:
-        return f"sqlite+pysqlite:///{self.database_path.as_posix()}"
+        return self.database_url_override or f"sqlite+pysqlite:///{self.database_path.as_posix()}"
 
 
 @lru_cache
