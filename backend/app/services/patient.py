@@ -1,10 +1,7 @@
-from app.models import Patient
+from app.models.access import DoctorPatient, User
+from app.models.patient import Patient
 from app.repositories.patient import PatientRepository
-from app.schemas.patient import (
-    PatientCreate,
-    PatientListResponse,
-    PatientRead,
-)
+from app.schemas.patient import PatientCreate, PatientListResponse, PatientRead
 from sqlalchemy.orm import Session
 
 
@@ -20,55 +17,51 @@ class PatientService:
     def create_patient(
         self,
         payload: PatientCreate,
+        *,
+        created_by: User,
     ) -> PatientRead:
+        if created_by.role not in {"doctor", "admin"}:
+            raise PermissionError("Doctor role required")
+
         try:
             patient = self._repository.create(
                 alias=payload.alias,
                 demographics=payload.demographics,
             )
-
+            # Создание пациента врачом и выдача ему доступа — одна транзакция.
+            if created_by.role == "doctor":
+                self._session.add(
+                    DoctorPatient(
+                        doctor_id=created_by.id,
+                        patient_id=patient.id,
+                    )
+                )
             self._session.commit()
             self._session.refresh(patient)
-
         except Exception:
             self._session.rollback()
             raise
 
         return self._to_read_model(patient)
 
-    def get_patient(
-        self,
-        patient_id: str,
-    ) -> PatientRead:
-        patient = self._repository.get_by_id(
-            patient_id,
-        )
-
+    def get_patient(self, patient_id: str) -> PatientRead:
+        patient = self._repository.get_by_id(patient_id)
         if patient is None:
             raise PatientNotFoundError(patient_id)
-
         return self._to_read_model(patient)
 
     def list_patients(
         self,
         *,
+        actor: User,
         search: str | None = None,
     ) -> PatientListResponse:
-        patients = self._repository.list_active(
-            search=search,
-        )
-
+        patients = self._repository.list_active(actor=actor, search=search)
         items = [self._to_read_model(patient) for patient in patients]
-
-        return PatientListResponse(
-            items=items,
-            total=len(items),
-        )
+        return PatientListResponse(items=items, total=len(items))
 
     @staticmethod
-    def _to_read_model(
-        patient: Patient,
-    ) -> PatientRead:
+    def _to_read_model(patient: Patient) -> PatientRead:
         return PatientRead(
             id=patient.id,
             alias=patient.alias,
