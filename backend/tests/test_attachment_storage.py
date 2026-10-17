@@ -2,7 +2,6 @@ import io
 import zipfile
 
 import pytest
-
 from app.services.attachment_storage import AttachmentRejected, AttachmentStorage
 
 

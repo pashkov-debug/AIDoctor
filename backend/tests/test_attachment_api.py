@@ -1,15 +1,14 @@
 """Интеграционные проверки. Без TEST_DATABASE_URL тесты пропускаются."""
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy.orm import Session
-
 from app.api.auth import current_user
 from app.core.config import settings
 from app.db.session import get_db
 from app.main import create_app
 from app.models.access import DoctorPatient, User
 from app.models.patient import Patient
+from fastapi.testclient import TestClient
+from sqlalchemy.orm import Session
 
 
 @pytest.fixture
