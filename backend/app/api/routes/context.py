@@ -21,6 +21,15 @@ from app.services.context_delta import (
     compare_contexts,
 )
 from app.services.context_digest import ContextDigest, build_digest
+from app.services.context_snapshots import (
+    SnapshotIntegrityError,
+    SnapshotNotFoundError,
+    SnapshotSummary,
+    SnapshotWithContext,
+    create_snapshot,
+    get_snapshot,
+    list_snapshots,
+)
 
 router = APIRouter(tags=["context"])
 SessionDependency = Annotated[Session, Depends(get_db)]
@@ -86,3 +95,71 @@ def compare_patient_context(
         return compare_contexts(request.baseline, current)
     except SnapshotValidationError as exc:
         raise HTTPException(status_code=422, detail=str(exc)) from exc
+
+
+@router.post(
+    "/patients/{patient_id}/context/snapshots",
+    response_model=SnapshotSummary,
+    status_code=201,
+    summary="Сохранить неизменяемый снимок контекста на сервере",
+)
+def save_patient_context_snapshot(
+    current: Annotated[ClinicalContext, Depends(_authorized_context)],
+    session: SessionDependency,
+    user: UserDependency,
+) -> SnapshotSummary:
+    try:
+        return create_snapshot(session, current, user.id)
+    except SnapshotIntegrityError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.get(
+    "/patients/{patient_id}/context/snapshots",
+    response_model=list[SnapshotSummary],
+    summary="Последние 50 серверных снимков пациента",
+)
+def list_patient_context_snapshots(
+    patient_id: str,
+    current: Annotated[ClinicalContext, Depends(_authorized_context)],
+    session: SessionDependency,
+) -> list[SnapshotSummary]:
+    # current используется как проверка права и существования активного пациента.
+    return list_snapshots(session, current.patient_id)
+
+
+@router.get(
+    "/patients/{patient_id}/context/snapshots/{snapshot_id}",
+    response_model=SnapshotWithContext,
+    summary="Получить серверный снимок пациента",
+)
+def get_patient_context_snapshot(
+    snapshot_id: str,
+    current: Annotated[ClinicalContext, Depends(_authorized_context)],
+    session: SessionDependency,
+) -> SnapshotWithContext:
+    try:
+        return get_snapshot(session, current.patient_id, snapshot_id)
+    except SnapshotNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Snapshot not found") from exc
+    except SnapshotIntegrityError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
+
+@router.post(
+    "/patients/{patient_id}/context/snapshots/{snapshot_id}/delta",
+    response_model=ContextDelta,
+    summary="Сравнить сохранённый снимок с текущим контекстом",
+)
+def compare_patient_snapshot(
+    snapshot_id: str,
+    current: Annotated[ClinicalContext, Depends(_authorized_context)],
+    session: SessionDependency,
+) -> ContextDelta:
+    try:
+        baseline = get_snapshot(session, current.patient_id, snapshot_id).context
+        return compare_contexts(baseline, current)
+    except SnapshotNotFoundError as exc:
+        raise HTTPException(status_code=404, detail="Snapshot not found") from exc
+    except (SnapshotIntegrityError, SnapshotValidationError) as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc

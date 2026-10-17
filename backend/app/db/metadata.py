@@ -1,6 +1,9 @@
+"""Единая SQLAlchemy Metadata, доступная Alembic и PostgreSQL-тестам."""
+
 from app.db.base import Base
 from app.models import (
     AuthSession,
+    ContextSnapshot,
     DoctorPatient,
     Encounter,
     HistoryEvent,
@@ -21,11 +24,9 @@ REGISTERED_MODELS = (
     MedicalObservation,
     MedicalAttachment,
     HistoryEvent,
+    ContextSnapshot,
 )
 
 metadata = Base.metadata
 
-__all__ = [
-    "REGISTERED_MODELS",
-    "metadata",
-]
+__all__ = ["REGISTERED_MODELS", "metadata"]
