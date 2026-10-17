@@ -2,6 +2,6 @@ fastapi
 uvicorn[standard]
 pydantic-settings
 python-dotenv
-
 sqlalchemy>=2.0,<3.0
-alembic>=1.13,<2.0psycopg[binary]>=3.2,<4\n
+alembic>=1.13,<2.0
+psycopg[binary]>=3.2,<4

@@ -1,14 +1,14 @@
 from app.db.base import Base
 from app.models import (
+    AuthSession,
+    DoctorPatient,
     Encounter,
     HistoryEvent,
+    MedicalAttachment,
+    MedicalObservation,
     Patient,
     QuestionnaireResponse,
     User,
-    DoctorPatient,
-    AuthSession,
-    MedicalObservation,
-    MedicalAttachment,
 )
 
 REGISTERED_MODELS = (

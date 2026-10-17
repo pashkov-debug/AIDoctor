@@ -4,11 +4,11 @@ from app.clinical.scales import (
     get_scale_definition,
 )
 from app.models import QuestionnaireResponse
-from app.repositories.patient import PatientRepository
 from app.repositories.encounter import EncounterRepository
 from app.repositories.history_event import (
     HistoryEventRepository,
 )
+from app.repositories.patient import PatientRepository
 from app.repositories.questionnaire import (
     QuestionnaireRepository,
 )

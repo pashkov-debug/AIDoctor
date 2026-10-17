@@ -1,6 +1,3 @@
-from app.api.auth import current_user
-from app.models.access import User
-from app.core.access import require_patient, require_encounter, require_doctor
 from typing import Annotated
 
 from fastapi import (
@@ -11,7 +8,10 @@ from fastapi import (
 )
 from sqlalchemy.orm import Session
 
+from app.api.auth import current_user
+from app.core.access import require_patient
 from app.db.session import get_db
+from app.models.access import User
 from app.schemas.history_event import (
     HistoryEventList,
 )
@@ -20,7 +20,8 @@ from app.services.history_event import (
     HistoryPatientNotFoundError,
 )
 
-router = APIRouter(dependencies=[Depends(current_user)],
+router = APIRouter(
+    dependencies=[Depends(current_user)],
     tags=["history"],
 )
 

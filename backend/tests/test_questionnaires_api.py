@@ -1,9 +1,9 @@
-from app.api.auth import current_user
-from types import SimpleNamespace
+import os
 from collections.abc import Generator
-from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
+from app.api.auth import current_user
 from app.db.base import Base
 from app.db.session import (
     create_database_engine,
@@ -11,16 +11,16 @@ from app.db.session import (
 )
 from app.main import app
 from fastapi.testclient import TestClient
+from sqlalchemy import Engine
 from sqlalchemy.orm import Session, sessionmaker
 
 
 @pytest.fixture
 def client(
-    tmp_path: Path,
+    pg_engine: Engine,
 ) -> Generator[TestClient, None, None]:
-    database_path = tmp_path / "questionnaires.db"
 
-    engine = create_database_engine(f"sqlite+pysqlite:///{database_path.as_posix()}")
+    engine = create_database_engine(os.environ["TEST_DATABASE_URL"])
 
     Base.metadata.create_all(engine)
 

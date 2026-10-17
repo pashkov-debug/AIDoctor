@@ -17,7 +17,6 @@ def run_migrations_offline() -> None:
             "paramstyle": "named",
         },
         compare_type=True,
-        render_as_batch=True,
     )
 
     with context.begin_transaction():
@@ -25,11 +24,6 @@ def run_migrations_offline() -> None:
 
 
 def run_migrations_online() -> None:
-    settings.database_path.parent.mkdir(
-        parents=True,
-        exist_ok=True,
-    )
-
     connectable = create_engine(
         settings.database_url,
         poolclass=pool.NullPool,
@@ -40,7 +34,6 @@ def run_migrations_online() -> None:
             connection=connection,
             target_metadata=target_metadata,
             compare_type=True,
-            render_as_batch=True,
         )
 
         with context.begin_transaction():

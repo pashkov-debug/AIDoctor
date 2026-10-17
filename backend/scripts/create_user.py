@@ -1,10 +1,13 @@
 """Создать учётную запись через CLI. Пароль вводится без отображения."""
+
 import argparse
 import getpass
-from sqlalchemy import select
+
 from app.core.security import hash_password
 from app.db.session import SessionLocal
 from app.models.access import User
+from sqlalchemy import select
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -22,5 +25,7 @@ def main():
         db.add(user)
         db.commit()
         print(f"Создан пользователь {user.username}; id={user.id}")
+
+
 if __name__ == "__main__":
     main()

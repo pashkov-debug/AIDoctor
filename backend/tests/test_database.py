@@ -1,4 +1,4 @@
-from pathlib import Path
+import os
 
 from app.db.base import Base
 from app.db.session import create_database_engine
@@ -8,14 +8,12 @@ from app.models import (
     Patient,
     QuestionnaireResponse,
 )
-from sqlalchemy import select
+from sqlalchemy import Engine, select
 from sqlalchemy.orm import Session
 
 
-def test_longitudinal_record_can_be_persisted(tmp_path: Path) -> None:
-    database_path = tmp_path / "test.db"
-
-    database_url = f"sqlite+pysqlite:///{database_path.as_posix()}"
+def test_longitudinal_record_can_be_persisted(pg_engine: Engine) -> None:
+    database_url = os.environ["TEST_DATABASE_URL"]
 
     engine = create_database_engine(database_url)
 

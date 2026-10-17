@@ -1,9 +1,3 @@
-from app.api.auth import current_user
-from app.models.access import User, DoctorPatient
-from app.models.patient import Patient
-from app.schemas.patient import PatientListResponse
-from sqlalchemy import select
-from app.core.access import require_patient, require_encounter, require_doctor
 from typing import Annotated
 
 from fastapi import (
@@ -13,9 +7,14 @@ from fastapi import (
     Query,
     status,
 )
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
+from app.api.auth import current_user
+from app.core.access import require_doctor, require_patient
 from app.db.session import get_db
+from app.models.access import DoctorPatient, User
+from app.models.patient import Patient
 from app.schemas.patient import (
     PatientCreate,
     PatientListResponse,
@@ -26,7 +25,8 @@ from app.services.patient import (
     PatientService,
 )
 
-router = APIRouter(dependencies=[Depends(current_user)],
+router = APIRouter(
+    dependencies=[Depends(current_user)],
     prefix="/patients",
     tags=["patients"],
 )
@@ -80,14 +80,20 @@ def list_patients(
     if user.role == "admin":
         return service.list_patients(search=search)
     if user.role == "doctor":
-        ids = session.scalars(select(DoctorPatient.patient_id).where(DoctorPatient.doctor_id == user.id)).all()
+        ids = session.scalars(
+            select(DoctorPatient.patient_id).where(DoctorPatient.doctor_id == user.id)
+        ).all()
     else:
         ids = session.scalars(select(Patient.id).where(Patient.user_id == user.id)).all()
     items = []
     for patient_id in ids:
         try:
             patient = service.get_patient(patient_id)
-            if search is None or search.lower() in patient.alias.lower() or search.lower() in patient.id.lower():
+            if (
+                search is None
+                or search.lower() in patient.alias.lower()
+                or search.lower() in patient.id.lower()
+            ):
                 items.append(patient)
         except PatientNotFoundError:
             continue
