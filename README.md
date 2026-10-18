@@ -252,7 +252,7 @@ python -m alembic -c alembic.ini check
 
 python -m ruff check backend
 python -m pytest backend/tests/test_safety_followups_unit.py -v
-. .\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m pytest backend/tests/test_safety_followups_pg.py -v -rs
 python -m pytest backend/tests -v -rs
 ```
@@ -300,7 +300,7 @@ python -m alembic -c alembic.ini check
 python -m ruff check backend
 python -m pytest backend/tests/test_safety_in_app_unit.py -v
 
-. .\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m pytest backend/tests/test_safety_in_app_pg.py -v -rs
 python -m pytest backend/tests -v -rs
 ```
@@ -367,7 +367,7 @@ python -m alembic -c alembic.ini current -v
 python -m alembic -c alembic.ini check
 python -m ruff check backend
 python -m pytest backend/tests/test_attachment_evidence_unit.py -v
-. .\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m pytest backend/tests/test_attachment_evidence_pg.py -v -rs
 python -m pytest backend/tests -v -rs
 ```
@@ -433,7 +433,7 @@ Swagger: http://127.0.0.1:8000/docs
 ## Тесты
 
 ```powershell
-.\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m ruff check backend
 python -m pytest backend/tests/test_context_snapshots_unit.py -v
 python -m pytest backend/tests/test_context_snapshots_api.py -v -rs
@@ -494,15 +494,15 @@ python -m alembic -c alembic.ini check
 | 3. UI врача и пациента | Полноценные кабинеты впереди |
 | **4. Context / Digest / Delta / Snapshots** | **Базовые функции и миграция v3 проверены локально; production-проверки впереди** |
 | **5. Safety Alerts / Outbox / Audit** | **Технический контур 5.1–5.8 завершён по сообщению пользователя; production privacy/security и клинические гарантии не завершены** |
-| 6. Извлечение файлов и внешний LLM | **6.1 — ручные непроверенные выдержки с происхождением; автоматическое извлечение и LLM впереди** |
+| 6. Извлечение файлов и внешний LLM | **6.1 — подтверждённые пользователем зелёные проверки; 6.2 — предпроверка и карантин (требует проверки в Windows); AV/парсера/LLM нет** |
 | 7. Утверждение / изменение / доработка рекомендаций врачом | Не завершён |
 | 8. Клинические тесты и демо чемпионата | Не завершён |
 | 9. Интернет-релиз, аудит и испытания | Не завершён |
 
-## Следующее направление после 6.1
+## Следующее направление после 6.2
 
-**Рекомендовано:** 6.2 — безопасный допуск файлов к обработке (AV/CDR gate)
-и изолированная подготовка к извлечению. До проверки файлов автоматический
+**Рекомендовано:** после подтверждения 6.2 спроектировать 6.3 — реальный AV/CDR gate
+и изолированную обработку документов, только с отдельного согласия. До проверки файлов автоматический
 парсинг, OCR/STT, LLM и добавление черновиков в клинический контекст запрещены.
 Внешний LLM — только после отдельного разрешения, модели угроз,
 прав доступа и согласия на передачу данных. Полноценный UI (этап 3)
@@ -558,7 +558,7 @@ python -m alembic -c alembic.ini upgrade head
 python -m alembic -c alembic.ini check
 python -m ruff check backend
 python -m pytest backend/tests/test_safety_notification_routes_unit.py -v
-. .\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m pytest backend/tests/test_safety_notification_routes_pg.py -v -rs
 python -m pytest backend/tests -v -rs
 ```
@@ -581,7 +581,7 @@ python -m alembic -c alembic.ini current -v
 python -m alembic -c alembic.ini check
 python -m ruff check backend
 python -m pytest backend/tests/test_safety_read_audit_unit.py -v
-. .\scripts\postgres_test_db.ps1
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
 python -m pytest backend/tests/test_safety_read_audit_pg.py -v -rs
 python -m pytest backend/tests -v -rs
 ```
@@ -590,3 +590,63 @@ python -m pytest backend/tests -v -rs
 `aisafe_v7_20261018`. Сохранить вывод полного pytest и количество
 `SKIPPED`/предупреждений. 5.8 нельзя считать фактически проверенным
 до подтверждения PostgreSQL-интеграции в рабочей среде.
+
+
+## Этап 6.1 — подтверждение локальных проверок (18.10.2026)
+
+Пользователь подтвердил: проверки этапа 6.1 зелёные в его окружении
+Windows/Python 3.12/PostgreSQL. Миграция `aiextract_v1_20261018` —
+предшественник 6.2. Ручные выдержки остаются **непроверенными**,
+не влияют на Context Builder и не являются результатами OCR/LLM.
+
+## Этап 6.2 — безопасная предпроверка без допуска парсера
+
+Добавлены новые таблицы `attachment_security_reviews` и
+`attachment_security_events`, отдельный API `GET .../security` для врача/
+администратора и `POST .../security/precheck` только для администратора.
+Проверяются метаданные, размер (до 20 МиБ), фактический SHA-256, сигнатуры,
+ряд опасных свойств DOCX/ZIP и безопасная ссылка на локальный файл.
+Доступ к пациенту перепроверяется; параллельные проверки сериализуются
+через PostgreSQL `FOR UPDATE`. Чтение статуса и переходы аудируются.
+
+`quarantined → prechecked_quarantined / rejected`;
+`prechecked_quarantined → prechecked_quarantined / rejected`;
+`rejected → rejected`. Для всех состояний **карантин активен**, а
+`antivirus_status=not_scanned` и `processing_allowed=false`.
+Нет AV/CDR, парсеров, OCR, LLM или автоматического медицинского анализа.
+Исходный `extraction_status=quarantined` и старые API не изменяются.
+Ни одна проверка 6.2 не добавляет содержимое вложения или ручные выдержки
+в Context Builder; этот инвариант остаётся прежним.
+
+Новая миграция `aiextract_v2_20261018` (после
+`aiextract_v1_20261018`). Только новые и изменённые файлы находятся
+в архиве инкремента; для установки заменить соответствующие пути в
+локальном проекте. Подробнее: [docs/attachment_security_v2.md](docs/attachment_security_v2.md).
+
+**Статус:** файлы 6.2 подготовлены; локальное подтверждение Windows,
+PostgreSQL и всех тестов ожидается. Не приступать к 6.3 до проверки.
+
+### Команды 6.2 для PowerShell
+
+```powershell
+.\.venv\Scripts\Activate.ps1
+docker compose up -d postgres
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini heads
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini check
+python -m ruff check backend
+python -m pytest backend/tests/test_attachment_security_unit.py -v
+# Только существующая выделенная пустая БД aidoctor_test (не production)!
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_attachment_security_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL
+```
+
+Если тестовой БД нет, создать отдельную `aidoctor_test` (см. документацию
+6.2). Фикстура удаляет и создаёт SQL-таблицы именно этой БД; на реальной
+БД тесты недопустимы. `SKIPPED` PostgreSQL-тестов не считать успехом.
+Следующий **рекомендуемый** шаг: подтвердить 6.2 в Windows; затем отдельно
+согласовать архитектуру реального антивирусного сканирования и CDR.

@@ -63,9 +63,10 @@ def safe_filename(filename: str | None) -> str:
     return result
 
 
-def _check_signature(path: Path, extension: str) -> bool:
-    with path.open("rb") as stream:
-        head = stream.read(64)
+def matches_signature(stream: BinaryIO, extension: str) -> bool:
+    """Ограниченная проверка формата из уже открытого источника; НЕ AV/CDR."""
+    stream.seek(0)
+    head = stream.read(64)
 
     signatures = {
         ".pdf": head.startswith(b"%PDF-"),
@@ -89,16 +90,37 @@ def _check_signature(path: Path, extension: str) -> bool:
         return signatures.get(extension, False)
 
     try:
-        with zipfile.ZipFile(path) as archive:
+        stream.seek(0)
+        with zipfile.ZipFile(stream) as archive:
             entries = archive.infolist()
-            names = {entry.filename for entry in entries}
             if len(entries) > 3000 or sum(e.file_size for e in entries) > 80 * 1024 * 1024:
                 return False
-            if any(name.lower().endswith("vbaproject.bin") for name in names):
+            names = [e.filename for e in entries]
+            if len(names) != len(set(names)):
                 return False
+            for entry in entries:
+                name = entry.filename.replace("\\", "/")
+                if (
+                    name.startswith("/")
+                    or ".." in name.split("/")
+                    or ":" in name.split("/", 1)[0]
+                    or name.startswith("./")
+                    or name.lower().endswith("vbaproject.bin")
+                    or entry.flag_bits & 0x1  # Запароленный/зашифрованный ZIP.
+                    or entry.file_size > 80 * 1024 * 1024
+                    or entry.file_size > 1000 * max(entry.compress_size, 1)
+                    or (entry.create_system == 3 and (entry.external_attr >> 16) & 0o170000
+                        == 0o120000)  # Unix symlink внутри архива.
+                ):
+                    return False
             return {"[Content_Types].xml", "word/document.xml"}.issubset(names)
-    except (zipfile.BadZipFile, OSError, ValueError):
+    except (zipfile.BadZipFile, OSError, ValueError, RuntimeError):
         return False
+
+
+def _check_signature(path: Path, extension: str) -> bool:
+    with path.open("rb") as stream:
+        return matches_signature(stream, extension)
 
 
 class AttachmentStorage:
