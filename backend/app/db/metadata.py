@@ -2,6 +2,7 @@
 
 from app.db.base import Base
 from app.models import (
+    AttachmentAVScan,
     AttachmentEvidenceDraft,
     AttachmentEvidenceReadAudit,
     AttachmentSecurityEvent,
@@ -29,6 +30,7 @@ from app.models import (
 )
 
 REGISTERED_MODELS = (
+    AttachmentAVScan,
     AttachmentEvidenceDraft,
     AttachmentEvidenceReadAudit,
     AttachmentSecurityEvent,

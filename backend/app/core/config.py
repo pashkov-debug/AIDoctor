@@ -19,6 +19,7 @@ class Settings(BaseSettings):
     llm_api_key: str | None = None
     safety_in_app_delivery_enabled: bool = False
     safety_followup_scan_enabled: bool = False
+    attachment_clamd_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
