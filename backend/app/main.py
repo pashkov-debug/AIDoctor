@@ -1,6 +1,7 @@
 from fastapi import FastAPI
 
 from app.api.routes.access import router as access_router
+from app.api.routes.attachment_evidence import router as attachment_evidence_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.context import router as context_router
@@ -34,6 +35,7 @@ def create_app() -> FastAPI:
         history_events_router,
         context_router,
         attachments_router,
+        attachment_evidence_router,
         safety_router,
         safety_routes_router,
         safety_inbox_router,

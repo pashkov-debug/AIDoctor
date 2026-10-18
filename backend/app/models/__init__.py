@@ -1,4 +1,8 @@
 from app.models.access import DoctorPatient, User
+from app.models.attachment_evidence_draft import (
+    AttachmentEvidenceDraft,
+    AttachmentEvidenceReadAudit,
+)
 from app.models.auth_session import AuthSession
 from app.models.context_snapshot import ContextSnapshot
 from app.models.encounter import Encounter
@@ -18,6 +22,8 @@ from app.models.safety_outbox import SafetyOutbox, SafetyOutboxEvent
 from app.models.safety_read_audit import SafetyReadAudit
 
 __all__ = [
+    "AttachmentEvidenceDraft",
+    "AttachmentEvidenceReadAudit",
     "AuthSession",
     "ContextSnapshot",
     "DoctorPatient",

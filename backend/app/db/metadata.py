@@ -2,6 +2,8 @@
 
 from app.db.base import Base
 from app.models import (
+    AttachmentEvidenceDraft,
+    AttachmentEvidenceReadAudit,
     AuthSession,
     ContextSnapshot,
     DoctorPatient,
@@ -25,6 +27,8 @@ from app.models import (
 )
 
 REGISTERED_MODELS = (
+    AttachmentEvidenceDraft,
+    AttachmentEvidenceReadAudit,
     Patient,
     Encounter,
     QuestionnaireResponse,
