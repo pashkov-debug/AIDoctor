@@ -20,6 +20,7 @@ from app.models import (
     SafetyNotificationRouteEvent,
     SafetyOutbox,
     SafetyOutboxEvent,
+    SafetyReadAudit,
     User,
 )
 
@@ -43,6 +44,7 @@ REGISTERED_MODELS = (
     SafetyNotificationRouteEvent,
     SafetyOutbox,
     SafetyOutboxEvent,
+    SafetyReadAudit,
 )
 
 metadata = Base.metadata

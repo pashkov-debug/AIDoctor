@@ -10,6 +10,7 @@ from app.db.session import get_db
 from app.models.access import User
 from app.schemas.safety_followup import SafetyFollowupRead
 from app.services.safety_followups import list_own_open_followups
+from app.services.safety_read_audit import record_safety_read
 
 router = APIRouter(tags=["safety-followups"])
 SessionDependency = Annotated[Session, Depends(get_db)]
@@ -27,9 +28,10 @@ def get_own_followups(
 ) -> list[SafetyFollowupRead]:
     if user.role != "doctor":
         raise HTTPException(status_code=403, detail="Doctor account required")
-    return [
-        SafetyFollowupRead.model_validate(item)
-        for item in list_own_open_followups(
-            session, recipient_user_id=user.id
-        )
-    ]
+    followups = list_own_open_followups(session, recipient_user_id=user.id)
+    result = [SafetyFollowupRead.model_validate(item) for item in followups]
+    record_safety_read(
+        session, actor_id=user.id, scope="followups_list",
+        returned_count=len(followups),
+    )
+    return result

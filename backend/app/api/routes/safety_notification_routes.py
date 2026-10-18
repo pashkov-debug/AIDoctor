@@ -18,6 +18,7 @@ from app.services.safety_notification_routes import (
     configure_own_route,
     get_own_route,
 )
+from app.services.safety_read_audit import record_safety_read
 
 router = APIRouter(tags=["safety-notification-routes"])
 SessionDependency = Annotated[Session, Depends(get_db)]
@@ -49,7 +50,12 @@ def get_route(
         result = get_own_route(session, patient_id=patient_id, actor_id=user.id)
     except RouteAccessDenied as exc:
         raise HTTPException(status_code=404, detail="Patient not found") from exc
-    return NotificationRouteRead.model_validate(result) if result is not None else None
+    serialized = NotificationRouteRead.model_validate(result) if result is not None else None
+    record_safety_read(
+        session, actor_id=user.id, scope="route_read",
+        patient_id=patient_id, returned_count=int(result is not None),
+    )
+    return serialized
 
 
 @router.put(

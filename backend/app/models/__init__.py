@@ -15,6 +15,7 @@ from app.models.safety_notification_route import (
     SafetyNotificationRouteEvent,
 )
 from app.models.safety_outbox import SafetyOutbox, SafetyOutboxEvent
+from app.models.safety_read_audit import SafetyReadAudit
 
 __all__ = [
     "AuthSession",
@@ -35,5 +36,6 @@ __all__ = [
     "SafetyNotificationRouteEvent",
     "SafetyOutbox",
     "SafetyOutboxEvent",
+    "SafetyReadAudit",
     "User",
 ]

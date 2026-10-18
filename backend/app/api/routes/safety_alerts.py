@@ -19,6 +19,7 @@ from app.services.safety_alerts import (
     create_alert,
     list_alerts,
 )
+from app.services.safety_read_audit import record_safety_read
 
 router = APIRouter(tags=["safety-alerts"])
 SessionDependency = Annotated[Session, Depends(get_db)]
@@ -73,11 +74,15 @@ def post_safety_alert(
 def get_safety_alerts(
     patient_id: Annotated[str, Depends(_authorized_clinician)],
     session: SessionDependency,
+    user: UserDependency,
 ) -> list[SafetyAlertRead]:
-    return [
-        SafetyAlertRead.model_validate(item)
-        for item in list_alerts(session, patient_id)
-    ]
+    alerts = list_alerts(session, patient_id)
+    result = [SafetyAlertRead.model_validate(item) for item in alerts]
+    record_safety_read(
+        session, actor_id=user.id, scope="alerts_list",
+        patient_id=patient_id, returned_count=len(alerts),
+    )
+    return result
 
 
 @router.post(
