@@ -95,7 +95,7 @@ AIDoctor — не узкоспециализированное приложен�
 
 Документация: [docs/safety_outbox_v1.md](docs/safety_outbox_v1.md).
 
-### Этап 5.3 — Idempotency-Key для ручного POST (новый инкремент)
+### Этап 5.3 — Idempotency-Key для ручного POST
 
 Для `POST /patients/{patient_id}/safety-alerts` можно передать заголовок
 `Idempotency-Key` (8–128 символов ASCII, рекомендуемый UUIDv4).
@@ -113,8 +113,8 @@ AIDoctor — не узкоспециализированное приложен�
 дедуплицируются на UNIQUE в PostgreSQL. Миграция
 `aisafe_v3_20261018` поверх `aisafe_v2_20261018`.
 
-**Локальное применение и PostgreSQL-тесты этапа 5.3 ещё не подтверждены.**
-Реальной доставки уведомлений по-прежнему нет.
+Пользователь сообщил о 134 зелёных тестах после этапа 5.4.
+Внешней доставки уведомлений нет.
 
 Документация: [docs/safety_idempotency_v1.md](docs/safety_idempotency_v1.md).
 
@@ -144,7 +144,7 @@ Remove-Item Env:PYTHONPATH
 
 
 
-### Этап 5.5 — настройки внутренних уведомлений (новый инкремент)
+### Этап 5.5 — настройки внутренних уведомлений
 
 Добавлены серверные маршруты `in_app` для **собственного аккаунта врача**:
 отдельная таблица `safety_notification_routes`, аудит изменений,
@@ -160,12 +160,79 @@ Remove-Item Env:PYTHONPATH
 Подтверждение относится только к **внутренней учётной записи** врача;
 email/SMS/внешние контакты и согласие пациента пока не подтверждаются.
 
-**Включение маршрута НЕ запускает отправку.** Настройки пока не подключены
-к рабочему транспорту, сообщения не посылаются. `delivery_status` в Safety
-Alerts остаётся `not_configured`. Новая миграция:
+**Включение маршрута НЕ запускает отправку.** С этапа 5.6 эти настройки
+использует только локальный in_app-адаптер при отдельном запуске.
+Внешней доставки нет. `delivery_status` в Safety Alerts остаётся
+`not_configured`. Миграция:
 `aisafe_v4_20261018`, предшественник `aisafe_v3_20261018`.
 
 Подробности: [docs/safety_notification_routes_v1.md](docs/safety_notification_routes_v1.md).
+
+### Этап 5.6 — локальный in_app inbox и ручной исполнитель
+
+**Новый инкремент:** одна техническая запись `safety_in_app_notifications`
+на событие Outbox и получателя. `UNIQUE(outbox_id, recipient_user_id)`
+защищает от повторной записи после потери подтверждения между двумя
+транзакциями. Адаптер разрешает доставку только при действующем
+opt-in `in_app`, активной связи `DoctorPatient` и неудалённом пациенте.
+Для решения о доставке маршрут и связанные данные блокируются до commit.
+
+Добавлен `GET /api/v1/safety-inbox` — последние 50 внутренних уведомлений
+**только текущего врача**, с повторной проверкой связи и soft-delete
+при чтении. Содержимое: только ID уведомления, пациента, сигнала и время
+записи; медицинских текстов, адресов, телефонов нет.
+Подтверждение означает запись в БД, **не прочтение врачом**.
+
+**По умолчанию выключено.** Для запуска требуются
+`SAFETY_IN_APP_DELIVERY_ENABLED=true` и отдельный CLI `--once`.
+Каждый запуск обрабатывает **не больше одного** сообщения Outbox.
+Автоматического worker-цикла, реального SMTP/SMS/push, scheduler и
+внешней доставки нет. Исторический API `delivery_status: not_configured`
+не меняется и не отражает статус нового inbox.
+
+Миграция: `aisafe_v5_20261018` после `aisafe_v4_20261018`.
+Интеграционные PostgreSQL-тесты и Ruff нужно подтвердить в Windows.
+
+Документация: [docs/safety_in_app_v1.md](docs/safety_in_app_v1.md).
+
+**Проверка этапа 5.6 (PowerShell из корня AIDoctor):**
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini heads
+# Ожидается ДО upgrade: current = aisafe_v4_20261018, heads = aisafe_v5_20261018
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini check
+
+python -m ruff check backend
+python -m pytest backend/tests/test_safety_in_app_unit.py -v
+
+. .\\scripts\\postgres_test_db.ps1
+python -m pytest backend/tests/test_safety_in_app_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+```
+
+Тестовая фикстура удаляет и пересоздаёт таблицы только в локальной
+PostgreSQL БД с суффиксом `_test`. Проверить, что integration-тесты не
+отмечены `SKIPPED`, прежде чем считать инкремент готовым.
+
+**Разовый запуск после отдельного включения врачом маршрута и проверки
+миграции:**
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\\backend).Path
+$env:SAFETY_IN_APP_DELIVERY_ENABLED = "true"
+python -m app.workers.safety_in_app_once --once
+Remove-Item Env:SAFETY_IN_APP_DELIVERY_ENABLED
+Remove-Item Env:PYTHONPATH
+```
+
+При отсутствии маршрута Outbox не считается доставленным: фиксируется
+`route_unavailable` и назначается повтор по правилам 5.2.
+После исчерпания трёх попыток нужен отдельный ручной разбор.
+Для безопасной диагностики по-прежнему доступен `--status` из 5.4.
 
 Подробности: [docs/context_snapshots_v3.md](docs/context_snapshots_v3.md).
 Для загрузки файлов: [docs/attachments.md](docs/attachments.md).
@@ -201,9 +268,9 @@ python -m alembic -c alembic.ini check
 
 ### Текущая локальная установка
 
-Для этапа 5.5 новых библиотек не требуется. Перед его применением
-уже должны работать 5.3–5.4 и Alembic `current = aisafe_v3_20261018`.
-После замены файлов выполните `upgrade head` до `aisafe_v4_20261018`.
+Для этапа 5.6 новых библиотек не требуется. Перед применением новой
+миграции ожидается `current = aisafe_v4_20261018`, после `upgrade head` —
+`aisafe_v5_20261018`. Код 5.6 не следует запускать до обновления БД.
 Для нового клона репозитория сначала убедитесь, что весь исходный код,
 модели, миграции и `main.py` внесены в Git; локальные архивы из истории
 разработки не являются воспроизводимым способом развёртывания.

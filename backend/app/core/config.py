@@ -17,6 +17,7 @@ class Settings(BaseSettings):
     database_url: str = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor"
     attachments_dir: str = "data/attachments"
     llm_api_key: str | None = None
+    safety_in_app_delivery_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",

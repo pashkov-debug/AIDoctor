@@ -121,9 +121,15 @@ def configure_own_route(
         raise
 
 
-def eligible_routes(session: Session, *, patient_id: str) -> tuple[EligibleRoute, ...]:
-    """Fail-closed: если нет подтверждения, связи или активного пациента — пусто."""
-    records = session.scalars(
+def eligible_routes(
+    session: Session, *, patient_id: str, for_delivery: bool = False
+) -> tuple[EligibleRoute, ...]:
+    """Fail-closed: маршрут, связь и пациент должны быть действующими.
+
+    Режим for_delivery удерживает блокировки до commit/rollback адаптера:
+    отключение маршрута и отзыв доступа не обгоняют создание inbox.
+    """
+    stmt = (
         select(SafetyNotificationRoute)
         .join(
             DoctorPatient,
@@ -141,7 +147,12 @@ def eligible_routes(session: Session, *, patient_id: str) -> tuple[EligibleRoute
             Patient.deleted_at.is_(None),
         )
         .order_by(SafetyNotificationRoute.id)
-    ).all()
+    )
+    if for_delivery:
+        stmt = stmt.with_for_update(
+            of=(SafetyNotificationRoute, DoctorPatient, User, Patient)
+        )
+    records = session.scalars(stmt).all()
     return tuple(
         EligibleRoute(
             route_id=route.id,
