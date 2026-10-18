@@ -62,7 +62,7 @@ class AttachmentSecurityEvent(IdMixin, TimestampMixin, Base):
     __table_args__ = (
         Index("ix_attachment_security_events_patient_created", "patient_id", "created_at"),
         CheckConstraint(
-            "action IN ('read', 'precheck')",
+            "action IN ('read', 'precheck', 'scan_input')",
             name="ck_attachment_security_event_action",
         ),
         CheckConstraint(

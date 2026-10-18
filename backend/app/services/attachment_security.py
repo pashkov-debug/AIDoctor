@@ -4,7 +4,7 @@ import hashlib
 import io
 import os
 import stat
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from pathlib import Path
 
 from app.db.base import utc_now
@@ -40,10 +40,14 @@ class InspectionResult:
     reason: str | None
     sha256: str
     length: int
+    payload: bytes | None = field(default=None, repr=False)  # Не выводить медданные в repr.
 
 
 def _read_quarantined_file(
-    storage: AttachmentStorage, attachment: MedicalAttachment
+    storage: AttachmentStorage,
+    attachment: MedicalAttachment,
+    *,
+    capture_payload: bool = False,
 ) -> InspectionResult:
     """Читаем максимум 20 МиБ, сверяем метаданные и сигнатуру без извлечения контента."""
     extension = Path(attachment.filename).suffix.lower()
@@ -101,7 +105,13 @@ def _read_quarantined_file(
         return InspectionResult(False, "hash_mismatch", observed_hash, size)
     if not matches_signature(io.BytesIO(data), extension):
         return InspectionResult(False, "signature_mismatch", observed_hash, size)
-    return InspectionResult(True, None, observed_hash, size)
+    return InspectionResult(
+        True,
+        None,
+        observed_hash,
+        size,
+        bytes(data) if capture_payload else None,
+    )
 
 
 def current_review(
