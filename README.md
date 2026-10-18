@@ -170,7 +170,7 @@ email/SMS/внешние контакты и согласие пациента �
 
 ### Этап 5.6 — локальный in_app inbox и ручной исполнитель
 
-**Новый инкремент:** одна техническая запись `safety_in_app_notifications`
+Реализовано: одна техническая запись `safety_in_app_notifications`
 на событие Outbox и получателя. `UNIQUE(outbox_id, recipient_user_id)`
 защищает от повторной записи после потери подтверждения между двумя
 транзакциями. Адаптер разрешает доставку только при действующем
@@ -194,6 +194,61 @@ opt-in `in_app`, активной связи `DoctorPatient` и неудалён
 Интеграционные PostgreSQL-тесты и Ruff нужно подтвердить в Windows.
 
 Документация: [docs/safety_in_app_v1.md](docs/safety_in_app_v1.md).
+
+### Этап 5.7 — административные follow-up, защита от частых уведомлений
+
+Добавлен отдельный **контрольный список непросмотренных ручных сигналов**
+без отправки новых уведомлений и без клинической классификации. Сигнал
+с `status="open"` попадает в список не ранее чем через **24 часа**, только
+при включённом `in_app`-маршруте врача и действующей связи `DoctorPatient`.
+
+Новая таблица `safety_followups` хранит только технические ID и время.
+Одна запись на пару «сигнал — врач» за всё время; ограничение **5 записей
+на врача за последние 24 часа**, атомарные блокировки PostgreSQL и UNIQUE.
+Повторные запуски не создают дублей. Если лимит исчерпан, запись
+откладывается до следующего отдельного запуска после освобождения окна.
+Подтверждение сигнала скрывает follow-up из списка, сохраняя историю.
+
+`GET /api/v1/safety-followups` — до 50 открытых контрольных отметок
+текущего врача. Доступ пациентам и администратору запрещён. Проверки
+действующей связи/удаления пациента/отключения маршрута повторяются при
+каждом чтении.
+
+**Нет автоматического расписания, SMS/email/push, повторного вызова
+Outbox и гарантии врачебного ответа.** Технический интервал в 24 часа
+не является клиническим SLA. Создание отметки требует однократного CLI
+при `SAFETY_FOLLOWUP_SCAN_ENABLED=true`. По умолчанию `false`.
+Миграция `aisafe_v6_20261018` поверх `aisafe_v5_20261018`.
+
+Ручная проверка (при явно включённом маршруте врача):
+
+```powershell
+$env:PYTHONPATH = (Resolve-Path .\\backend).Path
+$env:SAFETY_FOLLOWUP_SCAN_ENABLED = "true"
+python -m app.workers.safety_followup_once --once
+Remove-Item Env:SAFETY_FOLLOWUP_SCAN_ENABLED
+Remove-Item Env:PYTHONPATH
+```
+
+До миграции: `current = aisafe_v5_20261018`, `heads = aisafe_v6_20261018`.
+После `upgrade head` оба должны указывать на `aisafe_v6_20261018`.
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini heads
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini check
+
+python -m ruff check backend
+python -m pytest backend/tests/test_safety_followups_unit.py -v
+. .\\scripts\\postgres_test_db.ps1
+python -m pytest backend/tests/test_safety_followups_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+```
+
+Документация: [docs/safety_followups_v1.md](docs/safety_followups_v1.md).
 
 **Проверка этапа 5.6 (PowerShell из корня AIDoctor):**
 
@@ -268,9 +323,9 @@ python -m alembic -c alembic.ini check
 
 ### Текущая локальная установка
 
-Для этапа 5.6 новых библиотек не требуется. Перед применением новой
-миграции ожидается `current = aisafe_v4_20261018`, после `upgrade head` —
-`aisafe_v5_20261018`. Код 5.6 не следует запускать до обновления БД.
+Для этапа 5.7 новых библиотек не требуется. Перед применением новой
+миграции ожидается `current = aisafe_v5_20261018`, после `upgrade head` —
+`aisafe_v6_20261018`. Код 5.7 не следует запускать до обновления БД.
 Для нового клона репозитория сначала убедитесь, что весь исходный код,
 модели, миграции и `main.py` внесены в Git; локальные архивы из истории
 разработки не являются воспроизводимым способом развёртывания.

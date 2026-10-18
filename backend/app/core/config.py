@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     attachments_dir: str = "data/attachments"
     llm_api_key: str | None = None
     safety_in_app_delivery_enabled: bool = False
+    safety_followup_scan_enabled: bool = False
 
     model_config = SettingsConfigDict(
         env_file=PROJECT_ROOT / ".env",
