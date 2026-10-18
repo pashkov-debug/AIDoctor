@@ -119,7 +119,7 @@ AIDoctor — не узкоспециализированное приложен�
 Документация: [docs/safety_idempotency_v1.md](docs/safety_idempotency_v1.md).
 
 
-### Этап 5.4 — изолированный исполнитель Outbox (новый инкремент)
+### Этап 5.4 — изолированный исполнитель Outbox
 
 Добавлен `app.workers.safety_outbox`: библиотечный вызов `process_one` для
 **одной** записи Outbox, с отдельными SQLAlchemy Session для резервирования и
@@ -142,6 +142,30 @@ Remove-Item Env:PYTHONPATH
 
 Документация: [docs/safety_worker_v1.md](docs/safety_worker_v1.md).
 
+
+
+### Этап 5.5 — настройки внутренних уведомлений (новый инкремент)
+
+Добавлены серверные маршруты `in_app` для **собственного аккаунта врача**:
+отдельная таблица `safety_notification_routes`, аудит изменений,
+проверка связи `DoctorPatient`, soft-delete и роли. Врач включает
+или отключает маршрут через авторизованный API:
+
+| Метод и путь относительно `/api/v1` | Назначение |
+|---|---|
+| `GET /patients/{patient_id}/safety-notification-route` | Прочитать собственную настройку (`null`, если отсутствует) |
+| `PUT /patients/{patient_id}/safety-notification-route` | Установить `{"enabled":true/false,"channel":"in_app"}` |
+
+Повторное PUT с тем же состоянием не добавляет событие в аудит.
+Подтверждение относится только к **внутренней учётной записи** врача;
+email/SMS/внешние контакты и согласие пациента пока не подтверждаются.
+
+**Включение маршрута НЕ запускает отправку.** Настройки пока не подключены
+к рабочему транспорту, сообщения не посылаются. `delivery_status` в Safety
+Alerts остаётся `not_configured`. Новая миграция:
+`aisafe_v4_20261018`, предшественник `aisafe_v3_20261018`.
+
+Подробности: [docs/safety_notification_routes_v1.md](docs/safety_notification_routes_v1.md).
 
 Подробности: [docs/context_snapshots_v3.md](docs/context_snapshots_v3.md).
 Для загрузки файлов: [docs/attachments.md](docs/attachments.md).
@@ -177,9 +201,9 @@ python -m alembic -c alembic.ini check
 
 ### Текущая локальная установка
 
-Для этапов 5.3 и 5.4 новых библиотек не требуется. После установки полного
-комплекта 5.2 **повторно устанавливать пакеты не требуется**.
-Прежде чем применять этап 5.4, проверьте миграцию и тесты 5.3.
+Для этапа 5.5 новых библиотек не требуется. Перед его применением
+уже должны работать 5.3–5.4 и Alembic `current = aisafe_v3_20261018`.
+После замены файлов выполните `upgrade head` до `aisafe_v4_20261018`.
 Для нового клона репозитория сначала убедитесь, что весь исходный код,
 модели, миграции и `main.py` внесены в Git; локальные архивы из истории
 разработки не являются воспроизводимым способом развёртывания.
@@ -308,3 +332,27 @@ python -m alembic -c alembic.ini check
 Сохранение снимков в JSONB не делает чтения Context Builder транзакционно
 согласованными при конкурентных изменениях; при расширении потребуется
 единый согласованный срез БД и политика неизменяемого аудита.
+
+
+## Контроль этапа 5.5
+
+Перед миграцией проверить `alembic current -v` и `heads`.
+После неё запустить unit-тесты маршрутов, PostgreSQL-тесты (без skip),
+Ruff, `alembic check` и полный pytest. В рабочей среде пользователь
+подтвердил **134 зелёных теста этапа 5.4**; для 5.5 повторная проверка
+требуется, она не включена в это ранее подтверждённое число.
+
+```powershell
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini heads
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini check
+python -m ruff check backend
+python -m pytest backend/tests/test_safety_notification_routes_unit.py -v
+. .\scripts\postgres_test_db.ps1
+python -m pytest backend/tests/test_safety_notification_routes_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+```
+
+Интеграция реальной доставки, проверка email/телефона, согласия
+и автоматическая эскалация остаются за пределами 5.5.

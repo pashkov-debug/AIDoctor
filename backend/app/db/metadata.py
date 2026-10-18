@@ -14,6 +14,8 @@ from app.models import (
     SafetyAlert,
     SafetyAlertEvent,
     SafetyAlertRequest,
+    SafetyNotificationRoute,
+    SafetyNotificationRouteEvent,
     SafetyOutbox,
     SafetyOutboxEvent,
     User,
@@ -33,6 +35,8 @@ REGISTERED_MODELS = (
     SafetyAlert,
     SafetyAlertEvent,
     SafetyAlertRequest,
+    SafetyNotificationRoute,
+    SafetyNotificationRouteEvent,
     SafetyOutbox,
     SafetyOutboxEvent,
 )

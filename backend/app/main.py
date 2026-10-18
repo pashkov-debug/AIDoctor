@@ -10,6 +10,7 @@ from app.api.routes.history_events import router as history_events_router
 from app.api.routes.patients import router as patients_router
 from app.api.routes.questionnaires import router as questionnaires_router
 from app.api.routes.safety_alerts import router as safety_router
+from app.api.routes.safety_notification_routes import router as safety_routes_router
 from app.core.config import settings
 
 
@@ -32,6 +33,7 @@ def create_app() -> FastAPI:
         context_router,
         attachments_router,
         safety_router,
+        safety_routes_router,
     )
     for router in routers:
         application.include_router(router, prefix=settings.api_v1_prefix)

@@ -8,6 +8,10 @@ from app.models.patient import Patient
 from app.models.questionnaire_response import QuestionnaireResponse
 from app.models.safety_alert import SafetyAlert, SafetyAlertEvent
 from app.models.safety_alert_request import SafetyAlertRequest
+from app.models.safety_notification_route import (
+    SafetyNotificationRoute,
+    SafetyNotificationRouteEvent,
+)
 from app.models.safety_outbox import SafetyOutbox, SafetyOutboxEvent
 
 __all__ = [
@@ -23,6 +27,8 @@ __all__ = [
     "SafetyAlert",
     "SafetyAlertEvent",
     "SafetyAlertRequest",
+    "SafetyNotificationRoute",
+    "SafetyNotificationRouteEvent",
     "SafetyOutbox",
     "SafetyOutboxEvent",
     "User",
