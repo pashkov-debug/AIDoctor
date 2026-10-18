@@ -150,7 +150,8 @@ def test_roles_attachment_isolation_and_soft_delete(security_case, pg_engine):
     assert client.post(url + "/precheck").status_code == 403
     state["active"] = state["stranger"]
     assert client.get(url).status_code == 404
-    assert client.post(url + "/precheck").status_code == 404
+    # POST отклоняется на уровне admin-only роли до проверки доступа к пациенту.
+    assert client.post(url + "/precheck").status_code == 403
     state["active"] = state["admin"]
     wrong = url.replace(state["attachment"], state["other_attachment"])
     assert client.get(wrong).status_code == 404
@@ -167,7 +168,10 @@ def test_revoked_doctor_link_and_rejected_file_stays_rejected(security_case, pg_
     client, state, store, payload = security_case
     url = _url(state)
     path = store.path_for_download(state["storage_key"])
-    path.write_bytes(b"%PDF-1.7\nCHANGED-SYNTHETIC")
+    altered_payload = payload.replace(b"SYNTHETIC", b"MALICIOUS", 1)
+    assert altered_payload != payload
+    assert len(altered_payload) == len(payload)
+    path.write_bytes(altered_payload)
     response = client.post(url + "/precheck")
     assert response.status_code == 200
     assert response.json()["status"] == "rejected"

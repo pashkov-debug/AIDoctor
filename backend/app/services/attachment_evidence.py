@@ -3,12 +3,11 @@
 import hashlib
 import unicodedata
 
+from app.models.attachment_evidence_draft import AttachmentEvidenceDraft
+from app.models.medical_record import MedicalAttachment
 from sqlalchemy import select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.orm import Session
-
-from app.models.attachment_evidence_draft import AttachmentEvidenceDraft
-from app.models.medical_record import MedicalAttachment
 
 MAX_LOCATOR = 120
 MAX_EXCERPT = 2000

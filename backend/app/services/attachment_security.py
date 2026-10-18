@@ -7,9 +7,6 @@ import stat
 from dataclasses import dataclass
 from pathlib import Path
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
-
 from app.db.base import utc_now
 from app.models.attachment_security import AttachmentSecurityEvent, AttachmentSecurityReview
 from app.models.medical_record import MedicalAttachment
@@ -20,6 +17,8 @@ from app.services.attachment_storage import (
     AttachmentStorage,
     matches_signature,
 )
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 STATUS_QUARANTINED = "quarantined"
 STATUS_PRECHECKED = "prechecked_quarantined"
