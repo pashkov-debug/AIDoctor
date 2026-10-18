@@ -2,7 +2,7 @@
 
 from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, Header, HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.auth import current_user
@@ -13,6 +13,8 @@ from app.models.patient import Patient
 from app.schemas.safety_alert import SafetyAlertCreate, SafetyAlertRead
 from app.services.safety_alerts import (
     AlertNotFoundError,
+    IdempotencyConflict,
+    InvalidIdempotencyKey,
     acknowledge_alert,
     create_alert,
     list_alerts,
@@ -46,10 +48,21 @@ def post_safety_alert(
     patient_id: Annotated[str, Depends(_authorized_clinician)],
     session: SessionDependency,
     user: UserDependency,
+    idempotency_key: Annotated[str | None, Header(alias="Idempotency-Key")] = None,
 ) -> SafetyAlertRead:
-    return SafetyAlertRead.model_validate(
-        create_alert(session, patient_id, user.id, data)
-    )
+    try:
+        alert = create_alert(
+            session,
+            patient_id,
+            user.id,
+            data,
+            idempotency_key=idempotency_key,
+        )
+    except InvalidIdempotencyKey as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    except IdempotencyConflict as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+    return SafetyAlertRead.model_validate(alert)
 
 
 @router.get(

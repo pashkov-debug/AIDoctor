@@ -13,6 +13,9 @@ from app.models import (
     QuestionnaireResponse,
     SafetyAlert,
     SafetyAlertEvent,
+    SafetyAlertRequest,
+    SafetyOutbox,
+    SafetyOutboxEvent,
     User,
 )
 
@@ -29,6 +32,9 @@ REGISTERED_MODELS = (
     ContextSnapshot,
     SafetyAlert,
     SafetyAlertEvent,
+    SafetyAlertRequest,
+    SafetyOutbox,
+    SafetyOutboxEvent,
 )
 
 metadata = Base.metadata
