@@ -1,11 +1,9 @@
 """6.4.2: никакой тест не читает медицинские вложения и не требует Docker."""
 
 import hashlib
-import subprocess
 import sys
 
 import pytest
-
 from app.services import cdr_synthetic_execution as execution
 from app.workers import cdr_synthetic_once
 

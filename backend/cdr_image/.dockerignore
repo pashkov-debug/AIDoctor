@@ -1,4 +1,6 @@
 *
 !Dockerfile
+!Dockerfile.docx
 !worker.py
+!docx_worker.py
 !.dockerignore

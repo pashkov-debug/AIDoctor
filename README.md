@@ -1010,3 +1010,32 @@ Alembic head остаётся `aiextract_v5_20261019`.
 Новые тесты и сборка Docker на Windows требуют отдельного
 подтверждения; в среде подготовки проверены только доступные unit-тесты,
 синтаксис и архив. Инструкции: [документация 6.4.2a](docs/cdr_pdf_synthetic_v10.md).
+
+
+## Этап 6.4.2b — реальное преобразование синтетического DOCX (Docker)
+
+Подготовлен отдельный Dockerfile для DOCX, не меняющий рабочий PDF-only CDR 6.4.2a. Новый одноразовый worker принимает **только строго ограниченный синтетический DOCX**, создаёт PDF через LibreOffice Writer, затем Poppler рендерит страницы в JPEG, а img2pdf собирает новый PDF. На хост новые Python-пакеты не устанавливаются; Docker-образ с тяжёлыми пакетами Debian собирается только по явной команде.
+
+В ZIP входят **полные** `README.md`, изменённый `backend/cdr_image/.dockerignore`, новые `backend/cdr_image/Dockerfile.docx`, `backend/cdr_image/docx_worker.py`, `backend/app/services/cdr_docx_synthetic_execution.py`, `backend/app/workers/cdr_docx_synthetic_once.py`, два unit-теста и `docs/cdr_docx_synthetic_v11.md`.
+
+Настоящие медицинские вложения, клинические API, PostgreSQL и миграции не затрагиваются. Все результаты по-прежнему **недоверенные**: `sanitized=False`, `trusted=False`, `processing_allowed=False`. Карантин и ограничения Context Builder остаются. LibreOffice и Docker нельзя считать аттестованным CDR; здесь разрешён только встроенный синтетический пример.
+
+Команды PowerShell, ограничения, критерии готовности и негативные сценарии: [документация этапа 6.4.2b](docs/cdr_docx_synthetic_v11.md). Новых миграций нет (Alembic head `aiextract_v5_20261019`). Локальная проверка кода не заменяет сборку контейнера и полный pytest на Windows.
+
+### Исправление Ruff E501 для 6.4.2a/6.4.2b (20 октября 2026)
+
+Устранено превышение 100 символов в `backend/app/services/cdr_synthetic_execution.py`
+(формирование `docker_argv` в `synthetic_plan`). Это только перенос аргументов
+кортежа на отдельные строки; состав Docker-команды, её ограничения, результат
+`UnexecutedCDRPlan` и публичные контракты не изменились.
+
+Для проверки на Windows:
+
+```powershell
+python -m ruff check backend
+python -m pytest backend/tests/test_cdr_synthetic_execution_unit.py -v -rs
+python -m pytest backend/tests/test_cdr_docx_synthetic_execution_unit.py -v -rs
+```
+
+До следующего этапа должны оставаться неизменными карантин вложений
+и запрет клинической обработки CDR-результатов.

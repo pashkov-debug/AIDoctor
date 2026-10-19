@@ -11,9 +11,9 @@ import re
 import subprocess
 import threading
 import time
-from uuid import uuid4
 from dataclasses import dataclass
 from hmac import compare_digest
+from uuid import uuid4
 
 from app.services import cdr_isolation_contract
 from app.services.cdr_output_boundary import (
@@ -82,7 +82,12 @@ def synthetic_plan(image_id: str) -> cdr_isolation_contract.UnexecutedCDRPlan:
         raise CDRExecutionDenied("Нужен точный локальный ID образа sha256:<64 hex>")
     payload = synthetic_pdf()
     return cdr_isolation_contract.UnexecutedCDRPlan(
-        docker_argv=("docker", *cdr_isolation_contract._DOCKER_RESTRICTIONS, image_id, cdr_isolation_contract._WORKER_EXECUTABLE),
+        docker_argv=(
+            "docker",
+            *cdr_isolation_contract._DOCKER_RESTRICTIONS,
+            image_id,
+            cdr_isolation_contract._WORKER_EXECUTABLE,
+        ),
         media_type="application/pdf",
         content_sha256=hashlib.sha256(payload).hexdigest(),
         content_length=len(payload),

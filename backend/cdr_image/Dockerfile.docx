@@ -1,0 +1,18 @@
+# Только синтетические DOCX. Не использовать для файлов пациентов.
+# Debian-пакеты и базовый образ намеренно НЕ заявляются как подписанные/аттестованные.
+# Требуется отдельное утверждение SBOM, версий и sandbox для production.
+FROM python:3.12-slim-trixie
+
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        libreoffice-writer poppler-utils img2pdf fonts-dejavu-core \
+    && rm -rf /var/lib/apt/lists/*
+
+COPY worker.py /usr/local/bin/worker.py
+COPY docx_worker.py /usr/local/bin/aidoctor-docx-cdr-worker
+RUN chmod 0555 /usr/local/bin/aidoctor-docx-cdr-worker /usr/local/bin/worker.py
+
+USER 65534:65534
+ENV HOME=/tmp TMPDIR=/tmp
+WORKDIR /tmp
+CMD ["/usr/local/bin/aidoctor-docx-cdr-worker"]

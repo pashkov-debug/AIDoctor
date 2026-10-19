@@ -3,7 +3,6 @@
 from pathlib import Path
 
 import pytest
-
 from app.services.cdr_synthetic_execution import synthetic_pdf
 from cdr_image import worker
 
