@@ -888,5 +888,55 @@ Builder до отдельного этапа.
 автоматический downgrade запрещён. Полный контракт и тестовые команды:
 [docs/attachment_cdr_boundary_v7.md](docs/attachment_cdr_boundary_v7.md).
 
-**Проверка этапа 6.4.0 на Windows/PostgreSQL ещё не подтверждена.**
-До неё не переходить к 6.4.1 и не считать CDR работающим.
+**Подтверждено пользователем:** 6.4.0 — `339 passed` в Windows/Python 3.12/PostgreSQL.
+Это подтверждение тестов, не работающего CDR и не разрешение клинической обработки.
+
+
+## Этап 6.4.1a — проверяемый контракт изоляции CDR (19.10.2026)
+
+После подтверждения 6.4.0 (`339 passed`) добавлен **проектный
+fail-closed контракт** передачи *аудированного* `QuarantinedCDRCandidate`
+в будущую изолированную среду. `build_unexecuted_cdr_plan(...)` повторно
+проверяет длину и SHA-256 снимка и строит Docker-аргументы с отключённой
+сетью, rootfs read-only, непривилегированным пользователем, сброшенными
+capabilities, отключёнными журналами Docker, ресурсными ограничениями и
+закреплённым образом `@sha256:...`. Теги образов и подстановка дополнительных
+аргументов запрещены.
+
+**Это только план, НЕ запуск контейнера/реальный CDR.** Реального
+CDR-образа нет; план содержит место для будущего worker, не отправляет
+медицинские данные, не удостоверяет программу/результат и никогда не
+включает обработку. Карантин, Context Builder, авторизация, схемы БД,
+API и Alembic не изменены. Новых зависимостей нет.
+
+Новые файлы:
+`backend/app/services/cdr_isolation_contract.py`,
+`backend/tests/test_cdr_isolation_contract_unit.py`,
+`docs/cdr_isolation_contract_v8.md`. Обновлён полный корневой README.
+
+**Критическая особенность выбора движка:** image-based CDR (например,
+Dangerzone) без OCR уничтожает машинно читаемый текст; поэтому нельзя
+считать его выходом, пригодным для медицинского Context Builder.
+OCR/LLM и тяжёлые зависимости не включаются без согласования.
+
+Проверки PowerShell:
+
+```powershell
+python -m pytest backend/tests/test_cdr_isolation_contract_unit.py -v -rs
+python -m ruff check backend
+python -m alembic -c alembic.ini current -v
+python -m alembic -c alembic.ini check
+
+# Только выделенная тестовая БД (фикстуры пересоздают таблицы).
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL
+```
+
+Alembic head остаётся `aiextract_v5_20261019`. Полные риски,
+границы, критерии готовности и сравнение движков:
+[docs/cdr_isolation_contract_v8.md](docs/cdr_isolation_contract_v8.md).
+
+**Следующий рекомендуемый шаг:** отдельно согласовать реальный CDR-движок
+и требования к сохранению текста. До этого не запускать CDR на
+медицинских вложениях.
