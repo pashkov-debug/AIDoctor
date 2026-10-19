@@ -1,0 +1,29 @@
+# Этап 6.3.2. Включается только вместе с -f compose.av.yaml --profile av.
+# Файлы пациентов и PostgreSQL в контейнер ClamAV не монтируются.
+services:
+  clamd:
+    image: clamav/clamav:1.5.4
+    profiles:
+      - av
+    # По документации официального образа: непривилегированный entrypoint.
+    user: "clamav"
+    entrypoint: /init-unprivileged
+    restart: "no"
+    ports:
+      - "127.0.0.1:3310:3310"
+    volumes:
+      - aidoctor_clamav_signatures:/var/lib/clamav
+    environment:
+      CLAMAV_NO_CLAMD: "false"
+      CLAMAV_NO_FRESHCLAMD: "false"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 4g
+    cpus: 2.0
+    stop_grace_period: 30s
+
+volumes:
+  aidoctor_clamav_signatures:
