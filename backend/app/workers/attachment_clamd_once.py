@@ -1,4 +1,4 @@
-"""Ручное сканирование одного вложения: без планировщика и снятия карантина.
+"""Ручное сканирование с обязательным EICAR-гейтом без снятия карантина.
 
 Запуск: python -m app.workers.attachment_clamd_once --once --patient-id UUID
         --attachment-id UUID --actor-id UUID
@@ -8,6 +8,7 @@ import argparse
 
 from app.core.config import settings
 from app.db.session import SessionLocal
+from app.services.attachment_av_policy import PreflightGatedScanner
 from app.services.attachment_av_scan import scan_quarantined_attachment
 from app.services.attachment_clamd import ClamdScanner
 from app.services.attachment_storage import AttachmentStorage
@@ -31,7 +32,7 @@ def main() -> int:
                 attachment_id=args.attachment_id,
                 actor_id=args.actor_id,
                 storage=AttachmentStorage(settings.attachments_dir),
-                scanner=ClamdScanner(),
+                scanner=PreflightGatedScanner(ClamdScanner()),
             )
     except Exception:
         # Не выводим системные пути, имена файлов, токены или содержимое.
