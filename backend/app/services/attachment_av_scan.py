@@ -12,7 +12,7 @@ from app.models.attachment_av_scan import AttachmentAVScan
 from app.models.attachment_security import AttachmentSecurityEvent, AttachmentSecurityReview
 from app.models.medical_record import MedicalAttachment
 from app.models.patient import Patient
-from app.services.attachment_clamd import ClamdScanner, ClamdUnavailable
+from app.services.attachment_clamd import ClamdScanner
 from app.services.attachment_scan_boundary import (
     QuarantineScanInput,
     capture_quarantined_scan_input,
@@ -192,12 +192,14 @@ def scan_quarantined_attachment(
     reason = "scanner_unavailable"
     try:
         verdict = scanner.scan(snapshot.content)
-    except ClamdUnavailable:
-        pass
-    else:
         status = verdict.status
         version = verdict.engine_version
         reason = None
+    except Exception:
+        # Ошибка или некорректный объект стороннего AV-адаптера не должны
+        # обходить фиксацию error + audit. Никаких подробностей/PHI в БД.
+        # Ошибки записи отчёта/аудита ниже НЕ перехватываем: fail-closed.
+        pass
     return _persist_report(
         session,
         snapshot=snapshot,
