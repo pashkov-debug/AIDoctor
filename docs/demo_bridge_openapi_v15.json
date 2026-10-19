@@ -1,0 +1,331 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "AIDoctor Demo Bridge (synthetic only)",
+    "version": "1.0.0"
+  },
+  "paths": {
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": true,
+                  "type": "object",
+                  "title": "Response Health Health Get"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demo/v1/patient": {
+      "get": {
+        "summary": "Get Demo Patient",
+        "operationId": "get_demo_patient_demo_v1_patient_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/demo/v1/context": {
+      "get": {
+        "summary": "Get Demo Context",
+        "operationId": "get_demo_context_demo_v1_context_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DemoContextEnvelope"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "ClinicalContext": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version",
+            "default": "1.0"
+          },
+          "patient_id": {
+            "type": "string",
+            "title": "Patient Id"
+          },
+          "generated_at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Generated At"
+          },
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/ContextFact"
+            },
+            "type": "array",
+            "title": "Items"
+          },
+          "truncated_sources": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Truncated Sources"
+          },
+          "excluded_attachments_count": {
+            "type": "integer",
+            "title": "Excluded Attachments Count"
+          },
+          "content_sha256": {
+            "type": "string",
+            "title": "Content Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "patient_id",
+          "generated_at",
+          "items",
+          "excluded_attachments_count",
+          "content_sha256"
+        ],
+        "title": "ClinicalContext"
+      },
+      "ContextFact": {
+        "properties": {
+          "kind": {
+            "type": "string",
+            "enum": [
+              "encounter",
+              "history_event",
+              "observation",
+              "questionnaire"
+            ],
+            "title": "Kind"
+          },
+          "record_id": {
+            "type": "string",
+            "title": "Record Id"
+          },
+          "at": {
+            "type": "string",
+            "format": "date-time",
+            "title": "At"
+          },
+          "source_ref": {
+            "type": "string",
+            "title": "Source Ref"
+          },
+          "payload": {
+            "additionalProperties": true,
+            "type": "object",
+            "title": "Payload"
+          }
+        },
+        "type": "object",
+        "required": [
+          "kind",
+          "record_id",
+          "at",
+          "source_ref",
+          "payload"
+        ],
+        "title": "ContextFact"
+      },
+      "DemoContextData": {
+        "properties": {
+          "demo_id": {
+            "type": "string",
+            "const": "DEMO-001",
+            "title": "Demo Id"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "const": true,
+            "title": "Synthetic"
+          },
+          "clinical_context": {
+            "$ref": "#/components/schemas/ClinicalContext"
+          },
+          "notices": {
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "title": "Notices"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demo_id",
+          "synthetic",
+          "clinical_context",
+          "notices"
+        ],
+        "title": "DemoContextData"
+      },
+      "DemoContextEnvelope": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "const": true,
+            "title": "Synthetic"
+          },
+          "mode": {
+            "type": "string",
+            "const": "synthetic_demo_only",
+            "title": "Mode"
+          },
+          "source": {
+            "type": "string",
+            "const": "aidoctor_context_builder_demo_db",
+            "title": "Source"
+          },
+          "clinical_processing_allowed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Clinical Processing Allowed"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DemoContextData"
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "synthetic",
+          "mode",
+          "source",
+          "clinical_processing_allowed",
+          "data",
+          "content_sha256"
+        ],
+        "title": "DemoContextEnvelope"
+      },
+      "DemoEnvelope": {
+        "properties": {
+          "schema_version": {
+            "type": "string",
+            "const": "1.0",
+            "title": "Schema Version"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "const": true,
+            "title": "Synthetic"
+          },
+          "mode": {
+            "type": "string",
+            "const": "synthetic_demo_only",
+            "title": "Mode"
+          },
+          "source": {
+            "type": "string",
+            "const": "aidoctor_context_builder_demo_db",
+            "title": "Source"
+          },
+          "clinical_processing_allowed": {
+            "type": "boolean",
+            "const": false,
+            "title": "Clinical Processing Allowed"
+          },
+          "data": {
+            "$ref": "#/components/schemas/DemoPatientData"
+          },
+          "content_sha256": {
+            "type": "string",
+            "pattern": "^[0-9a-f]{64}$",
+            "title": "Content Sha256"
+          }
+        },
+        "type": "object",
+        "required": [
+          "schema_version",
+          "synthetic",
+          "mode",
+          "source",
+          "clinical_processing_allowed",
+          "data",
+          "content_sha256"
+        ],
+        "title": "DemoEnvelope"
+      },
+      "DemoPatientData": {
+        "properties": {
+          "demo_id": {
+            "type": "string",
+            "const": "DEMO-001",
+            "title": "Demo Id"
+          },
+          "synthetic": {
+            "type": "boolean",
+            "const": true,
+            "title": "Synthetic"
+          },
+          "sex": {
+            "type": "string",
+            "const": "female",
+            "title": "Sex"
+          },
+          "age_years": {
+            "type": "integer",
+            "const": 35,
+            "title": "Age Years"
+          },
+          "diagnosis_established": {
+            "type": "boolean",
+            "const": false,
+            "title": "Diagnosis Established"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "demo_id",
+          "synthetic",
+          "sex",
+          "age_years",
+          "diagnosis_established",
+          "label"
+        ],
+        "title": "DemoPatientData"
+      }
+    }
+  }
+}
