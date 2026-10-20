@@ -1,0 +1,1152 @@
+{
+  "reference": "AIDoctor-master (4).zip — stage 6.6 FINAL, excluding 6.7 Demo Bridge",
+  "note": "Контрольный снимок, не источник автоматического восстановления. Отличие хеша требует просмотра, но не доказывает ошибку.",
+  "files": [
+    {
+      "path": ".gitignore",
+      "sha256": "3add602cda5824e3c812af5a10584859ab92d0741d0ab1a144f8bc18899be10f",
+      "group": "code"
+    },
+    {
+      "path": "alembic.ini",
+      "sha256": "451dec306bd6244609d8aca39d768b098f9267343c3902f7a85b03d36014d83c",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/README",
+      "sha256": "31595cf53626af9ed16e15c44fa43183209cc163fbc3ebcb904b22ac436a8884",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/env.py",
+      "sha256": "214c90dc866300c4e5c5ae48f5a7ced85af8bf9b283c722ddf51948db19d3205",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/script.py.mako",
+      "sha256": "d38920781b4d31ae1c0a71bc09f41c2ade8feab9e5a087e3f30cb4bbf0c1c9d3",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aictx_v3_20261017_context_snapshots.py",
+      "sha256": "b28a23c34782d173f36d323c68301aab71e42af9dae0d10efd0a8a9c8b0a50ff",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aiextract_v1_20261018_manual_evidence.py",
+      "sha256": "c2f1c8b630ef21cff109a5b9ceb4a657b72df89cb5073c3beb6e92d598cdb9b4",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aiextract_v2_20261018_security_gate.py",
+      "sha256": "06f877587ab1321291422e5bee492c65d06f1775635c647b50b458a72fb5e605",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aiextract_v3_20261018_scan_input_audit.py",
+      "sha256": "1811a0e9f9e45e94e660544d64364583a0aa687413fc01a52d72e46e42c484b2",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aiextract_v4_20261018_clamd_reports.py",
+      "sha256": "b63f388fe180443aa50882cce72c83813b5fefc0c019a2f190c56ccbaa0923c8",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aiextract_v5_20261019_cdr_input_audit.py",
+      "sha256": "03bb597df76997b6051d25a76204b67cfe1967c6d96d742f9445955f824dab14",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v1_20261017_alerts.py",
+      "sha256": "b74996b94fda4fe0833094f204af06f1e7dcfcc7b42f8f9482f7379382dc30c6",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v2_20261018_outbox.py",
+      "sha256": "0604e96bf699598565ccc29b1f3726ee95560d15571a33fcefeb1d0cf76e0101",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v3_20261018_idempotency.py",
+      "sha256": "c619b38674018089d2cabbec4563c44daa6c32d336a9b20a06236a9c9006d5c4",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v4_20261018_notification_routes.py",
+      "sha256": "f66ef13b8dff34a468c8c5e5b6f530e0346efc31bcb326832f810230974062cf",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v5_20261018_in_app_inbox.py",
+      "sha256": "802272ec50c7df54f90a26e0b533be627c23aa93510d94fe05d842f90cdf9047",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v6_20261018_followups.py",
+      "sha256": "757c857095fd60db9d56169b2ee63aa7cabd260401c73cb3920892388584700d",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/aisafe_v7_20261018_read_audit.py",
+      "sha256": "2e1b32ec6df8fa3f897cbbd5acd0853be0f111c1ce6c72540544e62fbbe308a9",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/bb442bccae1b_create_longitudinal_core.py",
+      "sha256": "ccf518b691a6568966d51e1c06bf559e1853c7297f0848224891188e3c099095",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/c102_stage12_auth.py",
+      "sha256": "d96f07d87e5fb232b761e0b05d54e05a83f8227071ec35f67cb57eff85969428",
+      "group": "code"
+    },
+    {
+      "path": "backend/alembic/versions/c103_medical_metadata.py",
+      "sha256": "7d4a51bde9da153974fe5ca09b7c68eca7a59d39833ce83edcc6249670d2348f",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/__init__.py",
+      "sha256": "3082e324b1d6fea41f1afdb3692bbabe3a10eb2b29109da120bddebab5001da9",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/__init__.py",
+      "sha256": "c5e79b75137811726e30acef2fa5cfc649514fce1c86da771535b368f43238c0",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/auth.py",
+      "sha256": "01b1eab27552f978db227e1368f253eb776ec68d6dbdb83cdd7f79fe97b784d9",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/__init__.py",
+      "sha256": "d93b5f927d5548a8ac36fcb08ff9ea4d61844066f86244c9564b8b01c01428b4",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/access.py",
+      "sha256": "67cb15bd6b43d07abc4b8c3caa876dc3c6018534543601659a755d4bb044dbd5",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/attachment_evidence.py",
+      "sha256": "b9d6bc8a4646006c6b9d0436b31a8ace09cae5cb4df35c02c75ec1e460041794",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/attachment_security.py",
+      "sha256": "2e024f5777b4358b36fe47c8e5e703d55fcd950557e99485ae565b0194872c90",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/attachments.py",
+      "sha256": "643a677eb1b38cc7afa0cf6f527a3594ca93f9982f48ab8ed50afab0fce0345d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/auth.py",
+      "sha256": "81e233f8ea752bb9b2ab2313e891f05df14e34339a33efbf03d772ec3aadcd00",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/context.py",
+      "sha256": "d02bc145b79b88026f3bafecdf1ebe5c9740167cf506e11c946ab0b0fa3aa037",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/encounters.py",
+      "sha256": "eab8f6a2731c60410cc44f8b395d2def0709ea1eea73f9540332e43d9532b8f7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/health.py",
+      "sha256": "8e017bc526d52c41f6769c417fc5750cb6266afded3b59fa614e52cbb6e493a5",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/history_events.py",
+      "sha256": "e1915df3443f294b65169bb54ad2ebb1ac5fecd61c0960bd4c591345358e74d7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/patients.py",
+      "sha256": "abc1cceec8cf9a4ace867487191d3ece829f57a572c48e06d9903a09c418c020",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/questionnaires.py",
+      "sha256": "5f9182a760039240a8493fdab03016844ad787092448c33e0e4c51d0ddb40be7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/safety_alerts.py",
+      "sha256": "fadc72306cda83f87377fe1df69594385df0d969d9bd00b82decaccb83f65c10",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/safety_followups.py",
+      "sha256": "86db84724f37401b27f7851e6897581375dd1c664926293c403f9d01687a4d7a",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/safety_in_app_notifications.py",
+      "sha256": "d51958d5fc60885428c83855b98591e6a7da74e51be9a45515f4c7d6877d992e",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/api/routes/safety_notification_routes.py",
+      "sha256": "dca1e719b76c2d237622b43cd74d66d025818510d16e9c761d8319e722c8d052",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/clinical/__init__.py",
+      "sha256": "b5c718a86a182a7b54b19b1393d8f90bc314153a2fea03d515e7bc7630c65921",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/clinical/scales.py",
+      "sha256": "99c136f80fd39bda34b73ff4dc72f6d7a16cbdbfa40efd5ff51f6c3f4d3dc0e0",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/core/__init__.py",
+      "sha256": "f0abeffc1634dc92c6ba1699ea0860ea9d958aeb379c53b1370aeeef497cae6e",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/core/access.py",
+      "sha256": "cbdb04309620eab5b58d0e9cb87f58b1a63e3e82c91efccb2a7a60af2e030866",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/core/config.py",
+      "sha256": "79e6905a82aa4d6007d2a089cb15b6c03260586febf43fe4649886effabb1606",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/core/security.py",
+      "sha256": "5d1ea83b4b206ecd4a5ea5c86b6fcce74d011d082c8becc0169db90533fe5c75",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/db/base.py",
+      "sha256": "78e683474528b13610c809d220de2cf861113183528f68d549f5cb12a32e0b6b",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/db/init.py",
+      "sha256": "c09a1e9998915d9671218296afef3f96b9f15103be130e8dada009f9ddbdf1ef",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/db/metadata.py",
+      "sha256": "bd7535e25a0dd531a2b301d85b24aefcb923fb7b53355f1d033c38f9e56efa7f",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/db/session.py",
+      "sha256": "9a8bedd3d79df4e25a46d43da25582ebc1ad1c5901812906ba7920469b366cb7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/main.py",
+      "sha256": "614fe6ddb02a7a33d1b4cc34b5cc3b640b076b41c91d7430f006d79f88bf99fa",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/__init__.py",
+      "sha256": "303b38830b03de877f94c30363ca8bf4db25435573544703b4e99365f56222a6",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/access.py",
+      "sha256": "3a8ac2b7ed6543481b1dc1e5a8ba2e489eaaad34ee2bfcdc49d64a9776ae1b34",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/attachment_av_scan.py",
+      "sha256": "cc2c93f5a390378c6e04c7d18fa0b8e67e6f3c8168e53b1604e4cfd5271f578a",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/attachment_evidence_draft.py",
+      "sha256": "8b325e417a8ef1d857c898a04699d3bbf3d324bfeea5109d1cc060d519ad2067",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/attachment_security.py",
+      "sha256": "2b2d9c6e1b4c9ada8a4ceef781833e20266f91e66486e0838ae298c203e38c74",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/auth_session.py",
+      "sha256": "c997f207af91d9260501ce08eaf2600bb30b0cca9adf5544c90513056f08876d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/context_snapshot.py",
+      "sha256": "cadd25040feb7382b8fa6d8ddcf36ba2350e2cb1e7cbc3cc0a69001778413c6a",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/encounter.py",
+      "sha256": "e899bea5cebbbaea944be9346bebc13905f6fbd334936636266c464a10088dfb",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/history_event.py",
+      "sha256": "1419e7f4483c467d084a256f89d3356c30ad8018348faa7bf302f4bb8f1c875c",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/medical_record.py",
+      "sha256": "f1bfb4fc670adddbcc4107346b5a5c68f0f561959144feb7bd64bad9ba9fa7b7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/patient.py",
+      "sha256": "3ea20eb03f136f27f19f71656bd97f5d4a91b10cd6c64e491d68134345c60a7f",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/questionnaire_response.py",
+      "sha256": "6b228505fd694114577c45ad38bde359cae5e792ab260c1338076a20ee861051",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_alert.py",
+      "sha256": "e02aae837ea0002893d72983b45c878e58a6577e45ce694cf003cfd23409b4ca",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_alert_request.py",
+      "sha256": "f2aba5eb9c61f1ae09655689cd8cc46284f24d9c2a63b3a632551c7f3195347d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_followup.py",
+      "sha256": "de305699a6bac5d5ec79c4afc768fff4c99edbed219811b791d331df3a54488d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_in_app_notification.py",
+      "sha256": "e4be8e33f11fd2216ba77a7bfd0933997cf59d6de8b2e182af07c789378826d9",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_notification_route.py",
+      "sha256": "3a38625d626a0335b22249199023b198134eced74e5bb94dfc03c2a7bb4da046",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_outbox.py",
+      "sha256": "3ab9da7f7afc159f0aaf9d0143fdc0f6551c40a1a63ef679e4120e08fe0678fa",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/models/safety_read_audit.py",
+      "sha256": "22d401c2cf3fda3194d7e37a48b29b08f32454dac90e5b1a2ef441824d859796",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/repositories/encounter.py",
+      "sha256": "5e22665be837219538a6701c4cc62e3bdb00a7309e8cbcfd7acfc7cf4759cc1e",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/repositories/history_event.py",
+      "sha256": "368d4d85be6bc40a26c27c66ea08190c25e7044bd7369aa1ca7ac8ac731ff967",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/repositories/init.py",
+      "sha256": "e051945a16e27b28e338ac9bcf52faa02a065049f4a878868b846424748a17bb",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/repositories/patient.py",
+      "sha256": "d8da55998bf78f37cf35103a25c979911f7104309d1aed249ea45d93d5e69892",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/repositories/questionnaire.py",
+      "sha256": "20edea941f31bfed686c5be8429d65bf6bdd0427b9d5dcde03acb6eaa85d09a8",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/attachment_evidence_draft.py",
+      "sha256": "d902fe5100001753f982dccbff27aab292d2bf78f4367b825f6a6df8f8571c4c",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/attachment_security.py",
+      "sha256": "ea87a7e846c620d17ac802cca2b91644f5dfbedbf6c23875804aae7976237392",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/encounter.py",
+      "sha256": "46d1a6e5de6a314fd0a2486718bf7d3c1b30b16c4e1dd49317890223601010f3",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/history_event.py",
+      "sha256": "598a2263d95a9f02280f1503f13f65ff7ecc36452347c63be858e33a0f4127e8",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/init.py",
+      "sha256": "09f7442077a7cb0460d81e9537fa4ab51845d6958b2fd5ecd788c91f7ee865e5",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/patient.py",
+      "sha256": "2b87ec51570113ee40e8d0148f56dee08155f33a914d832683bc1a6fde2eb8a1",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/questionnaire.py",
+      "sha256": "1631761b55977bd9d6e9d97ca503089ba5a35b15c1ffa8192e24b8e2ac9ed938",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/safety_alert.py",
+      "sha256": "a3aa83044f059c97cf70f46e8f5ce973b03b3d34fb498054730b07636402e61c",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/safety_followup.py",
+      "sha256": "0f0e9a7785b721f0331ac7dfca4c9d21a363e2f1806b39af50ae901fafc5012a",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/safety_in_app_notification.py",
+      "sha256": "e655f728bf247f5cf8a14092e32f9573137fe36965c39a4528faa0c57f571272",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/schemas/safety_notification_route.py",
+      "sha256": "b83046bf6752fa91a9435d27f9a10875ab3339a5321cda599b8c290538c84b59",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_av_policy.py",
+      "sha256": "0e8e83102fb855e63f7dbb5c80756da7c94db105b82e6620cc9f7cd12acf0131",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_av_scan.py",
+      "sha256": "51e440d99074cb957680ce2a838df940ed99a4d58a1887589fdbb10a933cfc68",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_cdr_boundary.py",
+      "sha256": "cb8d9c91ad451bc7df33f4c2107c9cc9b07a9cf15fca885285241bafc056de76",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_clamd.py",
+      "sha256": "cb56dcfe7753fe5746f820990a5459f61509468982fa133f8f8a2713d29ffc55",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_evidence.py",
+      "sha256": "a91e74c228b203647e2152276d4a22ae20aa238e86200a9e31f617291e5c7872",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_scan_boundary.py",
+      "sha256": "a4eadd308b04187b4b3a82f0e88c15da80d03458105109fb58aae367c9e189e2",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_security.py",
+      "sha256": "1ba8dd41aa9ee0fcff12bac4e63c691b51ab0ba6d0b9b97b8fc0de49c2f1bc49",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/attachment_storage.py",
+      "sha256": "924fe747d20c862c11a7a5a6e1be092deaaea42135e8372cb7d28b3bff34fc84",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/cdr_docx_synthetic_execution.py",
+      "sha256": "ef24a70530ed91938a0343b4da576def329072f800be02dbbf122f14a894f1bd",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/cdr_isolation_contract.py",
+      "sha256": "9f2e5f4119c0340cbfadff2f50c6504dc2d508bc9adefa5983f03a493bbbd61f",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/cdr_output_boundary.py",
+      "sha256": "954c49028372d3dcf260c9c7dc50ee3b9c382fea7675c2ba7df940d484ae897a",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/cdr_synthetic_execution.py",
+      "sha256": "e07a7e9edd871023e2aabfbd85af76cd570d666b788f85bf16b049664e913eab",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/cdr_synthetic_output_av.py",
+      "sha256": "392853ea752d88b4583ff75218288206b427983d9bf7ada97c37f183a51e720b",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/clamd_health.py",
+      "sha256": "cc02c61320f7458df79c8f59ae5c17b03883550d4c064439d5963d39840ade5d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/context_builder.py",
+      "sha256": "ce7ab6ca3f77da6640dae38d2416814d834a1c4fd0eb19c3ef39e937c5f8f034",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/context_delta.py",
+      "sha256": "f789d9cec2eee9754109419900eca164d4bb770c28bf28ad54a8366f295c19fe",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/context_digest.py",
+      "sha256": "5665123c03dabffc41dbc6de52c3339de488b95a0a165a2ef4d55e8d2c7fdd70",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/context_snapshots.py",
+      "sha256": "b494ee52495441b215cb63eff98f88d010a6637c88913904d52b85cbfce08ccc",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/encounter.py",
+      "sha256": "103ebaf28b89a1f271e97a9d8b1a754824f432ee04d460f7bbc1cfb70f4bcf41",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/history_event.py",
+      "sha256": "78b503a7428658263a4ba73c643af663ef02999dbcc522e167b30ddc3ccfbd72",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/init.py",
+      "sha256": "5ee368b8b403ddb926e38792d6c660d7a6ec88ea5bd628ded82a91e52931d2f1",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/patient.py",
+      "sha256": "37b5ebf2d3479473aa9d0576a94f861f9858c6cab76bc2d5f2cbe787cc3b9776",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/questionnaire.py",
+      "sha256": "7e05f05317b20a5def5b4e38f977bb14fb92858f70132028b0601aa09cefb1c7",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_alerts.py",
+      "sha256": "569f9816f0d249e5591ec5c1ae5d262bbd0bd7f1d246d670ebe2af005f09ed04",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_followups.py",
+      "sha256": "748730b5ec81d05b7f936e6efdfe18c6ae9dd441132c4fc04230986145824900",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_in_app_delivery.py",
+      "sha256": "cd591177ca01628beedabf4fa523c641e21b9038a3d7a01ac15fffbdd19be67d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_notification_routes.py",
+      "sha256": "54567f60326564980f10cf163fc7133ec81dd04bf6af6e1b7a4e1dac187a7b93",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_outbox.py",
+      "sha256": "e00199c5cbc8faf31a06c0daf53d3ff8a088e9b25991597c6129cd5626554c79",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/services/safety_read_audit.py",
+      "sha256": "2ea9c24152866229591d5a8bd250f368c3b376d4cb262670b3549f573ce0e005",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/__init__.py",
+      "sha256": "867bb5015f7beb83611accf914fa0841b73cfb18872f19fb2fd1807d0802ef2d",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/attachment_clamd_once.py",
+      "sha256": "b465ec32b2fe93128f603a21e67702faa5eaccae502cdf08fb9b8dd3c8585fd9",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/cdr_docx_synthetic_once.py",
+      "sha256": "ba0121703810eec6d04491146bb8906d4a74b7ae81f08ce5ec66633584644315",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/cdr_synthetic_av_once.py",
+      "sha256": "572159006a40f7f861c553c883b72a078cebb8df3873ef997efa1cf3792c44cc",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/cdr_synthetic_once.py",
+      "sha256": "b92bd1bdee5d4fa7d320b299e404c4ae778467a3f997edf63794281be963e89b",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/clamd_preflight.py",
+      "sha256": "5fdf233c264d05bcbd784543efbf853ed4ab657585e96c1e1b0e914a20a0ca28",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/safety_followup_once.py",
+      "sha256": "ca9f81722812d7ce9369cd203d069c6f6d785c2c126982f6066177d87252fb32",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/safety_in_app_once.py",
+      "sha256": "4719d68205dc20f26c921986fd0c0db5b4d00bcb17b65117324fd41e15a5aa80",
+      "group": "code"
+    },
+    {
+      "path": "backend/app/workers/safety_outbox.py",
+      "sha256": "d7a6cd899402a612b26d1ab5b4b5b129978bb668dfc71ad6c5931a5a5ac26275",
+      "group": "code"
+    },
+    {
+      "path": "backend/cdr_image/.dockerignore",
+      "sha256": "0db52d5a73d433407e096403fb28b3b11050b84ec91a89823a2d46e0196171eb",
+      "group": "code"
+    },
+    {
+      "path": "backend/cdr_image/Dockerfile",
+      "sha256": "5a4f92b2c3a32c06b9d28e1c4f251a94bf84ea64db44e22fb62ba2007add73fb",
+      "group": "code"
+    },
+    {
+      "path": "backend/cdr_image/Dockerfile.docx",
+      "sha256": "805cd6903730d86ae0e41262309d1490795664b29804e3a7553df8bdb1ab2700",
+      "group": "code"
+    },
+    {
+      "path": "backend/cdr_image/docx_worker.py",
+      "sha256": "49c52201bde8edfb6d9051f88b86930d02a49f66caf6ad187711dd0f48b0b437",
+      "group": "code"
+    },
+    {
+      "path": "backend/cdr_image/worker.py",
+      "sha256": "06e29c23d837cd0921d7d9970bda032cd41a78a53dbe7c6f802b202953ca1c7e",
+      "group": "code"
+    },
+    {
+      "path": "backend/scripts/create_user.py",
+      "sha256": "96fb8cacec4eb4231e33c5f326bceb99b7cfbbba91be00508264c95671570e85",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/__init__.py",
+      "sha256": "eb1c050f315b1e3406095e48fc3b0ac98b6d8309855008ed4e24341eb2d7ba7d",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/conftest.py",
+      "sha256": "4d458a5fe998bc29e4ffd362d80adf453c803423c6f235e67be4f758e6852fef",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_api.py",
+      "sha256": "a59fdf7841b2b413ff15ead0ff8ebf39dd3fbfd57df91eae3ae69b4ad1670026",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_av_policy_pg.py",
+      "sha256": "2679c46ccad925482c62b61978b271f0985a9ec82573e53ac6ef66d56398e669",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_av_policy_unit.py",
+      "sha256": "542c8761273ff5032f3a583f2611a3f59bf045082f94e959fdaa8565c3548c6b",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_av_scan_pg.py",
+      "sha256": "6abc18d1956e7d573a98d7fc645047c9de96bc09b59dfb2713cf0a8f78eea542",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_cdr_boundary_pg.py",
+      "sha256": "ad5db91f38e97aac693b310321c9696921ffb9672c4e9d6e9fa4e34fa818e8ef",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_cdr_boundary_unit.py",
+      "sha256": "45bf1cc568cf54c1228c4bca9331542381159f21b78be4eefee7aeb0fb4de461",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_clamd_once_unit.py",
+      "sha256": "cb8d8b03325a362c9f7760001257ca37bcc5ae059883bb20a5a70c173e2e8bf0",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_clamd_unit.py",
+      "sha256": "d055887434aae166fc5432cfe215d2fe94ba8143a68d302faeae3c4377633fc1",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_evidence_pg.py",
+      "sha256": "9128406ef4752b19ca3dbf7770799e384f52a4e2c1d5847b5cc9612102142401",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_evidence_unit.py",
+      "sha256": "be24964c08851e19382ea30986d2cf99bc243b613ed3559050724dc713c7e4f3",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_scan_boundary_pg.py",
+      "sha256": "b44eda45f3dd778a6caed5ea056771cabe7e560729e02e9f0baefc06d33c4d36",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_scan_boundary_unit.py",
+      "sha256": "f4f86ffa9e28e8dd2605cba2e63cd23d774309925807bbe7bc7278b55f74742e",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_security_pg.py",
+      "sha256": "f110e6f882a81aa1a35e8c96d9a5352ce0a03994563140f96ac2da2f458f0081",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_security_unit.py",
+      "sha256": "cf2311468e6e379286a27ee1160df241051328f2f7ee88ee5306407cfa74b285",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_attachment_storage.py",
+      "sha256": "4ec7be3cd7ff69bd25f93dc784cfe336bdcc67eec135a9501b44b655718ed058",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_auth_access.py",
+      "sha256": "846a257510040ce4ed0e7e362a8ec06e63d51d9a8a572c29fc73a0f2bc6af452",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_docx_synthetic_execution_unit.py",
+      "sha256": "e5fedd068ce46cde28abb9bdfb1b08cc459ca4d735c7d0a925c0bdad12934cf2",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_docx_worker_unit.py",
+      "sha256": "9400963ec9de677256227ad94672835f19c90143e0c4f480cae32a6639e74637",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_isolation_contract_unit.py",
+      "sha256": "3a0c7524e375fe4534382ea1a587bed1e45708d8ffe0128edaadaa8b5ae6e727",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_output_boundary_unit.py",
+      "sha256": "71225be12f905965d024420a41bf425ef8d54a8be74eab373574f207ec2720b7",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_pdf_worker_unit.py",
+      "sha256": "7d053a247cde24fac2c39f2ea1c5aa36170649f9eed8e22d5be466c6d03ba116",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_synthetic_execution_unit.py",
+      "sha256": "4dc2578943a078b86266eccaceac8f33776a5c9c91240bf08d4ed644711780d5",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_cdr_synthetic_output_av_unit.py",
+      "sha256": "591d6cb1d765548185a9eddffce0c8bac7333ec3f8f771dedbc84a3edabf8bd6",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_clamd_preflight_unit.py",
+      "sha256": "bddb6ab85c7c8855f1ec89ad11ebefc16725eeeda49392dad9308ace869de9ce",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_builder_patch.py",
+      "sha256": "8a0ed657438483011c51aca28171c1ff92adb5d8841476ac6e247dda5fd70ad1",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_delta_api.py",
+      "sha256": "9f14e473e7307012c8a2742a4ffbb1dec33ca1bc2126dcd35e9b446d31e1f4a9",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_digest_delta.py",
+      "sha256": "1ca80d5bdd5ee738e031c58a84f7d4520139e86789ca51cbdf0ae05ed0518e75",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_router_registration_patch.py",
+      "sha256": "9679b96853363187c945be76f531962d0f579ce4349433ba2a52419a6faae07d",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_snapshots_api.py",
+      "sha256": "646320a70051ff660df58297381a22de564a0a53f99e562f06b9fafb504ecd5b",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_context_snapshots_unit.py",
+      "sha256": "4bb1981fb5220a6a0595677e37370b279cb92c1198245554b8e576242e2a477c",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_database.py",
+      "sha256": "ad146574be7f967e23ff3c83ee49884342bdc2434f577239b7a00e914f43f96f",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_encounters_api.py",
+      "sha256": "b716dcc5934064720846e1fbdc585046fd450ddc0c3180e0e7df223dfb7b2264",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_health.py",
+      "sha256": "45529f811f0ce407d382d51e85346bcdc91d2706d6f9f63740145324b06013af",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_patient_access_patch.py",
+      "sha256": "eb559ca38c5831c146457caf0f0049006d48cda9dda02f70129b08014c929a36",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_patients_api.py",
+      "sha256": "0560252a00413386e0eaf18c068348958cb0cb3675fe3e1f6af6361cc8259f60",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_postgres_contract.py",
+      "sha256": "e074aadf2a7369fcf3fd6a5d1675bdc1047d9954f342cf475eb2c6310e15ad82",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_questionnaires_api.py",
+      "sha256": "4e449148b244d96fef04b57908b13e9ac2d0b948eb21e4088d6eafe6910f2e8f",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_alert_schema.py",
+      "sha256": "23536013c55da50a7df655641ebeac1452e2074d79c8ee1835577cd5306f0916",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_alerts_api.py",
+      "sha256": "c6a640a1747e736b6f9a01bc1c0ebe9f61d8043f915e2d9c4fae3c30500d3e15",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_followups_pg.py",
+      "sha256": "f74c38060cb490d2320833dabd361ae55b4c03548cffcc2aa7b7766831ef9be8",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_followups_unit.py",
+      "sha256": "c19274d4190888d22109ea874bd5e7b30f9735e041ca9f9fb222cc36a070ded0",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_idempotency_pg.py",
+      "sha256": "06f29dd84ac320a4290b46e3f3f2806833dd13e38d678532bec6d14bb65d4302",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_idempotency_unit.py",
+      "sha256": "275bd08bee086f69983833f5f1a292fbcd598527b6c263266bcc8870d3a34fbb",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_in_app_pg.py",
+      "sha256": "ab71244a7d86e7b84e4299e1f39cc63d4ee68d346e7d43e5d77127663fbe2d3b",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_in_app_unit.py",
+      "sha256": "679e50c8d1e59be015524298b47b3ccf2a102a99dc7621bfaed7e7b818b8bc17",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_notification_routes_pg.py",
+      "sha256": "cb07f509dd25114135403966422056baab799ed3b72640483854fe3815fdeae6",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_notification_routes_unit.py",
+      "sha256": "137b54e019c304d5a6c19f2be0e88b46901d4bd243ce8dece576b800191bf5e2",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_outbox_pg.py",
+      "sha256": "4be6a982baf0eb811e3d88f1fc880cd4d111c7fd9e6a9d4c19601e0a286cc7d1",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_outbox_unit.py",
+      "sha256": "ca09714976172b6c5d634e559c4f56442385c84698d5faf32afe1ada453ff97c",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_read_audit_pg.py",
+      "sha256": "765202b0843c127874865bf1d9fda23eaf30c2417fac402d57ca04ed4c712e05",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_read_audit_unit.py",
+      "sha256": "497c22ad1eb2827dc8aa66767c21736ff50544ea7342a7aca8f440c383a09214",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_router_registered.py",
+      "sha256": "b674e770576d16473201f0f6caceacad7efa57c74d6f49f425bf126608430e13",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_worker_pg.py",
+      "sha256": "8d93b32a9687d5e80ba5a8e9365cba8c9b1edbd1a3d68122165147f89482778c",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_safety_worker_unit.py",
+      "sha256": "127adcae159dd7739b7794fc2e3e3b34645055e60653fe0d79b01c8288206186",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_stage6_final_pg.py",
+      "sha256": "a109c2be55dc2c26579bdf8a7dab06e2c2e5ff50e0356b5717b4cd3820f6dea7",
+      "group": "code"
+    },
+    {
+      "path": "backend/tests/test_stage6_final_unit.py",
+      "sha256": "0a6371f3a33339ea9471e83dcb5136ec6bc6f09f97599a529d28899bad464c8f",
+      "group": "code"
+    },
+    {
+      "path": "compose.av.yaml",
+      "sha256": "01c02ab3e0432d4f79d3e2f779be0fca6965d7e0a7762702b653256dec6812aa",
+      "group": "code"
+    },
+    {
+      "path": "compose.yaml",
+      "sha256": "e6224cef7860bca6b9ce9213bf2441c69b2f5ca7116421a04eacd28de43abee1",
+      "group": "code"
+    },
+    {
+      "path": "docs/attachment_cdr_boundary_v7.md",
+      "sha256": "e38f43bd5bd9ea71d5ee6c69e189b2459adbf483841a43498596d15c765dd980",
+      "group": "docs"
+    },
+    {
+      "path": "docs/attachment_clamd_v4.md",
+      "sha256": "94b6cc2995c3aed90019aac2a06a065f3ae84434776d303bd84a033190ed65d7",
+      "group": "docs"
+    },
+    {
+      "path": "docs/attachment_evidence_v1.md",
+      "sha256": "a345f6682a15113e6c162fa596e762e8dd3f633041055fbbdfc8754003938d49",
+      "group": "docs"
+    },
+    {
+      "path": "docs/attachment_scan_boundary_v3.md",
+      "sha256": "0b112344327a42a7fcd6cc6ef6f88120913ef3773cf7a4aa4659fa2f62b28beb",
+      "group": "docs"
+    },
+    {
+      "path": "docs/attachment_security_v2.md",
+      "sha256": "2657d6d1d2701f74281bf610954fe2e474fff4f9fb289182c23fb8955414343c",
+      "group": "docs"
+    },
+    {
+      "path": "docs/attachments.md",
+      "sha256": "4a26169c8976aac913a3be02c5d17e7e20c9eef0abe11d5811b0473c75cde77b",
+      "group": "docs"
+    },
+    {
+      "path": "docs/cdr_docx_synthetic_v11.md",
+      "sha256": "3c55acf560f022df5d520a40b3f98cc599c87b7e6a2c659ebbbb91f65f826154",
+      "group": "docs"
+    },
+    {
+      "path": "docs/cdr_isolation_contract_v8.md",
+      "sha256": "544aa423422ab1d79154f98bd8225316acc32a487dab7081b1c157edd65ff48b",
+      "group": "docs"
+    },
+    {
+      "path": "docs/cdr_output_boundary_v9.md",
+      "sha256": "7ac458e55e02206cc12b6547506381a201320807892f6b4ae8bd4ab87357feb4",
+      "group": "docs"
+    },
+    {
+      "path": "docs/cdr_output_repeat_av_v12.md",
+      "sha256": "a7f523ef5d9617713e3de79e9591bc2f6f2bd8006b55c78581b76e57bb5e0d7f",
+      "group": "docs"
+    },
+    {
+      "path": "docs/cdr_pdf_synthetic_v10.md",
+      "sha256": "319ae477db91b7aa2e2c956c77afddde6c815bee3b107309a6e4372185950dcf",
+      "group": "docs"
+    },
+    {
+      "path": "docs/clamd_operations_v5.md",
+      "sha256": "0c4ec599bf21351c582bc312f4d8ba146ae9a7d73b9cde5fe096b66349413e7d",
+      "group": "docs"
+    },
+    {
+      "path": "docs/clamd_scan_policy_v6.md",
+      "sha256": "63a79a2fa3f38b811431add18b31269ae3554fc6736cf9a2f15812559637301e",
+      "group": "docs"
+    },
+    {
+      "path": "docs/context_snapshots_v3.md",
+      "sha256": "4e7b79eb35f9192456c87660dc57f9994f24501f04f0b7b0e1dcfef0b10e353f",
+      "group": "docs"
+    },
+    {
+      "path": "docs/decisions/0002-internet-server.md",
+      "sha256": "71e54a926ea569e21b25d5502db1e665d4f8a43284580df05fe42a9db739294c",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_alerts_v1.md",
+      "sha256": "cb7e04b78705103b2324d2063835fffab32c95e4d22d5c3c8e686b791ffd802f",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_followups_v1.md",
+      "sha256": "5aecd403bb8e812effc9f6cea87501c3a63147d27b050c4560021b7f0f04d3e1",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_idempotency_v1.md",
+      "sha256": "a680476579dc542ffb0fa987a6a3a1487b98e461a58df90e22ec74c3a74b8de3",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_in_app_v1.md",
+      "sha256": "1e5b835fb4bfa8753edb34d2b8e572dbdc4611040aaca272fa849449e5dbd353",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_notification_routes_v1.md",
+      "sha256": "9f9d4c0a2cbf22c339f9a94f53ddda2a16e3e2ad8429a74d71ec83f558a231d9",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_outbox_v1.md",
+      "sha256": "9bdd02cc2c2c452cf5fbc4ee2c7863e94ce021fd73afd650949e7e03c874c7ee",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_read_audit_v1.md",
+      "sha256": "75563e23b0a8c820310432fc0585b5fdbee4d69c69969eb0f7534048cb4603a8",
+      "group": "docs"
+    },
+    {
+      "path": "docs/safety_worker_v1.md",
+      "sha256": "1ef15c3d765e7d4160743d38ddd448202cde693fe31cf7301030b3480d1545fb",
+      "group": "docs"
+    },
+    {
+      "path": "docs/security_context_patch.md",
+      "sha256": "876361c838f0e82421d3e494eed508ecc63b1d5792751aa5730cd6ce6d4b415c",
+      "group": "docs"
+    },
+    {
+      "path": "docs/stage6_final_v13.md",
+      "sha256": "49357cdcd49979e84361ce56a92547718bbaaabd677706ab34663394be1cc3f7",
+      "group": "docs"
+    },
+    {
+      "path": "main.py",
+      "sha256": "31a1a70d49254936783f1baeef08298cfa28509b21e52d05ad4a3bf7aabe951b",
+      "group": "code"
+    },
+    {
+      "path": "pyproject.toml",
+      "sha256": "59616d7fc87a54f87f8b78f2685b8629a06cc72a13edc5aeb533d7a704400fef",
+      "group": "code"
+    },
+    {
+      "path": "requirements-dev.txt",
+      "sha256": "249e4ccbe176743aab5386df4f5ea40098db2fc6a7642e44128c26ed70aaf855",
+      "group": "code"
+    },
+    {
+      "path": "requirements.txt",
+      "sha256": "b823832ecbdc1a74beea4d9a74b4b51af69ef832f8b82d0992de535d40f77930",
+      "group": "code"
+    },
+    {
+      "path": "scripts/create_context_snapshots_migration.py",
+      "sha256": "5b69da503dae2435d9e58391efcdd88ca0e3e3c0a05cae666dd2f3295ef7dd37",
+      "group": "code"
+    },
+    {
+      "path": "scripts/postgres_setup.ps1",
+      "sha256": "3ff9fc3979603d482edcbd09cfabe9f71e3703a2aefeafd039aa53f213cb1b41",
+      "group": "code"
+    },
+    {
+      "path": "scripts/postgres_test_db.ps1",
+      "sha256": "52f641a02e59bb3abcb7acd3b55ff9a7f5b78d59e718a9c67c19b721216e1716",
+      "group": "code"
+    },
+    {
+      "path": "scripts/register_context_router.py",
+      "sha256": "4b6df05e6617543d539da30fd6127e0fded6ab9d813cd9d406529d122774ee02",
+      "group": "code"
+    },
+    {
+      "path": "scripts/smoke_backend.ps1",
+      "sha256": "6cf54e614e62cca6e7caa97572f66d8b8c9f6a317f3beea69d095c787f4e66eb",
+      "group": "code"
+    }
+  ],
+  "temporary_paths": [
+    "demo_bridge",
+    "demo_mcp",
+    "demo-export",
+    "deploy/hoster/aidoctor-demo",
+    "deploy/hoster/aidoctor_live_config.example.php",
+    "backend/tests/test_demo_bridge_unit.py",
+    "backend/tests/test_demo_bridge_pg.py",
+    "backend/tests/test_mcp_demo_unit.py",
+    "backend/tests/test_live_demo_unit.py",
+    "backend/tests/test_live_demo_php.py",
+    "docs/demo_bridge_v15.md",
+    "docs/demo_bridge_openapi_v15.json",
+    "docs/site_creator_message_v15.md",
+    "docs/mcp_budget_demo_v14.md",
+    "docs/live_demo_v16.md",
+    "docs/live_demo_site_builder_v16.md",
+    "aidoctor_live_config.php",
+    "aidoctor_live_storage"
+  ],
+  "stage6_final_files": [
+    "backend/app/services/attachment_av_scan.py",
+    "backend/tests/test_stage6_final_unit.py",
+    "backend/tests/test_stage6_final_pg.py",
+    "docs/stage6_final_v13.md"
+  ]
+}

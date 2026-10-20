@@ -1,0 +1,12 @@
+{
+  "reference": "AIDoctor-master (4).zip — stage 6.6 FINAL, excluding 6.7 Demo Bridge",
+  "root": "C:\\Users\\pashk\\PycharmProjects\\AIDoctor",
+  "expected": 224,
+  "matched": 223,
+  "missing": [],
+  "changed": [
+    "backend/alembic/versions/aictx_v3_20261017_context_snapshots.py"
+  ],
+  "temporary_remnants": [],
+  "configuration_notes": []
+}
