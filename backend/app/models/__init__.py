@@ -1,4 +1,5 @@
 from app.models.access import DoctorPatient, User
+from app.models.admin_audit import AdminAuditEvent
 from app.models.attachment_av_scan import AttachmentAVScan
 from app.models.attachment_evidence_draft import (
     AttachmentEvidenceDraft,
@@ -25,6 +26,7 @@ from app.models.safety_outbox import SafetyOutbox, SafetyOutboxEvent
 from app.models.safety_read_audit import SafetyReadAudit
 
 __all__ = [
+    "AdminAuditEvent",
     "AttachmentAVScan",
     "AttachmentEvidenceDraft",
     "AttachmentEvidenceReadAudit",

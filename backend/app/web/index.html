@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
-  <title>AIDoctor — кабинеты врача и пациента</title>
+  <title>AIDoctor — кабинеты врача, пациента и администратора</title>
   <link rel="stylesheet" href="/app/assets/style.css">
   <script defer src="/app/assets/app.js"></script>
 </head>
@@ -16,9 +16,9 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1B</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1C</span>
         <h1>Ваше клиническое пространство</h1>
-        <p>Доступны кабинеты врача и пациента. Кабинет администратора ещё не реализован.</p>
+        <p>Доступны кабинеты врача, пациента и администратора.</p>
       </div>
       <form id="login-form">
         <label for="login-username">Имя пользователя</label>
@@ -44,8 +44,9 @@
         <button type="button" id="overview-nav" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
         <button type="button" class="nav-link" data-view="patient" id="patient-nav" hidden><span>♙</span> Моя карточка</button>
         <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
+        <button type="button" class="nav-link" data-view="admin" id="admin-nav" hidden><span>▣</span> Администрирование</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-1B</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-1C</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -95,6 +96,76 @@
             <p>Пока не реализованы проверенные правила видимости, не показываются визиты, результаты тестов, документы, внутренние записи и AI-черновики.
                Назначения появятся только после отдельной реализации врачебного утверждения и публикации.</p>
           </div>
+        </section>
+
+        <section id="admin-view" class="page" hidden>
+          <div class="page-intro"><span class="eyebrow">УПРАВЛЕНИЕ ДОСТУПОМ</span>
+            <h1>Кабинет администратора</h1>
+            <p>Все изменения проходят серверную проверку роли и сохраняются в PostgreSQL с аудитом.</p>
+          </div>
+          <div class="admin-toolbar">
+            <button class="button subtle" type="button" id="admin-refresh">Обновить данные</button>
+            <span class="message" id="admin-status" role="status" aria-live="polite"></span>
+          </div>
+          <div class="admin-grid">
+            <section class="panel">
+              <div class="panel-heading"><div><h2>Пользователи</h2><p>Существующие аккаунты и роли (до 500 записей).</p></div></div>
+              <div id="admin-users" class="admin-list" aria-live="polite"></div>
+              <form id="admin-user-form" class="admin-form">
+                <h3>Создать учётную запись</h3>
+                <label for="admin-username">Логин</label>
+                <input id="admin-username" required minlength="3" maxlength="120" pattern="[A-Za-z0-9_.-]+">
+                <label for="admin-user-role">Роль</label>
+                <select id="admin-user-role"><option value="doctor">Врач</option><option value="patient">Пациент</option></select>
+                <label for="admin-user-password">Пароль (от 12 символов)</label>
+                <input id="admin-user-password" type="password" required minlength="12" maxlength="256" autocomplete="new-password">
+                <button class="button primary" type="submit">Создать пользователя</button>
+                <p class="message" id="admin-user-status" role="status" aria-live="polite"></p>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><div><h2>Карточки пациентов</h2><p>Список активных карточек без медицинских данных.</p></div></div>
+              <div id="admin-patients" class="admin-list" aria-live="polite"></div>
+              <form id="admin-patient-form" class="admin-form">
+                <h3>Новый синтетический пациент</h3>
+                <label for="admin-patient-alias">Псевдоним</label>
+                <input id="admin-patient-alias" required maxlength="100" placeholder="Синтетический С-002">
+                <button class="button primary" type="submit">Создать карточку</button>
+                <p class="message" id="admin-patient-status" role="status" aria-live="polite"></p>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><div><h2>Связи врач–пациент</h2><p>Назначить врача или отозвать доступ к карточке.</p></div></div>
+              <div id="admin-links" class="admin-list" aria-live="polite"></div>
+              <form id="admin-link-form" class="admin-form">
+                <h3>Предоставить врачу доступ</h3>
+                <label for="admin-doctor-select">Врач</label>
+                <select id="admin-doctor-select" required></select>
+                <label for="admin-link-patient-select">Пациент</label>
+                <select id="admin-link-patient-select" required></select>
+                <button class="button primary" type="submit">Связать</button>
+                <p class="message" id="admin-link-status" role="status" aria-live="polite"></p>
+              </form>
+            </section>
+            <section class="panel">
+              <div class="panel-heading"><div><h2>Пациентский аккаунт</h2><p>Привязка допускается только для свободной карточки и свободной учётной записи.</p></div></div>
+              <form id="admin-bind-form" class="admin-form">
+                <label for="admin-patient-account-select">Учётная запись пациента</label>
+                <select id="admin-patient-account-select" required></select>
+                <label for="admin-bind-patient-select">Карточка без аккаунта</label>
+                <select id="admin-bind-patient-select" required></select>
+                <button class="button primary" type="submit">Привязать аккаунт</button>
+                <p class="message" id="admin-bind-status" role="status" aria-live="polite"></p>
+              </form>
+              <div class="notice notice-compact"><strong>Ограничения UI-1C</strong>
+                <p>Редактирование ролей, удаление аккаунтов и перенос привязанной карточки не включены из-за риска потери доступа или нарушения истории.</p>
+              </div>
+            </section>
+          </div>
+          <section class="panel admin-audit-panel">
+            <div class="panel-heading"><div><h2>Аудит администратора</h2><p>Последние 50 операций UI-1C и маршрутов управления связями.</p></div></div>
+            <div id="admin-audit" class="admin-list" aria-live="polite"></div>
+          </section>
         </section>
 
         <section id="settings-view" class="page" hidden>

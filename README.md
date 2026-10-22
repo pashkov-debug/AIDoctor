@@ -1,12 +1,58 @@
 # AIDoctor — универсальная медицинская платформа
 
-**Статус:** активная разработка. UI-1A (врач) и UI-1B (минимальная карточка пациента) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
+**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент) и UI-1C (администратор) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16+, Docker.
 - Рабочая среда: Windows 11, PyCharm, PowerShell.
 - Единственная серверная SQL-БД: **PostgreSQL + psycopg 3**. SQLite исключён.
 - Версионированный HTTP API: `/api/v1`.
 - Пользователи: врач, пациент, администратор с разными правами.
+
+
+## Текущий инкремент UI-1C — администратор
+
+Локальное приложение `/app` поддерживает три роли. Администратор
+`admin_ui1` входит с ранее установленным паролем; через кабинет
+создаёт учётные записи врача/пациента, постоянные **синтетические**
+карточки, привязывает аккаунт пациента и предоставляет/отзывает
+доступ врача к пациенту. Новая таблица `admin_audit_events` сохраняет
+историю изменений UI-1C; миграция `ui1c_20261023` следует за
+`ui1_20261022`. Кабинеты врача и пациента сохраняются.
+
+Доступные backend-контракты: `GET/POST /api/v1/admin/users`,
+`GET /api/v1/admin/patients`,
+`POST /api/v1/admin/synthetic-patients`, `GET /api/v1/admin/links`,
+`DELETE /api/v1/admin/links/{link_id}`, `GET /api/v1/admin/audit`,
+совместимые `POST /api/v1/access/link` и
+`POST /api/v1/access/patient-account`.
+Второй теперь выдаёт 409, если карточка или аккаунт уже заняты.
+
+**Запуск Windows PowerShell:**
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini check
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+**Проверки (в отдельном терминале):**
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+python -m pytest backend/tests/test_ui1_unit.py backend/tests/test_ui1b_unit.py backend/tests/test_ui1c_unit.py -v
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_ui1_pg.py backend/tests/test_ui1b_pg.py backend/tests/test_ui1c_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL
+```
+
+**ВНИМАНИЕ:** `pg_engine` удаляет/создаёт таблицы — запускать тесты
+с `TEST_DATABASE_URL` **только на локальной `aidoctor_test`**, никогда на
+`aidoctor` с постоянными синтетическими данными.
+Подробно: [docs/ui1c_admin_portal.md](docs/ui1c_admin_portal.md).
+Изменение ролей, удаление пациентов и AI-назначения вне UI-1C.
 
 ## Цель проекта
 

@@ -24,7 +24,7 @@ def test_patient_portal_public_shell_protected_api() -> None:
         assert "no-store" in response.headers["cache-control"]
         assert 'id="patient-view"' in response.text
         assert 'id="patient-details"' in response.text
-        assert "Кабинет администратора ещё не реализован" in response.text
+        assert 'id="admin-view"' in response.text
         assert "Назначения появятся только после" in response.text
         assert client.get("/api/v1/patients/me/portal").status_code == 401
         assert client.get("/app/assets/app.js").status_code == 200
@@ -36,4 +36,4 @@ def test_patient_portal_public_shell_protected_api() -> None:
     assert "sessionStorage" not in script
     assert "innerHTML" not in script
     assert 'api("/patients/me/portal")' in script
-    assert '["doctor", "patient"]' in script
+    assert '["doctor", "patient", "admin"]' in script

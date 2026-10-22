@@ -5,6 +5,7 @@ from fastapi.responses import FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.access import router as access_router
+from app.api.routes.admin import router as admin_router
 from app.api.routes.attachment_evidence import router as attachment_evidence_router
 from app.api.routes.attachment_security import router as attachment_security_router
 from app.api.routes.attachments import router as attachments_router
@@ -35,6 +36,7 @@ def create_app() -> FastAPI:
     routers = (
         health_router,
         auth_router,
+        admin_router,
         doctor_settings_router,
         access_router,
         patient_portal_router,
