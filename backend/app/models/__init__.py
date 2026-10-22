@@ -7,6 +7,7 @@ from app.models.attachment_evidence_draft import (
 )
 from app.models.attachment_security import AttachmentSecurityEvent, AttachmentSecurityReview
 from app.models.auth_session import AuthSession
+from app.models.clinical_order import ClinicalOrder, ClinicalOrderAudit
 from app.models.clinical_publication import ClinicalPublication, ClinicalPublicationAudit
 from app.models.context_snapshot import ContextSnapshot
 from app.models.doctor_settings import DoctorSettings, DoctorSettingsAudit
@@ -37,6 +38,8 @@ __all__ = [
     "ContextSnapshot",
     "ClinicalPublication",
     "ClinicalPublicationAudit",
+    "ClinicalOrder",
+    "ClinicalOrderAudit",
     "DoctorPatient",
     "DoctorSettings",
     "DoctorSettingsAudit",

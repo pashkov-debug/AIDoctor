@@ -181,3 +181,15 @@ code { background: #e9f1f3; padding: 2px 5px; border-radius: 4px; }
 
 /* UI-2C: исходные факты в карточке врача видны целиком без горизонтального переполнения */
 .clinical-entry details pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; font-size: .8rem; }
+
+/* UI-3A: структурированные назначения и предварительный просмотр утверждения. */
+.order-grid { display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px; margin:14px 0; }
+.order-grid label { display:grid;gap:6px; min-width:0; }
+#order-form { margin-top:20px; border-top:1px solid #e4eaee; padding-top:20px; }
+#order-form > label {display:grid;gap:6px;margin-top:13px;}
+#order-med-fields[hidden], #order-exam-fields[hidden] {display:none;}
+#order-exam-fields label {display:grid;gap:7px;margin:12px 0;}
+.order-dialog {max-width:min(760px,94vw);border:1px solid #d4e0e8;border-radius:14px;padding:25px;box-shadow:0 18px 80px #19364f4a;}
+.order-dialog::backdrop {background:#112e3da8;}
+.order-dialog pre {max-height:330px;overflow:auto;background:#eef4f5;border-radius:8px;padding:15px;white-space:pre-wrap;overflow-wrap:anywhere;}
+@media(max-width:650px){.order-grid{grid-template-columns:1fr;}}

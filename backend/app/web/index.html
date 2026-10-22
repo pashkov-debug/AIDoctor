@@ -16,7 +16,7 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-2B</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-3A</span>
         <h1>Ваше клиническое пространство</h1>
         <p>Доступны кабинеты врача, пациента и администратора.</p>
       </div>
@@ -47,7 +47,7 @@
         <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
         <button type="button" class="nav-link" data-view="admin" id="admin-nav" hidden><span>▣</span> Администрирование</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-2B</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-3A</span><p>AI отключён; назначения создаются и утверждаются врачом вручную.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -75,7 +75,7 @@
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
           <div class="notice"><strong>Границы текущего этапа</strong>
-            <p id="overview-notice">Клиническая карточка доступна врачу. Назначения, тесты и AI-анализ пока не подключены.</p></div>
+            <p id="overview-notice">Клиническая карточка доступна врачу. Ручные назначения доступны врачу. Тесты и AI-анализ пока не подключены.</p></div>
         </section>
 
 
@@ -94,6 +94,7 @@
             <button class="button subtle" type="button" data-clinical-target="clinical-visits-section">Визиты</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-history-section">История</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
+            <button class="button subtle" type="button" data-clinical-target="clinical-orders-section">Назначения</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-digest-section">Context Builder</button>
           </nav>
           <div class="clinical-grid">
@@ -154,13 +155,77 @@
               <p>Состав и даты фактов. Без AI-интерпретации; непроверенные вложения исключены.</p></div></div>
             <div id="clinical-context" class="clinical-list"></div>
           </section>
+          <section class="panel clinical-digest" id="clinical-orders-section">
+            <div class="panel-heading"><div><h2>Назначения врача <span id="clinical-orders-count" class="count-marker">—</span></h2>
+              <p>Черновик виден только врачу. После отдельного утверждения пациент видит структурированное назначение.</p></div></div>
+            <div id="clinical-orders-list" class="clinical-list">Загрузка…</div>
+            <form id="order-form" class="admin-form">
+              <h3 id="order-form-title">Новое назначение — черновик</h3>
+              <p class="muted">Не заполняйте вымышленными дозировками. Неполные черновики не утверждаются.</p>
+              <div class="order-grid">
+                <label>Тип
+                  <select id="order-kind"><option value="examination">Обследование</option><option value="medication">Препарат</option></select>
+                </label>
+                <label>Название
+                  <input id="order-name" maxlength="200" required autocomplete="off">
+                </label>
+              </div>
+              <div id="order-med-fields" class="order-grid" hidden>
+                <label>Действующее вещество <input id="order-active-ingredient" maxlength="200"></label>
+                <label>Форма выпуска <input id="order-dosage-form" maxlength="120"></label>
+                <label>Содержание вещества в единице <input id="order-strength" maxlength="120" placeholder="Например, 5 мг/таб."></label>
+                <label>Разовая доза (число) <input id="order-dose-value" type="number" step="0.0001" min="0.0001"></label>
+                <label>Единица разовой дозы <input id="order-dose-unit" maxlength="60" placeholder="мг"></label>
+                <label>Путь приёма/введения <input id="order-route" maxlength="120"></label>
+                <label>Приёмов в день <input id="order-frequency" type="number" min="1" max="12"></label>
+                <label>Время по местным часам, через запятую <input id="order-times" placeholder="08:00, 20:00"></label>
+                <label>Часовой пояс IANA <input id="order-timezone" maxlength="80" placeholder="Europe/Moscow"></label>
+                <label>Дата начала <input id="order-start-date" type="date"></label>
+                <label>Продолжительность, дней <input id="order-duration" type="number" min="1" max="3650"></label>
+                <label>Условия приёма <input id="order-administration" maxlength="500"></label>
+                <label>Противопоказания / взаимодействия (заметки врача) <textarea id="order-contraindications" maxlength="1000" rows="2"></textarea></label>
+              </div>
+              <div id="order-exam-fields">
+                <label>Что именно выполнить
+                  <textarea id="order-examination-details" maxlength="1000" rows="2"></textarea>
+                </label>
+              </div>
+              <label>Показание
+                <textarea id="order-indication" maxlength="1000" rows="2"></textarea>
+              </label>
+              <label>Обоснование врача
+                <textarea id="order-rationale" maxlength="1500" rows="2"></textarea>
+              </label>
+              <label>Источник / клиническая рекомендация, если проверена
+                <input id="order-source" maxlength="500">
+              </label>
+              <div class="form-actions">
+                <button class="button primary" type="submit" id="order-save-button">Сохранить черновик</button>
+                <button class="button subtle" type="button" id="order-edit-cancel" hidden>Отменить редактирование</button>
+                <span id="order-save-status" class="message" role="status" aria-live="polite"></span>
+              </div>
+            </form>
+          </section>
+          <dialog id="order-approval-dialog" class="order-dialog">
+            <h2>Проверка перед утверждением</h2>
+            <p>В БД будет изменён статус только этого назначения на «утверждено».
+              Оно станет доступно пациенту. Исходный текст AI сюда не переносится.</p>
+            <pre id="order-approval-preview"></pre>
+            <p><strong>Врач обязан проверить показания, дозировку, взаимодействия и противопоказания.
+              Система проверяет формат, но не медицинскую безопасность назначения.</strong></p>
+            <div class="form-actions">
+              <button type="button" class="button primary" id="order-approval-submit">Проверил — утвердить и показать пациенту</button>
+              <button type="button" class="button subtle" id="order-approval-cancel">Отмена</button>
+            </div>
+            <p id="order-approval-status" role="status" class="message"></p>
+          </dialog>
           <div class="visibility-info"><strong>Кто видит эти данные?</strong>
             <p>Врач: визиты, события, наблюдения и Digest разрешённых пациентов.
-              Пациент: собственную карточку и только специально опубликованный врачом текст.
+              Пациент: собственную карточку, опубликованный врачом текст и активные утверждённые назначения.
               Врачебные черновики, внутренние события и AI-ответы пациенту не показываются.</p>
           </div>
-          <div class="notice"><strong>Граница UI-2B</strong>
-            <p>Визиты сохраняются как черновики. Ни одно действие на этом экране не назначает лечение и не публикует медицинские сведения пациенту.</p>
+          <div class="notice"><strong>Граница UI-3A</strong>
+            <p>Визиты сохраняются как черновики. Назначения создаются отдельно, публикуются пациенту только после явного ручного утверждения врачом.</p>
           </div>
         </section>
 
@@ -185,12 +250,17 @@
             <div id="patient-publications" class="clinical-list">Загрузка…</div>
           </section>
           <section class="panel clinical-digest">
+            <div class="panel-heading"><div><h2>Мои утверждённые назначения</h2>
+              <p>Препараты и обследования, отдельно утверждённые врачом. Черновики недоступны.</p></div></div>
+            <div id="patient-orders" class="clinical-list">Загрузка…</div>
+          </section>
+          <section class="panel clinical-digest">
             <div class="panel-heading"><div><h2>Что мне доступно сейчас</h2>
               <p>Разделение прав на уровне FastAPI, а не только интерфейса.</p></div></div>
             <div class="access-rows">
-              <div><strong>Видно:</strong> моя карточка и тексты, отдельно опубликованные врачом.</div>
-              <div><strong>Ещё не опубликовано:</strong> исходные визиты и внутренние записи, Digest, результаты тестов, документы и назначения.</div>
-              <div><strong>Позже:</strong> врачебно утверждённые назначения, назначенные тесты и разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
+              <div><strong>Видно:</strong> моя карточка, опубликованные тексты и утверждённые действующие назначения.</div>
+              <div><strong>Ещё не опубликовано:</strong> исходные визиты и внутренние записи, Digest, результаты тестов и документы.</div>
+              <div><strong>Позже:</strong> психологические тесты и дополнительная разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
             </div>
           </section>
         </section>

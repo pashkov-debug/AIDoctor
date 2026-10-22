@@ -22,8 +22,13 @@ function endSession(message = "") {
   state.view = "overview";
   state.clinicalPatient = null;
   state.clinicalPublications = [];
+  orderEditing = null;
+  orderApproval = null;
+  orderPendingKey = null;
+  if ($("order-approval-dialog").open) $("order-approval-dialog").close();
   $("patient-details").hidden = true;
   $("patient-publications").replaceChildren();
+  $("patient-orders").replaceChildren();
   showMessage("patient-status", "");
   clearAdminData();
   $("workspace").hidden = true;
@@ -75,7 +80,7 @@ function roleLayout(user) {
     $("overview-description").textContent =
       "Доступные вам пациенты и настройки для будущего клинического контекста.";
     $("overview-notice").textContent =
-      "Выберите пациента для просмотра истории и визитов. Назначения, тесты и AI-область пока не подключены.";
+      "Выберите пациента для просмотра истории и визитов. Ручные назначения доступны врачу. Тесты и AI-область пока не подключены.";
   }
   showView(doctor ? "overview" : patient ? "patient" : "admin");
 }
@@ -124,6 +129,7 @@ async function loadPatientPortal() {
     $("patient-details").hidden = false;
     showMessage("patient-status", "");
     await loadPatientPublications(accountId);
+    await loadPatientOrders(accountId);
   } catch (error) {
     if (state.user?.id !== accountId || state.view !== "patient") return;
     const message = error.status === 404
@@ -441,11 +447,12 @@ async function loadClinical() {
     renderClinicalHistory(history.items || []);
     renderClinicalObservations(context);
     renderClinicalDigest(digest);
+    await loadClinicalOrders(patient.id);
     showMessage("clinical-card-status", "Данные обновлены", true);
   } catch (error) {
     if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
     showMessage("clinical-card-status", `Ошибка загрузки: ${error.message}`);
-    ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
+    ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context", "clinical-orders-list"].forEach((id) => {
       $(id).textContent = "Данные недоступны.";
     });
   }
@@ -800,3 +807,290 @@ $("admin-bind-form").addEventListener("submit", (event) => {
     patient_id: $("admin-bind-patient-select").value,
   }, "admin-bind-status");
 });
+
+
+// UI-3A: отдельный контракт ручных назначений. Ни AI, ни автоматических решений.
+let orderEditing = null;
+let orderApproval = null;
+let orderPendingKey = null;
+const orderMedicationFields = {
+  active_ingredient: "order-active-ingredient",
+  dosage_form: "order-dosage-form",
+  strength: "order-strength",
+  dose_value: "order-dose-value",
+  dose_unit: "order-dose-unit",
+  route: "order-route",
+  frequency_per_day: "order-frequency",
+  timezone: "order-timezone",
+  start_date: "order-start-date",
+  duration_days: "order-duration",
+  administration_notes: "order-administration",
+  contraindications: "order-contraindications",
+};
+const orderCommonFields = {
+  indication: "order-indication", rationale: "order-rationale",
+  source_reference: "order-source",
+};
+
+function orderEndpoint(patientId) {
+  return `/patients/${encodeURIComponent(patientId)}/clinical-orders`;
+}
+
+function refreshOrderFields() {
+  const med = $("order-kind").value === "medication";
+  $("order-med-fields").hidden = !med;
+  $("order-exam-fields").hidden = med;
+}
+$("order-kind").addEventListener("change", refreshOrderFields);
+
+function orderPayload() {
+  const kind = $("order-kind").value;
+  const data = {
+    kind, name: $("order-name").value.trim(),
+    request_key: orderEditing?.request_key || (orderPendingKey ||= crypto.randomUUID()),
+  };
+  Object.entries(orderCommonFields).forEach(([key, field]) => {
+    const v = $(field).value.trim();
+    if (v) data[key] = v;
+  });
+  if (kind === "medication") {
+    Object.entries(orderMedicationFields).forEach(([key, field]) => {
+      const v = $(field).value.trim();
+      if (v) data[key] = v;
+    });
+    if (data.frequency_per_day) data.frequency_per_day = Number(data.frequency_per_day);
+    if (data.duration_days) data.duration_days = Number(data.duration_days);
+    const times = $("order-times").value.split(",").map((x) => x.trim()).filter(Boolean);
+    if (times.length) data.times_local = times;
+  } else {
+    const v = $("order-examination-details").value.trim();
+    if (v) data.examination_details = v;
+  }
+  return data;
+}
+
+function resetOrderEditor() {
+  orderEditing = null;
+  orderPendingKey = null;
+  $("order-form").reset();
+  $("order-kind").disabled = false;
+  $("order-form-title").textContent = "Новое назначение — черновик";
+  $("order-save-button").textContent = "Сохранить черновик";
+  $("order-edit-cancel").hidden = true;
+  refreshOrderFields();
+}
+$("order-edit-cancel").addEventListener("click", resetOrderEditor);
+
+function startOrderEdit(item) {
+  orderEditing = item;
+  $("order-kind").value = item.kind;
+  $("order-kind").disabled = true;
+  $("order-name").value = item.name;
+  Object.entries(orderCommonFields).forEach(([key, id]) => {
+    $(id).value = item[key] ?? "";
+  });
+  Object.entries(orderMedicationFields).forEach(([key, id]) => {
+    $(id).value = item[key] ?? "";
+  });
+  $("order-times").value = (item.times_local || []).join(", ");
+  $("order-examination-details").value = item.examination_details || "";
+  $("order-form-title").textContent = `Редактирование черновика · версия ${item.version}`;
+  $("order-save-button").textContent = "Сохранить изменения";
+  $("order-edit-cancel").hidden = false;
+  refreshOrderFields();
+  $("order-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+function orderDescription(item) {
+  if (item.kind === "examination") {
+    return [item.name, item.examination_details, item.indication]
+      .filter(Boolean).join(" · ");
+  }
+  const dose = item.dose_value ? `${item.dose_value} ${item.dose_unit || ""}` : "доза не указана";
+  const clock = (item.times_local || []).join(", ") || "время не указано";
+  return [
+    item.name, item.strength, dose, item.route,
+    `приёмов/день: ${item.frequency_per_day || "—"}`,
+    `часы: ${clock} (${item.timezone || "без часового пояса"})`,
+    item.start_date ? `начало ${item.start_date}` : null,
+    item.duration_days ? `${item.duration_days} дней` : null,
+    item.administration_notes ? `Условия: ${item.administration_notes}` : null,
+  ].filter(Boolean).join(" · ");
+}
+
+function orderRecord(item) {
+  const statusName = { draft: "Черновик", approved: "Утверждено", cancelled: "Отменено" };
+  const row = clinicalLine(
+    `${item.kind === "medication" ? "Препарат" : "Обследование"} · ${statusName[item.status]}`,
+    orderDescription(item),
+    `Версия ${item.version}; ${item.kind === "medication" ? "врач обязан проверить дозировку" : "ручное назначение"}`,
+  );
+  const details = document.createElement("details");
+  const summary = document.createElement("summary");
+  summary.textContent = "Полные поля назначения";
+  const pre = document.createElement("pre");
+  pre.textContent = JSON.stringify(item, null, 2);
+  details.append(summary, pre);
+  row.append(details);
+  if (item.status === "draft") {
+    if (item.author_id === state.user?.id) {
+      const edit = document.createElement("button");
+      edit.type = "button";
+      edit.className = "button subtle";
+      edit.textContent = "Редактировать";
+      edit.addEventListener("click", () => startOrderEdit(item));
+      row.append(edit);
+    }
+    const approve = document.createElement("button");
+    approve.type = "button";
+    approve.className = "button primary";
+    approve.textContent = "Просмотр изменений → Одобрить";
+    approve.addEventListener("click", () => {
+      orderApproval = item;
+      $("order-approval-preview").textContent = JSON.stringify({
+        действие: "Утвердить и показать пациенту",
+        пациент: item.patient_id,
+        назначение: item.id,
+        версия: item.version,
+        вид: item.kind,
+        название: item.name,
+        подробности: orderDescription(item),
+        показание: item.indication,
+        обоснование_врача: item.rationale,
+        взаимодействия_и_противопоказания: item.contraindications,
+        источник: item.source_reference,
+      }, null, 2);
+      showMessage("order-approval-status", "");
+      $("order-approval-dialog").showModal();
+    });
+    row.append(approve);
+  }
+  if (item.status !== "cancelled") {
+    const cancel = document.createElement("button");
+    cancel.type = "button";
+    cancel.className = "button subtle";
+    cancel.textContent = item.status === "approved" ? "Отменить утверждённое" : "Отменить черновик";
+    cancel.addEventListener("click", () => cancelOrder(item, cancel));
+    row.append(cancel);
+  }
+  return row;
+}
+
+async function loadClinicalOrders(patientId) {
+  $("clinical-orders-list").textContent = "Загрузка назначений…";
+  try {
+    const items = await api(orderEndpoint(patientId));
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId) return;
+    $("clinical-orders-count").textContent = String(items.length);
+    showClinicalRecords(
+      "clinical-orders-list", items, orderRecord,
+      "Назначений нет. Создайте черновик ниже.",
+    );
+  } catch (error) {
+    $("clinical-orders-list").textContent = `Назначения недоступны: ${error.message}`;
+  }
+}
+
+$("order-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patient = state.clinicalPatient;
+  if (!patient || state.user?.role !== "doctor") return;
+  const button = $("order-save-button");
+  button.disabled = true;
+  showMessage("order-save-status", "Запись…");
+  const data = orderPayload();
+  try {
+    if (orderEditing) {
+      await api(`${orderEndpoint(patient.id)}/${encodeURIComponent(orderEditing.id)}`, {
+        method: "PUT", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ expected_version: orderEditing.version, data }),
+      });
+    } else {
+      await api(orderEndpoint(patient.id), {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      });
+    }
+    resetOrderEditor();
+    showMessage("order-save-status", "Черновик сохранён. Пациент его не видит.", true);
+    await loadClinicalOrders(patient.id);
+  } catch (error) {
+    showMessage("order-save-status", `Ошибка сохранения: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("order-approval-cancel").addEventListener("click", () => {
+  $("order-approval-dialog").close();
+  orderApproval = null;
+});
+$("order-approval-submit").addEventListener("click", async () => {
+  const item = orderApproval;
+  if (!item || item.patient_id !== state.clinicalPatient?.id) return;
+  const button = $("order-approval-submit");
+  button.disabled = true;
+  try {
+    await api(`${orderEndpoint(item.patient_id)}/${encodeURIComponent(item.id)}/approve`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        expected_version: item.version,
+        confirm_patient_visibility: true, confirm_clinical_review: true,
+      }),
+    });
+    $("order-approval-dialog").close();
+    orderApproval = null;
+    await loadClinicalOrders(item.patient_id);
+  } catch (error) {
+    showMessage("order-approval-status", `Не утверждено: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function cancelOrder(item, button) {
+  const reason = window.prompt("Причина отмены (не менее 3 символов):");
+  if (reason === null) return;
+  if (reason.trim().length < 3) {
+    showMessage("order-save-status", "Укажите причину отмены от 3 символов.");
+    return;
+  }
+  if (!window.confirm("Отменить назначение? Если оно опубликовано, пациент перестанет видеть его как актуальное.")) return;
+  button.disabled = true;
+  try {
+    await api(`${orderEndpoint(item.patient_id)}/${encodeURIComponent(item.id)}/cancel`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expected_version: item.version, reason: reason.trim() }),
+    });
+    if (orderEditing?.id === item.id) resetOrderEditor();
+    await loadClinicalOrders(item.patient_id);
+  } catch (error) {
+    showMessage("order-save-status", `Ошибка отмены: ${error.message}`);
+    button.disabled = false;
+  }
+}
+
+async function loadPatientOrders(accountId) {
+  const target = $("patient-orders");
+  target.textContent = "Загрузка назначений…";
+  try {
+    const data = await api("/patients/me/clinical-orders");
+    if (state.user?.id !== accountId || state.view !== "patient") return;
+    target.replaceChildren();
+    if (!data.items.length) {
+      target.textContent = "Актуальных утверждённых назначений пока нет.";
+      return;
+    }
+    data.items.forEach((item) => target.append(
+      clinicalLine(
+        `${item.kind === "medication" ? "Препарат" : "Обследование"} · ${item.name}`,
+        orderDescription(item),
+        `Врачебное утверждение: ${formatDate(item.approved_at)}`,
+      )
+    ));
+  } catch (error) {
+    if (state.user?.id === accountId && state.view === "patient") {
+      target.textContent = `Не удалось получить назначения: ${error.message}`;
+    }
+  }
+}

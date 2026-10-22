@@ -10,6 +10,7 @@ from app.api.routes.attachment_evidence import router as attachment_evidence_rou
 from app.api.routes.attachment_security import router as attachment_security_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.clinical_orders import router as clinical_orders_router
 from app.api.routes.clinical_publication import router as clinical_publication_router
 from app.api.routes.context import router as context_router
 from app.api.routes.doctor_settings import router as doctor_settings_router
@@ -42,6 +43,7 @@ def create_app() -> FastAPI:
         access_router,
         patient_portal_router,
         clinical_publication_router,
+        clinical_orders_router,
         patients_router,
         encounters_router,
         questionnaires_router,
