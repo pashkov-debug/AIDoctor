@@ -51,17 +51,16 @@ def test_ui1_web_public_but_no_private_data() -> None:
         assert 'id="workspace"' in response.text
         assert "Доступны кабинеты врача, пациента и администратора" in response.text
         assert (
-            "Российские клинические рекомендации, утверждённые Минздравом России"
-            in response.text
+            "Российские клинические рекомендации, утверждённые Минздравом России" in response.text
         )
         assert 'id="clinical-rki"' in response.text
         assert client.get("/app/assets/app.js").status_code == 200
         assert client.get("/").status_code == 200
         assert client.get("/api/v1/doctors/me/settings").status_code == 401
         assert client.get("/api/v1/doctors/me/doctor-context").status_code == 401
-    script = (
-        Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js"
-    ).read_text(encoding="utf-8")
+    script = (Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js").read_text(
+        encoding="utf-8"
+    )
     assert "localStorage" not in script
     assert "sessionStorage" not in script
     assert "innerHTML" not in script

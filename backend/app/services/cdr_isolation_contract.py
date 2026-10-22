@@ -95,9 +95,7 @@ def build_unexecuted_cdr_plan(
     """
     if not isinstance(candidate, QuarantinedCDRCandidate):
         raise CDRIsolationDenied("Требуется аудированный тип CDR-кандидата")
-    if not isinstance(image_by_digest, str) or not _IMAGE_RE.fullmatch(
-        image_by_digest
-    ):
+    if not isinstance(image_by_digest, str) or not _IMAGE_RE.fullmatch(image_by_digest):
         raise CDRIsolationDenied("CDR-образ обязан быть закреплён по SHA-256")
 
     if candidate.media_type not in CDR_INPUT_FORMATS.values():

@@ -31,7 +31,9 @@ def get_own_safety_inbox(
     notifications = list_own_inbox(session, recipient_user_id=user.id)
     result = [SafetyInAppNotificationRead.model_validate(item) for item in notifications]
     record_safety_read(
-        session, actor_id=user.id, scope="inbox_list",
+        session,
+        actor_id=user.id,
+        scope="inbox_list",
         returned_count=len(notifications),
     )
     return result

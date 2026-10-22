@@ -21,7 +21,9 @@ def upgrade() -> None:
         sa.Column("actor_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("patient_id", sa.String(36), sa.ForeignKey("patients.id"), nullable=False),
         sa.Column(
-            "attachment_id", sa.String(36), sa.ForeignKey("medical_attachments.id"),
+            "attachment_id",
+            sa.String(36),
+            sa.ForeignKey("medical_attachments.id"),
             nullable=False,
         ),
         sa.Column("content_sha256", sa.String(64), nullable=False),
@@ -46,7 +48,8 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_attachment_av_scans_attachment_created",
-        "attachment_av_scans", ["attachment_id", "created_at"],
+        "attachment_av_scans",
+        ["attachment_id", "created_at"],
     )
     op.drop_constraint(
         "ck_attachment_security_event_action", "attachment_security_events", type_="check"

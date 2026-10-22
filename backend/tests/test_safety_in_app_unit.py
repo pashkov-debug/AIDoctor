@@ -28,11 +28,19 @@ def test_db_structure_and_no_medical_content_in_api_schema():
     assert "safety_in_app_notifications" in metadata.tables
     table = metadata.tables["safety_in_app_notifications"]
     assert {
-        "id", "created_at", "outbox_id", "alert_id",
-        "patient_id", "recipient_user_id", "route_id",
+        "id",
+        "created_at",
+        "outbox_id",
+        "alert_id",
+        "patient_id",
+        "recipient_user_id",
+        "route_id",
     } == set(table.columns.keys())
     assert set(SafetyInAppNotificationRead.model_fields) == {
-        "id", "patient_id", "alert_id", "created_at"
+        "id",
+        "patient_id",
+        "alert_id",
+        "created_at",
     }
 
 

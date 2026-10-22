@@ -29,9 +29,9 @@ def test_patient_portal_public_shell_protected_api() -> None:
         assert client.get("/api/v1/patients/me/portal").status_code == 401
         assert client.get("/app/assets/app.js").status_code == 200
 
-    script = (
-        Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js"
-    ).read_text(encoding="utf-8")
+    script = (Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js").read_text(
+        encoding="utf-8"
+    )
     assert "localStorage" not in script
     assert "sessionStorage" not in script
     assert "innerHTML" not in script

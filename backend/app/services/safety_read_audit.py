@@ -34,9 +34,7 @@ def record_safety_read(
         raise ValueError("returned_count должен быть числом 0..100")
     if (patient_id is not None) != (scope in _PATIENT_SCOPES):
         raise ValueError("Неверная область patient_id")
-    if patient_id is not None and (
-        not isinstance(patient_id, str) or not patient_id.strip()
-    ):
+    if patient_id is not None and (not isinstance(patient_id, str) or not patient_id.strip()):
         raise ValueError("patient_id обязателен для чтения пациента")
 
     try:

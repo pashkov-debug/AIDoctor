@@ -16,12 +16,8 @@ from sqlalchemy import select
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
-PROFILE_NAMES = (
-    "full_name", "specialty", "institution", "professional_info", "contact_email"
-)
-CLINICAL_NAMES = (
-    "practice_country", "rki_mode", "institution_type", "clinical_specialty"
-)
+PROFILE_NAMES = ("full_name", "specialty", "institution", "professional_info", "contact_email")
+CLINICAL_NAMES = ("practice_country", "rki_mode", "institution_type", "clinical_specialty")
 DEFAULT_CLINICAL = ClinicalFields()
 
 
@@ -78,10 +74,7 @@ def update_settings(
     previous = (
         {name: getattr(record, name) for name in allowed}
         if record is not None
-        else {
-            name: ("disabled" if name == "rki_mode" else None)
-            for name in allowed
-        }
+        else {name: ("disabled" if name == "rki_mode" else None) for name in allowed}
     )
     changed = [name for name in allowed if previous[name] != values[name]]
     if not changed:

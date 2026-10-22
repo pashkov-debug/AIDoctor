@@ -20,24 +20,20 @@ class SafetyNotificationRoute(IdMixin, TimestampMixin, Base):
     __tablename__ = "safety_notification_routes"
     __table_args__ = (
         UniqueConstraint(
-            "patient_id", "recipient_user_id", "channel",
+            "patient_id",
+            "recipient_user_id",
+            "channel",
             name="uq_safety_notification_routes_scope",
         ),
-        CheckConstraint(
-            "channel = 'in_app'", name="ck_safety_notification_routes_channel"
-        ),
+        CheckConstraint("channel = 'in_app'", name="ck_safety_notification_routes_channel"),
         CheckConstraint(
             "NOT enabled OR confirmed_at IS NOT NULL",
             name="ck_safety_notification_routes_confirmation",
         ),
-        Index(
-            "ix_safety_notification_routes_patient_enabled", "patient_id", "enabled"
-        ),
+        Index("ix_safety_notification_routes_patient_enabled", "patient_id", "enabled"),
     )
 
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     recipient_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False
     )
@@ -59,7 +55,5 @@ class SafetyNotificationRouteEvent(IdMixin, TimestampMixin, Base):
     route_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("safety_notification_routes.id"), nullable=False
     )
-    actor_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(12), nullable=False)

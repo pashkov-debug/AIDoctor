@@ -24,9 +24,7 @@ PDF = b"%PDF-1.5\nsynthetic output page\n%%EOF\n"
 
 
 def output_result(*, docx=False):
-    source_hash = hashlib.sha256(
-        synthetic_docx() if docx else synthetic_pdf()
-    ).hexdigest()
+    source_hash = hashlib.sha256(synthetic_docx() if docx else synthetic_pdf()).hexdigest()
     output_hash = hashlib.sha256(PDF).hexdigest()
     output = UntrustedCDROutput(
         source_sha256=source_hash,
@@ -99,11 +97,14 @@ def test_infected_scan_never_clears():
     assert len(engine.calls) == 2
 
 
-@pytest.mark.parametrize("status,reason", [
-    ("exception", "scanner_unavailable"),
-    ("unexpected", "scanner_unavailable"),
-    ("weird", "scanner_unavailable"),
-])
+@pytest.mark.parametrize(
+    "status,reason",
+    [
+        ("exception", "scanner_unavailable"),
+        ("unexpected", "scanner_unavailable"),
+        ("weird", "scanner_unavailable"),
+    ],
+)
 def test_scanner_error_is_fail_closed(status, reason):
     engine = FakeEngine(cdr_status=status)
     report = scan_synthetic_cdr_output(output_result(), scanner=gated(engine))
@@ -127,11 +128,31 @@ def test_version_change_fails_closed():
     assert report.engine_version is None
 
 
-@pytest.mark.parametrize("change", [
-    "hash", "size", "type", "media", "empty", "source", "same", "raw", "eof",
-], ids=[
-    "hash", "size", "type", "media", "empty", "source", "same", "raw", "eof",
-])
+@pytest.mark.parametrize(
+    "change",
+    [
+        "hash",
+        "size",
+        "type",
+        "media",
+        "empty",
+        "source",
+        "same",
+        "raw",
+        "eof",
+    ],
+    ids=[
+        "hash",
+        "size",
+        "type",
+        "media",
+        "empty",
+        "source",
+        "same",
+        "raw",
+        "eof",
+    ],
+)
 def test_tampered_output_refused_before_scanning(change):
     result = output_result()
     output = result.output
@@ -152,13 +173,17 @@ def test_tampered_output_refused_before_scanning(change):
     elif change == "raw":
         raw = b"not PDF %%EOF"
         output = replace(
-            output, content=raw, output_length=len(raw),
+            output,
+            content=raw,
+            output_length=len(raw),
             output_sha256=hashlib.sha256(raw).hexdigest(),
         )
     else:
         raw = b"%PDF-1.5\nno end"
         output = replace(
-            output, content=raw, output_length=len(raw),
+            output,
+            content=raw,
+            output_length=len(raw),
             output_sha256=hashlib.sha256(raw).hexdigest(),
         )
     result = replace(
@@ -206,7 +231,8 @@ def test_worker_only_runs_explicitly(monkeypatch, docx):
     image_flag = "--docx-image-id" if docx else "--pdf-image-id"
     args = [image_flag, "sha256:" + "f" * 64]
     monkeypatch.setattr(
-        cdr_synthetic_av_once, "settings",
+        cdr_synthetic_av_once,
+        "settings",
         SimpleNamespace(attachment_clamd_enabled=True),
     )
     with pytest.raises(SystemExit) as info:
@@ -216,28 +242,34 @@ def test_worker_only_runs_explicitly(monkeypatch, docx):
 
 def test_worker_disabled_by_default(monkeypatch):
     monkeypatch.setattr(
-        cdr_synthetic_av_once, "settings",
+        cdr_synthetic_av_once,
+        "settings",
         SimpleNamespace(attachment_clamd_enabled=False),
     )
     with pytest.raises(SystemExit) as info:
-        cdr_synthetic_av_once.main(
-            ["--once", "--pdf-image-id", "sha256:" + "f" * 64]
-        )
+        cdr_synthetic_av_once.main(["--once", "--pdf-image-id", "sha256:" + "f" * 64])
     assert info.value.code == 2
 
 
-@pytest.mark.parametrize("status,expected", [
-    ("clean_reported", 0), ("infected_reported", 1), ("error", 1),
-])
+@pytest.mark.parametrize(
+    "status,expected",
+    [
+        ("clean_reported", 0),
+        ("infected_reported", 1),
+        ("error", 1),
+    ],
+)
 def test_worker_reports_status_without_payload(monkeypatch, capsys, status, expected):
     from app.services.cdr_synthetic_output_av import SyntheticCDRAVReceipt
 
     monkeypatch.setattr(
-        cdr_synthetic_av_once, "settings",
+        cdr_synthetic_av_once,
+        "settings",
         SimpleNamespace(attachment_clamd_enabled=True),
     )
     monkeypatch.setattr(
-        cdr_synthetic_av_once, "run_synthetic_pdf_cdr",
+        cdr_synthetic_av_once,
+        "run_synthetic_pdf_cdr",
         lambda **kw: output_result(),
     )
     monkeypatch.setattr(cdr_synthetic_av_once, "ClamdScanner", lambda: FakeEngine())
@@ -255,9 +287,7 @@ def test_worker_reports_status_without_payload(monkeypatch, capsys, status, expe
             checked_at=NOW,
         ),
     )
-    code = cdr_synthetic_av_once.main(
-        ["--once", "--pdf-image-id", "sha256:" + "f" * 64]
-    )
+    code = cdr_synthetic_av_once.main(["--once", "--pdf-image-id", "sha256:" + "f" * 64])
     assert code == expected
     text = capsys.readouterr().out
     assert "synthetic output page" not in text
@@ -268,7 +298,8 @@ def test_worker_does_not_leak_cdr_error(monkeypatch, capsys):
     from app.services.cdr_synthetic_execution import CDRExecutionDenied
 
     monkeypatch.setattr(
-        cdr_synthetic_av_once, "settings",
+        cdr_synthetic_av_once,
+        "settings",
         SimpleNamespace(attachment_clamd_enabled=True),
     )
     monkeypatch.setattr(
@@ -276,7 +307,5 @@ def test_worker_does_not_leak_cdr_error(monkeypatch, capsys):
         "run_synthetic_docx_cdr",
         lambda **kw: (_ for _ in ()).throw(CDRExecutionDenied("PRIVATE SECRET")),
     )
-    assert cdr_synthetic_av_once.main(
-        ["--once", "--docx-image-id", "sha256:" + "f" * 64]
-    ) == 1
+    assert cdr_synthetic_av_once.main(["--once", "--docx-image-id", "sha256:" + "f" * 64]) == 1
     assert "PRIVATE SECRET" not in capsys.readouterr().out

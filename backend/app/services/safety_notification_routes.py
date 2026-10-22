@@ -73,26 +73,21 @@ def configure_own_route(
         _require_link(session, patient_id, actor_id)
         now = utc_now()
         table = SafetyNotificationRoute
-        stmt = (
-            pg_insert(table)
-            .values(
-                id=new_uuid(),
-                created_at=now,
-                patient_id=patient_id,
-                recipient_user_id=actor_id,
-                channel="in_app",
-                enabled=enabled,
-                confirmed_at=now if enabled else None,
-            )
+        stmt = pg_insert(table).values(
+            id=new_uuid(),
+            created_at=now,
+            patient_id=patient_id,
+            recipient_user_id=actor_id,
+            channel="in_app",
+            enabled=enabled,
+            confirmed_at=now if enabled else None,
         )
         updated_id = session.scalar(
             stmt.on_conflict_do_update(
                 constraint="uq_safety_notification_routes_scope",
                 set_={
                     "enabled": stmt.excluded.enabled,
-                    "confirmed_at": func.coalesce(
-                        table.confirmed_at, stmt.excluded.confirmed_at
-                    ),
+                    "confirmed_at": func.coalesce(table.confirmed_at, stmt.excluded.confirmed_at),
                 },
                 where=table.enabled.is_distinct_from(stmt.excluded.enabled),
             ).returning(table.id)
@@ -149,9 +144,7 @@ def eligible_routes(
         .order_by(SafetyNotificationRoute.id)
     )
     if for_delivery:
-        stmt = stmt.with_for_update(
-            of=(SafetyNotificationRoute, DoctorPatient, User, Patient)
-        )
+        stmt = stmt.with_for_update(of=(SafetyNotificationRoute, DoctorPatient, User, Patient))
     records = session.scalars(stmt).all()
     return tuple(
         EligibleRoute(

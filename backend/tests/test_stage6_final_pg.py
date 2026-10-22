@@ -69,8 +69,7 @@ def test_unexpected_av_failure_is_audited_without_releasing(
         assert review.status == "prechecked_quarantined"
         assert db.scalar(select(func.count()).select_from(AttachmentAVScan)) == 1
         events = db.scalars(
-            select(AttachmentSecurityEvent)
-            .where(AttachmentSecurityEvent.action == "av_scan")
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "av_scan")
         ).all()
         assert len(events) == 1
         assert events[0].outcome == "error"
@@ -93,9 +92,9 @@ def test_successful_av_report_still_cannot_clear_clinical_gate(scan_case, pg_eng
     from app.services.attachment_clamd import ClamdVerdict
 
     state, storage, _ = scan_case
-    fake = FailingScanner(response=ClamdVerdict(
-        "clean_reported", "ClamAV 1.5.4/12345/Sun Oct 18 06:24:14 2026"
-    ))
+    fake = FailingScanner(
+        response=ClamdVerdict("clean_reported", "ClamAV 1.5.4/12345/Sun Oct 18 06:24:14 2026")
+    )
     with Session(pg_engine) as db:
         receipt = scan_quarantined_attachment(
             db,

@@ -37,7 +37,8 @@ def context_client(pg_engine) -> Iterator[tuple[TestClient, dict]]:
         db.add(encounter)
         db.flush()
         old_event = HistoryEvent(
-            patient_id=patient.id, category="symptom",
+            patient_id=patient.id,
+            category="symptom",
             fact_json={"text": "outdated"},
             source_ref="synthetic:old",
         )
@@ -50,7 +51,8 @@ def context_client(pg_engine) -> Iterator[tuple[TestClient, dict]]:
         db.add_all([old_event, old_observation])
         db.flush()
         new_event = HistoryEvent(
-            patient_id=patient.id, category="symptom",
+            patient_id=patient.id,
+            category="symptom",
             fact_json={"text": "corrected"},
             source_ref="synthetic:new",
             supersedes_id=old_event.id,
@@ -61,27 +63,29 @@ def context_client(pg_engine) -> Iterator[tuple[TestClient, dict]]:
             value_json={"value": 120},
             supersedes_id=old_observation.id,
         )
-        db.add_all([
-            new_event,
-            new_observation,
-            QuestionnaireResponse(
-                patient_id=patient.id,
-                encounter_id=encounter.id,
-                scale_id="SYNTHETIC",
-                item_scores_json=[1, 2],
-                total_score=3,
-            ),
-            MedicalAttachment(
-                patient_id=patient.id,
-                uploaded_by_id=doctor.id,
-                filename="confidential.pdf",
-                media_type="application/pdf",
-                content_sha256="a" * 64,
-                content_length=12,
-                storage_key="synthetic-opaque-key",
-                extraction_status="quarantined",
-            ),
-        ])
+        db.add_all(
+            [
+                new_event,
+                new_observation,
+                QuestionnaireResponse(
+                    patient_id=patient.id,
+                    encounter_id=encounter.id,
+                    scale_id="SYNTHETIC",
+                    item_scores_json=[1, 2],
+                    total_score=3,
+                ),
+                MedicalAttachment(
+                    patient_id=patient.id,
+                    uploaded_by_id=doctor.id,
+                    filename="confidential.pdf",
+                    media_type="application/pdf",
+                    content_sha256="a" * 64,
+                    content_length=12,
+                    storage_key="synthetic-opaque-key",
+                    extraction_status="quarantined",
+                ),
+            ]
+        )
         state = {
             "patient_id": patient.id,
             "doctor_id": doctor.id,
@@ -122,7 +126,10 @@ def test_context_is_versioned_reproducible_and_excludes_superseded_data(context_
     assert len(body["content_sha256"]) == 64
     assert len(body["items"]) == 4
     assert {item["kind"] for item in body["items"]} == {
-        "encounter", "history_event", "observation", "questionnaire"
+        "encounter",
+        "history_event",
+        "observation",
+        "questionnaire",
     }
     serialized = response.text
     assert "outdated" not in serialized

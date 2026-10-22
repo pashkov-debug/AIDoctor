@@ -10,7 +10,9 @@ class SafetyAlertRequest(IdMixin, TimestampMixin, Base):
     __tablename__ = "safety_alert_requests"
     __table_args__ = (
         UniqueConstraint(
-            "patient_id", "actor_id", "key_digest",
+            "patient_id",
+            "actor_id",
+            "key_digest",
             name="uq_safety_alert_requests_scope_key",
         ),
         UniqueConstraint("alert_id", name="uq_safety_alert_requests_alert"),
@@ -20,12 +22,8 @@ class SafetyAlertRequest(IdMixin, TimestampMixin, Base):
         ),
     )
 
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
-    actor_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
+    actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     alert_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("safety_alerts.id"), nullable=False
     )

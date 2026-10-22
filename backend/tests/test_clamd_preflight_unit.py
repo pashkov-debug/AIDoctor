@@ -90,9 +90,7 @@ def test_timezone_aware_required_for_injected_clock():
 
 def test_age_limit_boundary():
     current = datetime(2026, 10, 19, 11, tzinfo=UTC)
-    assert pf.validate_signature_date(
-        VERSION, now=current + timedelta(days=7)
-    ) == current
+    assert pf.validate_signature_date(VERSION, now=current + timedelta(days=7)) == current
     with pytest.raises(pf.PreflightFailure, match="устарела"):
         pf.validate_signature_date(VERSION, now=current + timedelta(days=7, seconds=1))
 

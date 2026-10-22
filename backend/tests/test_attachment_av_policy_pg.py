@@ -69,11 +69,16 @@ def test_preflight_clean_report_is_still_quarantined_and_audited(scan_case, pg_e
         with pytest.raises(ProcessingProhibited):
             require_processing_clearance(attachment, db.scalar(select(AttachmentSecurityReview)))
         assert ContextBuilder(db).build(state["patient"]).items == []
-        assert db.scalar(
-            select(func.count()).select_from(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "av_scan",
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(
+                    AttachmentSecurityEvent.action == "av_scan",
+                )
             )
-        ) == 1
+            == 1
+        )
 
 
 def test_failed_eicar_records_error_and_never_transfers_medical_bytes(scan_case, pg_engine):
@@ -86,12 +91,17 @@ def test_failed_eicar_records_error_and_never_transfers_medical_bytes(scan_case,
     with Session(pg_engine) as db:
         assert db.scalar(select(AttachmentAVScan)).status == "error"
         assert db.scalar(select(AttachmentSecurityReview)).status == "prechecked_quarantined"
-        assert db.scalar(
-            select(func.count()).select_from(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "av_scan",
-                AttachmentSecurityEvent.outcome == "error",
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(
+                    AttachmentSecurityEvent.action == "av_scan",
+                    AttachmentSecurityEvent.outcome == "error",
+                )
             )
-        ) == 1
+            == 1
+        )
 
 
 def test_detected_file_rejected_without_postflight(scan_case, pg_engine):

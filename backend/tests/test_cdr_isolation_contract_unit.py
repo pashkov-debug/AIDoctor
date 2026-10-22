@@ -72,8 +72,9 @@ def test_command_restricts_network_mounts_processes_memory_and_privileges():
         "--log-driver=none",
     ):
         assert required in args
-    assert not any(v.startswith(("--volume", "--mount", "-v", "-p", "--publish", "--privileged"))
-                   for v in args)
+    assert not any(
+        v.startswith(("--volume", "--mount", "-v", "-p", "--publish", "--privileged")) for v in args
+    )
 
 
 @pytest.mark.parametrize(

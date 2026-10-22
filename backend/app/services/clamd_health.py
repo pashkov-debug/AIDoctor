@@ -26,11 +26,7 @@ class ClamdHealth:
 
 def eicar_bytes() -> bytes:
     """Безвредный тест: строится в памяти, не записывается на диск."""
-    return (
-        b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$"
-        + b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE!"
-        + b"$H+H*"
-    )
+    return b"X5O!P%@AP[4\\PZX54(P^)7CC)7}$" + b"EICAR-STANDARD-ANTIVIRUS-TEST-FILE!" + b"$H+H*"
 
 
 def validate_signature_date(
@@ -97,6 +93,4 @@ def verify_clamd(
     max_age_days: int = 7,
 ) -> datetime:
     """Совместимый контракт диагностической команды 6.3.2."""
-    return verify_clamd_with_version(
-        scanner, now=now, max_age_days=max_age_days
-    ).signature_date
+    return verify_clamd_with_version(scanner, now=now, max_age_days=max_age_days).signature_date

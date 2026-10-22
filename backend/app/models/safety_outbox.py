@@ -51,9 +51,7 @@ class SafetyOutbox(IdMixin, TimestampMixin, Base):
     event_type: Mapped[str] = mapped_column(String(24), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False)
     attempt_count: Mapped[int] = mapped_column(Integer, nullable=False)
-    next_attempt_at: Mapped[datetime] = mapped_column(
-        DateTime(timezone=True), nullable=False
-    )
+    next_attempt_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
     lease_expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     claim_token: Mapped[str | None] = mapped_column(String(36))
     delivered_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
@@ -64,8 +62,7 @@ class SafetyOutboxEvent(IdMixin, TimestampMixin, Base):
     __tablename__ = "safety_outbox_events"
     __table_args__ = (
         CheckConstraint(
-            "event_type IN ('enqueued', 'claimed', 'retry_scheduled', "
-            "'delivered', 'exhausted')",
+            "event_type IN ('enqueued', 'claimed', 'retry_scheduled', 'delivered', 'exhausted')",
             name="ck_safety_outbox_events_type",
         ),
         CheckConstraint(

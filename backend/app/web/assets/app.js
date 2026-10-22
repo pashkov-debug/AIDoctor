@@ -1,7 +1,7 @@
 "use strict";
 
 // Токен только в оперативной памяти вкладки; после перезагрузки нужен новый вход.
-const state = { token: null, user: null, settings: null, view: "overview", clinicalPatient: null };
+const state = { token: null, user: null, settings: null, view: "overview", clinicalPatient: null, clinicalPublications: [] };
 const $ = (id) => document.getElementById(id);
 const roleNames = { doctor: "Врач", patient: "Пациент", admin: "Администратор" };
 
@@ -21,7 +21,9 @@ function endSession(message = "") {
   state.settings = null;
   state.view = "overview";
   state.clinicalPatient = null;
+  state.clinicalPublications = [];
   $("patient-details").hidden = true;
+  $("patient-publications").replaceChildren();
   showMessage("patient-status", "");
   clearAdminData();
   $("workspace").hidden = true;
@@ -111,6 +113,7 @@ async function loadPatientPortal() {
   const accountId = state.user?.id;
   if (state.user?.role !== "patient") return;
   $("patient-details").hidden = true;
+  $("patient-publications").textContent = "Загрузка…";
   showMessage("patient-status", "Загрузка карточки…");
   try {
     const record = await api("/patients/me/portal");
@@ -120,12 +123,34 @@ async function loadPatientPortal() {
     $("patient-created").textContent = formatDate(record.created_at);
     $("patient-details").hidden = false;
     showMessage("patient-status", "");
+    await loadPatientPublications(accountId);
   } catch (error) {
     if (state.user?.id !== accountId || state.view !== "patient") return;
     const message = error.status === 404
       ? "Учётная запись пока не связана с активной карточкой пациента. Попросите администратора выполнить привязку."
       : `Не удалось загрузить карточку: ${error.message}`;
     showMessage("patient-status", message);
+  }
+}
+
+async function loadPatientPublications(accountId) {
+  const target = $("patient-publications");
+  target.textContent = "Загрузка опубликованных записей…";
+  try {
+    const data = await api("/patients/me/clinical-publications");
+    if (state.user?.id !== accountId || state.view !== "patient") return;
+    target.replaceChildren();
+    if (!data.items.length) {
+      target.textContent = "Врач пока не публиковал записей для вас.";
+      return;
+    }
+    data.items.forEach((item) => target.append(clinicalLine(
+      formatDate(item.published_at), item.text, "Подтверждено и опубликовано врачом"
+    )));
+  } catch (error) {
+    if (state.user?.id === accountId && state.view === "patient") {
+      target.textContent = `Не удалось загрузить опубликованные записи: ${error.message}`;
+    }
   }
 }
 
@@ -225,16 +250,134 @@ function renderClinicalVisits(items) {
 
 function renderClinicalHistory(items) {
   $("clinical-history-count").textContent = String(items.length);
+  const records = new Map(state.clinicalPublications.map((p) => [p.history_event_id, p]));
+  const superseded = new Set(items.map((item) => item.supersedes_id).filter(Boolean));
   showClinicalRecords("clinical-history", items, (item) => {
     const fact = item.fact || {};
     const description = typeof fact.text === "string"
       ? fact.text : JSON.stringify(fact).slice(0, 500);
-    return clinicalLine(
+    const row = clinicalLine(
       `${formatDate(item.occurred_at)} · ${item.category}`,
       description, `Источник: ${item.source_ref}; приоритет: ${item.priority}`,
     );
+    const fullFact = document.createElement("details");
+    const summary = document.createElement("summary");
+    summary.textContent = "Показать полный исходный факт перед подтверждением";
+    const fullText = document.createElement("pre");
+    fullText.textContent = JSON.stringify(item.fact || {}, null, 2);
+    fullFact.append(summary, fullText);
+    row.append(fullFact);
+    const release = records.get(item.id);
+    const status = document.createElement("small");
+    status.textContent = superseded.has(item.id) ? "Историческая версия исправлена"
+      : release ? `Решение врача: ${release.status}; версия ${release.version}`
+        : "Запись ещё не подтверждена врачом";
+    row.append(status);
+    if (superseded.has(item.id)) return row;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button subtle";
+    if (!release) {
+      button.textContent = "Подтвердить запись";
+      button.addEventListener("click", () => confirmHistory(item.id, button));
+    } else if (release.status === "confirmed") {
+      button.textContent = "Подготовить публикацию пациенту";
+      button.addEventListener("click", () => preparePublication(item, release));
+    } else if (release.status === "published") {
+      button.textContent = "Отозвать публикацию";
+      button.addEventListener("click", () => revokePublication(release, button));
+    } else {
+      return row;
+    }
+    row.append(button);
+    return row;
   }, "Событий пока нет.");
 }
+
+async function confirmHistory(eventId, button) {
+  const patient = state.clinicalPatient;
+  if (!patient || !window.confirm(
+    "Подтвердить клиническую запись? Это сохранит врачебное решение, но НЕ покажет запись пациенту."
+  )) return;
+  button.disabled = true;
+  try {
+    await api(`/patients/${encodeURIComponent(patient.id)}/history-events/${encodeURIComponent(eventId)}/confirm`, {
+      method: "POST",
+    });
+    await loadClinical();
+  } catch (error) {
+    showMessage("clinical-publication-status", `Ошибка подтверждения: ${error.message}`);
+    button.disabled = false;
+  }
+}
+
+function preparePublication(item, release) {
+  const form = $("clinical-publication-form");
+  form.hidden = false;
+  $("clinical-publication-id").value = release.id;
+  $("clinical-publication-version").value = String(release.version);
+  $("clinical-publication-source").textContent =
+    `Источник: ${formatDate(item.occurred_at)}, ${item.category}, ID ${item.id}. Исходный текст не передаётся пациенту.`;
+  $("clinical-publication-text").value = "";
+  $("clinical-publication-confirm").checked = false;
+  showMessage("clinical-publication-status", "Введите только те сведения, которые следует показать пациенту.");
+  form.scrollIntoView({ behavior: "smooth", block: "center" });
+}
+
+async function revokePublication(release, button) {
+  const patient = state.clinicalPatient;
+  if (!patient) return;
+  const reason = window.prompt("Причина отзыва опубликованного текста (не менее 3 символов):");
+  if (reason === null) return;
+  if (reason.trim().length < 3) {
+    showMessage("clinical-publication-status", "Укажите причину отзыва от 3 символов.");
+    return;
+  }
+  if (!window.confirm("Отозвать публикацию? Пациент больше не увидит её в своём кабинете.")) return;
+  button.disabled = true;
+  try {
+    await api(`/patients/${encodeURIComponent(patient.id)}/clinical-publications/${encodeURIComponent(release.id)}/revoke`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expected_version: release.version, reason: reason.trim() }),
+    });
+    await loadClinical();
+  } catch (error) {
+    showMessage("clinical-publication-status", `Ошибка отзыва: ${error.message}`);
+    button.disabled = false;
+  }
+}
+
+$("clinical-publication-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patient = state.clinicalPatient;
+  if (!patient || state.user?.role !== "doctor") return;
+  const text = $("clinical-publication-text").value.trim();
+  if (!text || !$("clinical-publication-confirm").checked) return;
+  if (!window.confirm(
+    `ПАЦИЕНТ УВИДИТ ИМЕННО ЭТОТ ТЕКСТ:\\n\\n${text}\\n\\nПодтвердить публикацию?`
+  )) return;
+  const button = event.currentTarget.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    await api(`/patients/${encodeURIComponent(patient.id)}/clinical-publications/${encodeURIComponent($("clinical-publication-id").value)}/publish`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        expected_version: Number($("clinical-publication-version").value),
+        patient_text: text, confirm_patient_visibility: true,
+      }),
+    });
+    $("clinical-publication-form").hidden = true;
+    await loadClinical();
+  } catch (error) {
+    showMessage("clinical-publication-status", `Ошибка публикации: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+$("clinical-publication-cancel").addEventListener("click", () => {
+  $("clinical-publication-form").hidden = true;
+});
+
 
 const observationNames = {
   subjective_anxiety: "Самооценка тревожности",
@@ -279,18 +422,21 @@ async function loadClinical() {
   if (!patient || state.user?.role !== "doctor") return;
   $("clinical-title").textContent = patient.alias;
   $("clinical-identity").textContent = `ID: ${patient.id} · Внутренняя клиническая карточка врача`;
+  $("clinical-publication-form").hidden = true;
   showMessage("clinical-card-status", "Загрузка…");
   ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
     $(id).textContent = "Загрузка…";
   });
   try {
-    const [visits, history, context, digest] = await Promise.all([
+    const [visits, history, context, digest, publications] = await Promise.all([
       api(`/patients/${encodeURIComponent(patient.id)}/encounters`),
       api(`/patients/${encodeURIComponent(patient.id)}/history-events`),
       api(`/patients/${encodeURIComponent(patient.id)}/context`),
       api(`/patients/${encodeURIComponent(patient.id)}/context/digest`),
+      api(`/patients/${encodeURIComponent(patient.id)}/clinical-publications`),
     ]);
     if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
+    state.clinicalPublications = publications;
     renderClinicalVisits(visits.items || []);
     renderClinicalHistory(history.items || []);
     renderClinicalObservations(context);

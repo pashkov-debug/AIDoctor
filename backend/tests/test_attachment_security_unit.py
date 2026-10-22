@@ -73,9 +73,12 @@ def test_tampering_or_missing_file_is_rejected(tmp_path):
 def test_size_mismatch_and_invalid_signature(tmp_path):
     storage = AttachmentStorage(tmp_path)
     saved = storage.save(io.BytesIO(b"%PDF-1.7\nSYNTHETIC"), "scan.pdf")
-    assert _read_quarantined_file(
-        storage, _attachment(saved, content_length=saved.content_length + 1)
-    ).reason == "size_mismatch"
+    assert (
+        _read_quarantined_file(
+            storage, _attachment(saved, content_length=saved.content_length + 1)
+        ).reason
+        == "size_mismatch"
+    )
     path = storage.path_for_download(saved.key)
     path.write_bytes(b"not a pdf")
     import hashlib

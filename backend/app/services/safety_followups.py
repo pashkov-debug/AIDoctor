@@ -31,9 +31,7 @@ def _moment(value: datetime | None) -> datetime:
     return result.astimezone(UTC)
 
 
-def create_one_due_followup(
-    session: Session, *, now: datetime | None = None
-) -> str:
+def create_one_due_followup(session: Session, *, now: datetime | None = None) -> str:
     """Одно сохранённое событие максимум; возвращает created или empty.
 
     Только маршруты in_app с действующим opt-in; ни одна запись Inbox
@@ -98,9 +96,7 @@ def create_one_due_followup(
                 continue
             # Блокирует подтверждённый маршрут, DoctorPatient и User.
             # Все решения принимаются в той же транзакции, что INSERT.
-            routes = eligible_routes(
-                session, patient_id=alert.patient_id, for_delivery=True
-            )
+            routes = eligible_routes(session, patient_id=alert.patient_id, for_delivery=True)
             for recipient in routes:
                 exists = session.scalar(
                     select(followup.id).where(
@@ -128,9 +124,7 @@ def create_one_due_followup(
                         recipient_user_id=recipient.recipient_user_id,
                         route_id=recipient.route_id,
                     )
-                    .on_conflict_do_nothing(
-                        constraint="uq_safety_followups_alert_recipient"
-                    )
+                    .on_conflict_do_nothing(constraint="uq_safety_followups_alert_recipient")
                     .returning(followup.id)
                 )
                 if created_id is not None:
@@ -167,8 +161,7 @@ def list_own_open_followups(
             )
             .where(
                 SafetyNotificationRoute.patient_id == SafetyFollowup.patient_id,
-                SafetyNotificationRoute.recipient_user_id
-                == SafetyFollowup.recipient_user_id,
+                SafetyNotificationRoute.recipient_user_id == SafetyFollowup.recipient_user_id,
                 SafetyFollowup.recipient_user_id == recipient_user_id,
                 SafetyAlert.status == "open",
                 Patient.deleted_at.is_(None),
@@ -176,9 +169,7 @@ def list_own_open_followups(
                 SafetyNotificationRoute.enabled.is_(True),
                 SafetyNotificationRoute.confirmed_at.is_not(None),
             )
-            .order_by(
-                SafetyFollowup.created_at.desc(), SafetyFollowup.id.desc()
-            )
+            .order_by(SafetyFollowup.created_at.desc(), SafetyFollowup.id.desc())
             .limit(limit)
         ).all()
     )

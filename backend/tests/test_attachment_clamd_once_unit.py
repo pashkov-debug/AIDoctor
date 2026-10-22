@@ -17,10 +17,14 @@ class FakeSession:
 
 
 def test_cli_uses_preflight_gated_scanner(monkeypatch, capsys):
-    monkeypatch.setattr(cli, "settings", SimpleNamespace(
-        attachment_clamd_enabled=True,
-        attachments_dir="unused",
-    ))
+    monkeypatch.setattr(
+        cli,
+        "settings",
+        SimpleNamespace(
+            attachment_clamd_enabled=True,
+            attachments_dir="unused",
+        ),
+    )
     monkeypatch.setattr(cli, "SessionLocal", FakeSession)
     monkeypatch.setattr(cli, "AttachmentStorage", lambda _path: object())
     monkeypatch.setattr(cli, "ClamdScanner", lambda: object())
@@ -33,9 +37,18 @@ def test_cli_uses_preflight_gated_scanner(monkeypatch, capsys):
 
     monkeypatch.setattr(cli, "scan_quarantined_attachment", fake_scan)
     monkeypatch.setattr(
-        sys, "argv",
-        ["run", "--once", "--patient-id", "synthetic-patient",
-         "--attachment-id", "synthetic-document", "--actor-id", "synthetic-admin"],
+        sys,
+        "argv",
+        [
+            "run",
+            "--once",
+            "--patient-id",
+            "synthetic-patient",
+            "--attachment-id",
+            "synthetic-document",
+            "--actor-id",
+            "synthetic-admin",
+        ],
     )
     assert cli.main() == 1
     assert "карантин сохранён" in capsys.readouterr().out
@@ -45,9 +58,18 @@ def test_cli_uses_preflight_gated_scanner(monkeypatch, capsys):
 def test_cli_refuses_without_explicit_enable(monkeypatch, enable, once):
     monkeypatch.setattr(cli, "settings", SimpleNamespace(attachment_clamd_enabled=enable))
     monkeypatch.setattr(
-        sys, "argv",
-        ["run", *(["--once"] if once else []),
-         "--patient-id", "p", "--attachment-id", "a", "--actor-id", "u"],
+        sys,
+        "argv",
+        [
+            "run",
+            *(["--once"] if once else []),
+            "--patient-id",
+            "p",
+            "--attachment-id",
+            "a",
+            "--actor-id",
+            "u",
+        ],
     )
     with pytest.raises(SystemExit) as error:
         cli.main()

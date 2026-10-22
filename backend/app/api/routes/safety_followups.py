@@ -31,7 +31,9 @@ def get_own_followups(
     followups = list_own_open_followups(session, recipient_user_id=user.id)
     result = [SafetyFollowupRead.model_validate(item) for item in followups]
     record_safety_read(
-        session, actor_id=user.id, scope="followups_list",
+        session,
+        actor_id=user.id,
+        scope="followups_list",
         returned_count=len(followups),
     )
     return result

@@ -1,4 +1,5 @@
 """UI-2A: ограничения локального seed и границы демонстрационных записей."""
+
 from datetime import UTC, datetime
 
 import pytest

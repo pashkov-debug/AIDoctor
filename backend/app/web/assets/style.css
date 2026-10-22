@@ -178,3 +178,6 @@ code { background: #e9f1f3; padding: 2px 5px; border-radius: 4px; }
 .access-rows > div:last-child { border-bottom:none; }
 #clinical-visits-section, #clinical-history-section,
 #clinical-observations-section, #clinical-digest-section { scroll-margin-top: 24px; }
+
+/* UI-2C: исходные факты в карточке врача видны целиком без горизонтального переполнения */
+.clinical-entry details pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow-y: auto; font-size: .8rem; }

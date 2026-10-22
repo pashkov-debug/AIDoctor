@@ -66,11 +66,22 @@ def convert_pdf(payload: bytes) -> bytes:
         source.write_bytes(payload)
         pages = _pdf_page_count(source)
         prefix = tmp / "page"
-        _run([
-            "pdftoppm", "-jpeg", "-jpegopt", "quality=75",
-            "-r", "96", "-f", "1", "-l", str(pages),
-            str(source), str(prefix),
-        ])
+        _run(
+            [
+                "pdftoppm",
+                "-jpeg",
+                "-jpegopt",
+                "quality=75",
+                "-r",
+                "96",
+                "-f",
+                "1",
+                "-l",
+                str(pages),
+                str(source),
+                str(prefix),
+            ]
+        )
         files = sorted(
             tmp.glob("page-*.jpg"),
             key=lambda item: int(item.stem.rsplit("-", 1)[-1]),

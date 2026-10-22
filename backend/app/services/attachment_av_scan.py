@@ -64,9 +64,7 @@ def _persist_report(
         .with_for_update()
     )
     patient_exists = session.scalar(
-        select(Patient.id).where(
-            Patient.id == snapshot.patient_id, Patient.deleted_at.is_(None)
-        )
+        select(Patient.id).where(Patient.id == snapshot.patient_id, Patient.deleted_at.is_(None))
     )
     role = session.scalar(select(User.role).where(User.id == actor_id))
     status = scanner_status
@@ -145,8 +143,11 @@ def _persist_report(
             attachment_id=snapshot.attachment_id,
             action="av_scan",
             outcome=(
-                STATUS_REJECTED if status == "infected_reported"
-                else STATUS_PRECHECKED if status == "clean_reported" else "error"
+                STATUS_REJECTED
+                if status == "infected_reported"
+                else STATUS_PRECHECKED
+                if status == "clean_reported"
+                else "error"
             ),
             reason_code="av_detected" if status == "infected_reported" else reason,
         )

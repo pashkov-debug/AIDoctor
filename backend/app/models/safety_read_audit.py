@@ -2,6 +2,7 @@
 
 Не хранит клинический текст, токены, тело запроса или содержимое ответа.
 """
+
 from sqlalchemy import CheckConstraint, ForeignKey, Index, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -23,11 +24,7 @@ class SafetyReadAudit(IdMixin, TimestampMixin, Base):
         Index("ix_safety_read_audit_actor_created", "actor_id", "created_at"),
     )
 
-    actor_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
-    patient_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("patients.id")
-    )
+    actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
+    patient_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("patients.id"))
     scope: Mapped[str] = mapped_column(String(24), nullable=False)
     returned_count: Mapped[int] = mapped_column(Integer, nullable=False)

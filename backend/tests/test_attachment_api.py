@@ -72,17 +72,16 @@ def test_upload_list_download_and_access(api):
     state["user_id"] = other_id
     assert client.get(endpoint).status_code == 404
     assert client.get(f"{endpoint}/{body['id']}").status_code == 404
-    assert client.post(
-        endpoint, files={"file": ("study.pdf", payload, "application/pdf")}
-    ).status_code == 404
+    assert (
+        client.post(endpoint, files={"file": ("study.pdf", payload, "application/pdf")}).status_code
+        == 404
+    )
 
 
 def test_upload_rejects_fake_pdf(api):
     client, _, patient_id, _, _ = api
     endpoint = f"/api/v1/patients/{patient_id}/attachments"
-    response = client.post(
-        endpoint, files={"file": ("x.pdf", b"malicious", "application/pdf")}
-    )
+    response = client.post(endpoint, files={"file": ("x.pdf", b"malicious", "application/pdf")})
     assert response.status_code == 415
     assert client.get(endpoint).json() == []
 

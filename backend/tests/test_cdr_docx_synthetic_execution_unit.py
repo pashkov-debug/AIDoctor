@@ -26,8 +26,7 @@ def test_synthetic_plan_narrow_and_deterministic():
     assert "--memory=2048m" in plan.docker_argv
     assert "--ulimit=nofile=256:256" in plan.docker_argv
     assert not any(
-        x.startswith(("--mount", "--volume", "--publish", "-v", "-p"))
-        for x in plan.docker_argv
+        x.startswith(("--mount", "--volume", "--publish", "-v", "-p")) for x in plan.docker_argv
     )
 
 
@@ -51,10 +50,12 @@ def test_image_injection_rejected(image_id):
 def test_container_mock_success_untrusted(monkeypatch):
     converted = b"%PDF-1.5\nchanged synthetic\n%%EOF\n"
     seen = {}
+
     def fake_run(argv, payload, **kwargs):
         seen["argv"] = argv
         assert payload == execution.synthetic_docx()
         return converted
+
     monkeypatch.setattr(execution, "_capture_bounded_process", fake_run)
     monkeypatch.setattr(execution.subprocess, "run", lambda *args, **kw: None)
     result = execution.run_synthetic_docx_cdr(image_id=IMAGE_ID)
@@ -77,8 +78,10 @@ def test_invalid_output_fail_closed(monkeypatch, raw):
 
 def test_cleanup_even_on_failed_container(monkeypatch):
     called = []
+
     def fail(*args, **kwargs):
         raise CDRExecutionDenied("SECRET_PRIVATE")
+
     monkeypatch.setattr(execution, "_capture_bounded_process", fail)
     monkeypatch.setattr(
         execution.subprocess,
@@ -96,10 +99,9 @@ def test_cli_requires_explicit_flag_and_hides_secret(monkeypatch, capsys):
         cdr_docx_synthetic_once.main(["--image-id", IMAGE_ID])
     assert error.value.code == 2
     monkeypatch.setattr(
-        cdr_docx_synthetic_once, "run_synthetic_docx_cdr",
+        cdr_docx_synthetic_once,
+        "run_synthetic_docx_cdr",
         lambda **kwargs: (_ for _ in ()).throw(CDRExecutionDenied("SECRET_PRIVATE")),
     )
-    assert cdr_docx_synthetic_once.main(
-        ["--run-synthetic", "--image-id", IMAGE_ID]
-    ) == 1
+    assert cdr_docx_synthetic_once.main(["--run-synthetic", "--image-id", IMAGE_ID]) == 1
     assert "SECRET_PRIVATE" not in capsys.readouterr().out

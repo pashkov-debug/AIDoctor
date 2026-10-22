@@ -1,4 +1,5 @@
 """UI-2B: PostgreSQL-интеграция только на aidoctor_test."""
+
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -42,30 +43,58 @@ def test_two_idempotent_separate_timelines(pg_engine) -> None:
 
         assert seed_patient_timeline(session, first, anchor)["visits"] == 4
         a = seed_extra_records(
-            session, first, anchor, "anxiety", FIRST_VISITS,
-            FIRST_EVENTS, FIRST_OBSERVATIONS,
+            session,
+            first,
+            anchor,
+            "anxiety",
+            FIRST_VISITS,
+            FIRST_EVENTS,
+            FIRST_OBSERVATIONS,
         )
         second = get_or_create_second_patient(session, doctor)
         b = seed_extra_records(
-            session, second, anchor, "mood", SECOND_VISITS,
-            SECOND_EVENTS, SECOND_OBSERVATIONS,
+            session,
+            second,
+            anchor,
+            "mood",
+            SECOND_VISITS,
+            SECOND_EVENTS,
+            SECOND_OBSERVATIONS,
         )
-        assert a == {"visits": len(FIRST_VISITS), "events": len(FIRST_EVENTS),
-                     "observations": len(FIRST_OBSERVATIONS)}
-        assert b == {"visits": len(SECOND_VISITS), "events": len(SECOND_EVENTS),
-                     "observations": len(SECOND_OBSERVATIONS)}
+        assert a == {
+            "visits": len(FIRST_VISITS),
+            "events": len(FIRST_EVENTS),
+            "observations": len(FIRST_OBSERVATIONS),
+        }
+        assert b == {
+            "visits": len(SECOND_VISITS),
+            "events": len(SECOND_EVENTS),
+            "observations": len(SECOND_OBSERVATIONS),
+        }
         assert seed_patient_timeline(session, first, anchor) == {
-            "visits": 0, "events": 0, "observations": 0,
+            "visits": 0,
+            "events": 0,
+            "observations": 0,
         }
         assert seed_extra_records(
-            session, first, anchor, "anxiety", FIRST_VISITS,
-            FIRST_EVENTS, FIRST_OBSERVATIONS,
+            session,
+            first,
+            anchor,
+            "anxiety",
+            FIRST_VISITS,
+            FIRST_EVENTS,
+            FIRST_OBSERVATIONS,
         ) == {"visits": 0, "events": 0, "observations": 0}
         again = get_or_create_second_patient(session, doctor)
         assert again.id == second.id
         assert seed_extra_records(
-            session, second, anchor, "mood", SECOND_VISITS,
-            SECOND_EVENTS, SECOND_OBSERVATIONS,
+            session,
+            second,
+            anchor,
+            "mood",
+            SECOND_VISITS,
+            SECOND_EVENTS,
+            SECOND_OBSERVATIONS,
         ) == {"visits": 0, "events": 0, "observations": 0}
         assert session.scalar(
             select(func.count(Encounter.id)).where(Encounter.patient_id == first.id)
@@ -91,12 +120,18 @@ def test_unmarked_patient_cannot_receive_seed(pg_engine) -> None:
         session.flush()
         with pytest.raises(ValueError, match="synthetic"):
             seed_extra_records(
-                session, other, datetime(2026, 10, 23, tzinfo=UTC),
-                "mood", SECOND_VISITS, SECOND_EVENTS, SECOND_OBSERVATIONS,
+                session,
+                other,
+                datetime(2026, 10, 23, tzinfo=UTC),
+                "mood",
+                SECOND_VISITS,
+                SECOND_EVENTS,
+                SECOND_OBSERVATIONS,
             )
-        assert session.scalar(
-            select(func.count(Encounter.id)).where(Encounter.patient_id == other.id)
-        ) == 0
+        assert (
+            session.scalar(select(func.count(Encounter.id)).where(Encounter.patient_id == other.id))
+            == 0
+        )
 
 
 def test_patient_cannot_read_doctor_visits_history_or_context(pg_engine) -> None:
@@ -106,7 +141,8 @@ def test_patient_cannot_read_doctor_visits_history_or_context(pg_engine) -> None
         session.add_all([doctor, patient_user])
         session.flush()
         patient = Patient(
-            alias="UI2B-PORTAL", user_id=patient_user.id,
+            alias="UI2B-PORTAL",
+            user_id=patient_user.id,
             demographics_json={"synthetic": True},
         )
         session.add(patient)

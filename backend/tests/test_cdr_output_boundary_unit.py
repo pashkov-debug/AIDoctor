@@ -84,9 +84,7 @@ def test_end_marker_must_be_near_end():
 )
 def test_output_format_is_pdf_only(format_name):
     with pytest.raises(CDROutputRejected, match="должен быть PDF"):
-        capture_untrusted_cdr_output(
-            make_plan(), io.BytesIO(CONVERTED), media_type=format_name
-        )
+        capture_untrusted_cdr_output(make_plan(), io.BytesIO(CONVERTED), media_type=format_name)
 
 
 class InfiniteSyntheticStream:
@@ -174,6 +172,4 @@ def test_capture_does_not_run_docker_or_use_db(monkeypatch):
 
     monkeypatch.setattr(subprocess, "run", forbidden)
     monkeypatch.setattr(subprocess, "Popen", forbidden)
-    assert not capture_untrusted_cdr_output(
-        make_plan(), io.BytesIO(CONVERTED)
-    ).processing_allowed
+    assert not capture_untrusted_cdr_output(make_plan(), io.BytesIO(CONVERTED)).processing_allowed

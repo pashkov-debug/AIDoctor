@@ -39,24 +39,27 @@ def _seed(engine):
         )
         return alert.id
 
+
 def _factory(engine):
     return lambda: Session(engine)
 
+
 def _entry(engine, alert_id):
     with Session(engine) as session:
-        item = session.scalar(
-            select(SafetyOutbox).where(SafetyOutbox.alert_id == alert_id)
-        )
+        item = session.scalar(select(SafetyOutbox).where(SafetyOutbox.alert_id == alert_id))
         assert item is not None
         return item.id, item.status, item.attempt_count
 
+
 def _events(engine, outbox_id):
     with Session(engine) as session:
-        return list(session.scalars(
-            select(SafetyOutboxEvent.event_type)
-            .where(SafetyOutboxEvent.outbox_id == outbox_id)
-            .order_by(SafetyOutboxEvent.created_at, SafetyOutboxEvent.id)
-        ).all())
+        return list(
+            session.scalars(
+                select(SafetyOutboxEvent.event_type)
+                .where(SafetyOutboxEvent.outbox_id == outbox_id)
+                .order_by(SafetyOutboxEvent.created_at, SafetyOutboxEvent.id)
+            ).all()
+        )
 
 
 class SyntheticReceiptTransport:
@@ -103,9 +106,7 @@ def test_failure_records_only_category(pg_engine):
     assert process_one(_factory(pg_engine), SyntheticFailureTransport()) == "retry_scheduled"
     outbox_id, status, attempts = _entry(pg_engine, alert_id)
     assert (status, attempts) == ("pending", 1)
-    assert _events(pg_engine, outbox_id) == [
-        "enqueued", "claimed", "retry_scheduled"
-    ]
+    assert _events(pg_engine, outbox_id) == ["enqueued", "claimed", "retry_scheduled"]
     with Session(pg_engine) as session:
         item = session.get(SafetyOutbox, outbox_id)
         assert item.last_error_code == "provider_unavailable"
@@ -125,6 +126,4 @@ def test_expired_lease_rejects_late_positive_receipt(pg_engine):
     assert process_one(_factory(pg_engine), LateTransport()) == "stale"
     outbox_id, status, attempts = _entry(pg_engine, alert_id)
     assert (status, attempts) == ("pending", 1)
-    assert _events(pg_engine, outbox_id) == [
-        "enqueued", "claimed", "retry_scheduled"
-    ]
+    assert _events(pg_engine, outbox_id) == ["enqueued", "claimed", "retry_scheduled"]

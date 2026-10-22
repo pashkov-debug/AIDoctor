@@ -96,9 +96,7 @@ def test_explicit_opt_in_creates_one_notification_and_only_own_inbox(pg_engine, 
     factory = _factory(pg_engine)
     assert _count(pg_engine) == 0
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
 
     assert process_one(factory, InAppTransport(factory, enabled=True)) == "delivered"
     assert process_one(factory, InAppTransport(factory, enabled=True)) == "empty"
@@ -120,8 +118,9 @@ def test_explicit_opt_in_creates_one_notification_and_only_own_inbox(pg_engine, 
     assert client.get("/api/v1/safety-inbox").status_code == 403
     with Session(pg_engine) as db:
         events = db.scalars(
-            select(SafetyOutboxEvent.event_type)
-            .where(SafetyOutboxEvent.outbox_id == case["outbox"])
+            select(SafetyOutboxEvent.event_type).where(
+                SafetyOutboxEvent.outbox_id == case["outbox"]
+            )
         ).all()
         assert set(events) == {"enqueued", "claimed", "delivered"}
 
@@ -136,9 +135,7 @@ def test_disabled_route_fails_closed_then_retry_can_deliver(pg_engine, case):
     assert item.last_error_code == "route_unavailable"
 
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
         item = db.get(SafetyOutbox, case["outbox"])
         item.next_attempt_at = utc_now() - timedelta(seconds=1)
         db.commit()
@@ -151,9 +148,7 @@ def test_disabled_route_fails_closed_then_retry_can_deliver(pg_engine, case):
 def test_inbox_commit_replayed_after_worker_crash_is_idempotent(pg_engine, case):
     factory = _factory(pg_engine)
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
 
     with Session(pg_engine) as db:
         claim = claim_due(db, limit=1)[0]
@@ -182,9 +177,7 @@ def test_inbox_commit_replayed_after_worker_crash_is_idempotent(pg_engine, case)
 def test_stale_or_unclaimed_envelope_fails_without_writing(pg_engine, case):
     adapter = InAppTransport(_factory(pg_engine), enabled=True)
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     envelope = DeliveryEnvelope(
         outbox_id=case["outbox"],
         alert_id=case["alert"],
@@ -196,14 +189,10 @@ def test_stale_or_unclaimed_envelope_fails_without_writing(pg_engine, case):
     assert _count(pg_engine) == 0
 
 
-def test_revoked_link_and_deleted_patient_hide_existing_inbox(
-    pg_engine, case, client
-):
+def test_revoked_link_and_deleted_patient_hide_existing_inbox(pg_engine, case, client):
     factory = _factory(pg_engine)
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     assert process_one(factory, InAppTransport(factory, enabled=True)) == "delivered"
     assert len(client.get("/api/v1/safety-inbox").json()) == 1
     with Session(pg_engine) as db:

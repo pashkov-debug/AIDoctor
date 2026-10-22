@@ -39,9 +39,7 @@ class FakeTransport:
 
     def send(self, envelope):
         assert self.factory.active == 0  # во время отправки нет DB Session
-        assert envelope == worker.DeliveryEnvelope(
-            "outbox-id", "alert-id", "created", 1
-        )
+        assert envelope == worker.DeliveryEnvelope("outbox-id", "alert-id", "created", 1)
         assert not hasattr(envelope, "patient_id")
         self.called += 1
         if isinstance(self.response, Exception):
@@ -76,7 +74,8 @@ def test_success_uses_separate_sessions_and_confirms(monkeypatch):
 
     monkeypatch.setattr(worker, "mark_delivered", confirm)
     monkeypatch.setattr(
-        worker, "mark_attempt_failed",
+        worker,
+        "mark_attempt_failed",
         lambda *a, **kw: pytest.fail("Не должно быть ошибки доставки"),
     )
     assert worker.process_one(factory, transport) == "delivered"
@@ -96,19 +95,19 @@ def test_success_uses_separate_sessions_and_confirms(monkeypatch):
         (RuntimeError("secret patient note"), "transport_unexpected"),
     ],
 )
-def test_errors_are_sanitized_and_never_mark_delivered(
-    monkeypatch, response, expected_code
-):
+def test_errors_are_sanitized_and_never_mark_delivered(monkeypatch, response, expected_code):
     factory = SessionFactory()
     transport = FakeTransport(factory, response)
     monkeypatch.setattr(worker, "claim_due", lambda *a, **kw: [CLAIM])
     called = []
     monkeypatch.setattr(
-        worker, "mark_attempt_failed",
+        worker,
+        "mark_attempt_failed",
         lambda session, claim, *, error_code: called.append(error_code),
     )
     monkeypatch.setattr(
-        worker, "mark_delivered",
+        worker,
+        "mark_delivered",
         lambda *a, **kw: pytest.fail("Нет подтверждения"),
     )
     assert worker.process_one(factory, transport) == "retry_scheduled"
@@ -120,9 +119,12 @@ def test_third_failure_is_terminal(monkeypatch):
     claim = OutboxClaim("outbox", "alert", "created", "token", 3)
     monkeypatch.setattr(worker, "claim_due", lambda *a, **kw: [claim])
     monkeypatch.setattr(worker, "mark_attempt_failed", lambda *a, **kw: None)
-    assert worker.process_one(
-        factory, FakeTransport(factory, worker.TransportFailure("provider_rejected"))
-    ) == "failed"
+    assert (
+        worker.process_one(
+            factory, FakeTransport(factory, worker.TransportFailure("provider_rejected"))
+        )
+        == "failed"
+    )
 
 
 def test_empty_does_not_invoke_transport(monkeypatch):
@@ -142,9 +144,10 @@ def test_old_lease_is_not_confirmed(monkeypatch):
         raise InvalidOutboxClaim()
 
     monkeypatch.setattr(worker, "mark_delivered", stale)
-    assert worker.process_one(
-        factory, FakeTransport(factory, worker.DeliveryReceipt("receipt-98765"))
-    ) == "stale"
+    assert (
+        worker.process_one(factory, FakeTransport(factory, worker.DeliveryReceipt("receipt-98765")))
+        == "stale"
+    )
 
 
 def test_transport_error_code_allowlist():

@@ -95,9 +95,7 @@ def security_status(
     user: UserDependency,
     response: Response,
 ) -> AttachmentSecurityRead:
-    attachment = _require_attachment(
-        session, user, patient_id, attachment_id, write=False
-    )
+    attachment = _require_attachment(session, user, patient_id, attachment_id, write=False)
     review = record_read(session, attachment=attachment, actor_id=user.id)
     response.headers["Cache-Control"] = "private, no-store"
     return _response(attachment, review)
@@ -111,14 +109,10 @@ def precheck_attachment(
     user: UserDependency,
     response: Response,
 ) -> AttachmentSecurityRead:
-    attachment = _require_attachment(
-        session, user, patient_id, attachment_id, write=True
-    )
+    attachment = _require_attachment(session, user, patient_id, attachment_id, write=True)
     storage = AttachmentStorage(settings.attachments_dir)
     try:
-        review = perform_precheck(
-            session, attachment=attachment, actor_id=user.id, storage=storage
-        )
+        review = perform_precheck(session, attachment=attachment, actor_id=user.id, storage=storage)
     except InspectionUnavailable as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ProcessingProhibited as exc:

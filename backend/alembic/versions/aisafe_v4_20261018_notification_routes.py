@@ -26,12 +26,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["patient_id"], ["patients.id"]),
         sa.ForeignKeyConstraint(["recipient_user_id"], ["users.id"]),
         sa.UniqueConstraint(
-            "patient_id", "recipient_user_id", "channel",
+            "patient_id",
+            "recipient_user_id",
+            "channel",
             name="uq_safety_notification_routes_scope",
         ),
-        sa.CheckConstraint(
-            "channel = 'in_app'", name="ck_safety_notification_routes_channel"
-        ),
+        sa.CheckConstraint("channel = 'in_app'", name="ck_safety_notification_routes_channel"),
         sa.CheckConstraint(
             "NOT enabled OR confirmed_at IS NOT NULL",
             name="ck_safety_notification_routes_confirmation",
@@ -39,7 +39,8 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_safety_notification_routes_patient_enabled",
-        "safety_notification_routes", ["patient_id", "enabled"],
+        "safety_notification_routes",
+        ["patient_id", "enabled"],
     )
     op.create_table(
         "safety_notification_route_events",
@@ -57,7 +58,8 @@ def upgrade() -> None:
     )
     op.create_index(
         "ix_safety_notification_route_events_route",
-        "safety_notification_route_events", ["route_id", "created_at"],
+        "safety_notification_route_events",
+        ["route_id", "created_at"],
     )
 
 

@@ -104,12 +104,17 @@ def test_verified_snapshot_is_immutable_and_does_not_release(scan_case, pg_engin
         assert ContextBuilder(db).build(state["patient"]).excluded_attachments_count == 1
         with pytest.raises(ProcessingProhibited):
             require_processing_clearance(attachment, review)
-        assert db.scalar(
-            select(func.count()).select_from(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "scan_input",
-                AttachmentSecurityEvent.outcome == "prechecked_quarantined",
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(
+                    AttachmentSecurityEvent.action == "scan_input",
+                    AttachmentSecurityEvent.outcome == "prechecked_quarantined",
+                )
             )
-        ) == 1
+            == 1
+        )
 
 
 def test_admin_only_and_patient_isolation(scan_case, pg_engine):
@@ -128,11 +133,14 @@ def test_admin_only_and_patient_isolation(scan_case, pg_engine):
     with pytest.raises(ScanAccessDenied):
         _capture(pg_engine, state, storage, patient_id=different_patient)
     with Session(pg_engine) as db:
-        assert db.scalar(
-            select(func.count()).select_from(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "scan_input"
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "scan_input")
             )
-        ) == 0
+            == 0
+        )
         db.get(Patient, state["patient"]).deleted_at = utc_now()
         db.commit()
     with pytest.raises(ScanAccessDenied):
@@ -151,9 +159,7 @@ def test_tampered_prechecked_file_terminally_rejected(scan_case, pg_engine):
         assert review.status == "rejected"
         assert review.reason_code == "hash_mismatch"
         events = db.scalars(
-            select(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "scan_input"
-            )
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "scan_input")
         ).all()
         assert len(events) == 1
         assert events[0].outcome == "rejected"
@@ -172,9 +178,9 @@ def test_precheck_required_and_extracted_ref_blocked(scan_case, pg_engine):
     with pytest.raises(ProcessingProhibited):
         _capture(pg_engine, state, storage)
     with Session(pg_engine) as db:
-        events = db.scalars(select(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "scan_input"
-        )).all()
+        events = db.scalars(
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "scan_input")
+        ).all()
         assert len(events) == 1
         assert events[0].outcome == "quarantined"
 
@@ -199,9 +205,9 @@ def test_scan_io_failure_fails_closed_with_audit(scan_case, pg_engine, monkeypat
     with pytest.raises(InspectionUnavailable):
         _capture(pg_engine, state, storage)
     with Session(pg_engine) as db:
-        event_row = db.scalar(select(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "scan_input"
-        ))
+        event_row = db.scalar(
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "scan_input")
+        )
         assert event_row.outcome == "error"
         assert db.scalar(select(AttachmentSecurityReview)).status == "prechecked_quarantined"
 
@@ -233,23 +239,28 @@ def test_parallel_scans_serialize_and_preserve_state(scan_case, pg_engine):
         results = list(pool.map(capture_once, range(2)))
     assert results == [payload, payload]
     with Session(pg_engine) as db:
-        assert db.scalar(
-            select(func.count()).select_from(AttachmentSecurityEvent).where(
-                AttachmentSecurityEvent.action == "scan_input"
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "scan_input")
             )
-        ) == 2
+            == 2
+        )
 
 
 def test_postgres_disallows_forged_scanner_result(scan_case, pg_engine):
     state, _, _ = scan_case
     with Session(pg_engine) as db:
-        db.add(AttachmentSecurityEvent(
-            actor_id=state["admin"],
-            patient_id=state["patient"],
-            attachment_id=state["attachment"],
-            action="scan_passed",
-            outcome="prechecked_quarantined",
-        ))
+        db.add(
+            AttachmentSecurityEvent(
+                actor_id=state["admin"],
+                patient_id=state["patient"],
+                attachment_id=state["attachment"],
+                action="scan_passed",
+                outcome="prechecked_quarantined",
+            )
+        )
         with pytest.raises(IntegrityError):
             db.commit()
         db.rollback()
@@ -274,9 +285,9 @@ def test_stale_precheck_fingerprint_does_not_release_bytes(scan_case, pg_engine)
     with pytest.raises(ProcessingProhibited):
         _capture(pg_engine, state, storage)
     with Session(pg_engine) as db:
-        event_row = db.scalar(select(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "scan_input"
-        ))
+        event_row = db.scalar(
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "scan_input")
+        )
         assert event_row.reason_code == "scan_input_not_ready"
 
 
@@ -298,6 +309,11 @@ def test_rejection_and_audit_atomic_on_database_failure(scan_case, pg_engine):
     with Session(pg_engine) as db:
         # Откат транзакции возвращает старую запись, но выдачи байтов не было.
         assert db.scalar(select(AttachmentSecurityReview)).status == "prechecked_quarantined"
-        assert db.scalar(select(func.count()).select_from(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "scan_input"
-        )) == 0
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "scan_input")
+            )
+            == 0
+        )

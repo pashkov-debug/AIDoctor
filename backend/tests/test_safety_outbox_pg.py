@@ -118,7 +118,9 @@ def test_retries_exhaustion_audit_and_old_token(pg_engine):
         assert first[0].alert_id == alert_id
         assert claim_due(session, now=start + timedelta(seconds=1)) == []
         mark_attempt_failed(
-            session, first[0], error_code="provider_unavailable",
+            session,
+            first[0],
+            error_code="provider_unavailable",
             now=start + timedelta(seconds=2),
         )
         assert claim_due(session, now=start + timedelta(seconds=30)) == []
@@ -130,14 +132,18 @@ def test_retries_exhaustion_audit_and_old_token(pg_engine):
             mark_delivered(session, first[0], now=start + timedelta(seconds=34))
 
         mark_attempt_failed(
-            session, second[0], error_code="provider_unavailable",
+            session,
+            second[0],
+            error_code="provider_unavailable",
             now=start + timedelta(seconds=34),
         )
         assert claim_due(session, now=start + timedelta(seconds=93)) == []
         third = claim_due(session, now=start + timedelta(seconds=95))
         assert len(third) == 1 and third[0].attempt_number == 3
         mark_attempt_failed(
-            session, third[0], error_code="provider_unavailable",
+            session,
+            third[0],
+            error_code="provider_unavailable",
             now=start + timedelta(seconds=96),
         )
         assert claim_due(session, now=start + timedelta(days=1)) == []
@@ -147,8 +153,13 @@ def test_retries_exhaustion_audit_and_old_token(pg_engine):
         assert entry.attempt_count == 3
         assert entry.last_error_code == "provider_unavailable"
         assert [e.event_type for e in _events(session, entry.id)] == [
-            "enqueued", "claimed", "retry_scheduled",
-            "claimed", "retry_scheduled", "claimed", "exhausted",
+            "enqueued",
+            "claimed",
+            "retry_scheduled",
+            "claimed",
+            "retry_scheduled",
+            "claimed",
+            "exhausted",
         ]
 
 
@@ -170,7 +181,11 @@ def test_expired_lease_recovered_and_success_recorded_only_explicitly(pg_engine)
         assert entry.delivered_at is not None
         assert entry.claim_token is None
         assert [e.event_type for e in _events(session, entry.id)] == [
-            "enqueued", "claimed", "retry_scheduled", "claimed", "delivered",
+            "enqueued",
+            "claimed",
+            "retry_scheduled",
+            "claimed",
+            "delivered",
         ]
 
 

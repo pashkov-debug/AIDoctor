@@ -109,8 +109,10 @@ def matches_signature(stream: BinaryIO, extension: str) -> bool:
                     or entry.flag_bits & 0x1  # Запароленный/зашифрованный ZIP.
                     or entry.file_size > 80 * 1024 * 1024
                     or entry.file_size > 1000 * max(entry.compress_size, 1)
-                    or (entry.create_system == 3 and (entry.external_attr >> 16) & 0o170000
-                        == 0o120000)  # Unix symlink внутри архива.
+                    or (
+                        entry.create_system == 3
+                        and (entry.external_attr >> 16) & 0o170000 == 0o120000
+                    )  # Unix symlink внутри архива.
                 ):
                     return False
             return {"[Content_Types].xml", "word/document.xml"}.issubset(names)
@@ -160,8 +162,7 @@ class AttachmentStorage:
 
         try:
             with tempfile.NamedTemporaryFile(
-                mode="wb", prefix=".upload-", suffix=".part",
-                dir=destination.parent, delete=False
+                mode="wb", prefix=".upload-", suffix=".part", dir=destination.parent, delete=False
             ) as output:
                 temporary = Path(output.name)
                 while block := source.read(CHUNK_SIZE):

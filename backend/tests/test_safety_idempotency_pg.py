@@ -110,9 +110,12 @@ def test_same_key_with_different_request_is_conflict_without_side_effects(api, p
     client, state = api
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
     header = {"Idempotency-Key": "request-conflict-2026"}
-    assert client.post(
-        url, headers=header, json={"reason_code": "clinician_review", "priority": "standard"}
-    ).status_code == 201
+    assert (
+        client.post(
+            url, headers=header, json={"reason_code": "clinician_review", "priority": "standard"}
+        ).status_code
+        == 201
+    )
     conflict = client.post(
         url, headers=header, json={"reason_code": "clinician_review", "priority": "urgent"}
     )

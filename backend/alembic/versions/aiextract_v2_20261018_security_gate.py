@@ -20,7 +20,9 @@ def upgrade() -> None:
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("patient_id", sa.String(36), sa.ForeignKey("patients.id"), nullable=False),
         sa.Column(
-            "attachment_id", sa.String(36), sa.ForeignKey("medical_attachments.id"),
+            "attachment_id",
+            sa.String(36),
+            sa.ForeignKey("medical_attachments.id"),
             nullable=False,
         ),
         sa.Column("checked_by_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False),
@@ -51,7 +53,9 @@ def upgrade() -> None:
         sa.Column("actor_id", sa.String(36), sa.ForeignKey("users.id"), nullable=False),
         sa.Column("patient_id", sa.String(36), sa.ForeignKey("patients.id"), nullable=False),
         sa.Column(
-            "attachment_id", sa.String(36), sa.ForeignKey("medical_attachments.id"),
+            "attachment_id",
+            sa.String(36),
+            sa.ForeignKey("medical_attachments.id"),
             nullable=False,
         ),
         sa.Column("action", sa.String(16), nullable=False),

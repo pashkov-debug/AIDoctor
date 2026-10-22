@@ -13,12 +13,14 @@ class SafetyInAppNotification(IdMixin, TimestampMixin, Base):
     __tablename__ = "safety_in_app_notifications"
     __table_args__ = (
         UniqueConstraint(
-            "outbox_id", "recipient_user_id",
+            "outbox_id",
+            "recipient_user_id",
             name="uq_safety_in_app_outbox_recipient",
         ),
         Index(
             "ix_safety_in_app_recipient_created",
-            "recipient_user_id", "created_at",
+            "recipient_user_id",
+            "created_at",
         ),
     )
 
@@ -28,9 +30,7 @@ class SafetyInAppNotification(IdMixin, TimestampMixin, Base):
     alert_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("safety_alerts.id"), nullable=False
     )
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     recipient_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False
     )

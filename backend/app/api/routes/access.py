@@ -90,9 +90,7 @@ def bind_patient_user(
     if user.role != "admin":
         raise HTTPException(status_code=403, detail="Admin required")
     # Блокировка карточки защищает от параллельной смены user_id.
-    target = db.scalar(
-        select(Patient).where(Patient.id == payload.patient_id).with_for_update()
-    )
+    target = db.scalar(select(Patient).where(Patient.id == payload.patient_id).with_for_update())
     account = db.get(User, payload.user_id)
     if (
         target is None

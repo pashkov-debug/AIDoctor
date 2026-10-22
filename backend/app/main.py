@@ -10,6 +10,7 @@ from app.api.routes.attachment_evidence import router as attachment_evidence_rou
 from app.api.routes.attachment_security import router as attachment_security_router
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.auth import router as auth_router
+from app.api.routes.clinical_publication import router as clinical_publication_router
 from app.api.routes.context import router as context_router
 from app.api.routes.doctor_settings import router as doctor_settings_router
 from app.api.routes.encounters import router as encounters_router
@@ -40,6 +41,7 @@ def create_app() -> FastAPI:
         doctor_settings_router,
         access_router,
         patient_portal_router,
+        clinical_publication_router,
         patients_router,
         encounters_router,
         questionnaires_router,
@@ -56,9 +58,7 @@ def create_app() -> FastAPI:
     for router in routers:
         application.include_router(router, prefix=settings.api_v1_prefix)
     web_dir = Path(__file__).resolve().parent / "web"
-    application.mount(
-        "/app/assets", StaticFiles(directory=web_dir / "assets"), name="web-assets"
-    )
+    application.mount("/app/assets", StaticFiles(directory=web_dir / "assets"), name="web-assets")
 
     @application.get("/", include_in_schema=False)
     def home_redirect() -> RedirectResponse:

@@ -2,6 +2,7 @@
 
 Запуск из корня: python -m backend.scripts.seed_ui2a_synthetic --apply
 """
+
 import argparse
 from datetime import UTC, datetime, timedelta
 
@@ -59,9 +60,7 @@ def select_target(session: Session, doctor_name: str, patient_name: str) -> Pati
         raise ValueError("Учётная запись пациента не найдена или имеет другую роль")
 
     # Блокируем карточку до конца транзакции. Параллельные запуски не дублируют записи.
-    patient = session.scalar(
-        select(Patient).where(Patient.user_id == account.id).with_for_update()
-    )
+    patient = session.scalar(select(Patient).where(Patient.user_id == account.id).with_for_update())
     if patient is None or patient.deleted_at is not None:
         raise ValueError("У пациента нет активной привязанной карточки")
     if (patient.demographics_json or {}).get("synthetic") is not True:
@@ -85,9 +84,7 @@ def seed_patient_timeline(
         raise ValueError("Нельзя изменять несинтетическую карточку")
     if reference.tzinfo is None or reference.utcoffset() is None:
         raise ValueError("reference должен содержать временную зону")
-    visits = session.scalars(
-        select(Encounter).where(Encounter.patient_id == patient.id)
-    ).all()
+    visits = session.scalars(select(Encounter).where(Encounter.patient_id == patient.id)).all()
     by_key = {
         item.payload_json.get("seed_key"): item
         for item in visits
@@ -99,10 +96,13 @@ def seed_patient_timeline(
         if key in by_key:
             continue
         item = Encounter(
-            patient_id=patient.id, reason=reason, status="draft",
+            patient_id=patient.id,
+            reason=reason,
+            status="draft",
             occurred_at=reference + timedelta(days=offset),
             payload_json={
-                "seed_key": key, "synthetic": True,
+                "seed_key": key,
+                "synthetic": True,
                 "complaints": complaints,
                 "functional_impact": impact,
                 "clinician_question": None,
@@ -111,39 +111,59 @@ def seed_patient_timeline(
         session.add(item)
         created["visits"] += 1
 
-    event_refs = set(session.scalars(
-        select(HistoryEvent.source_ref).where(HistoryEvent.patient_id == patient.id)
-    ).all())
+    event_refs = set(
+        session.scalars(
+            select(HistoryEvent.source_ref).where(HistoryEvent.patient_id == patient.id)
+        ).all()
+    )
     for index, (offset, category, narrative) in enumerate(EVENTS, start=1):
         key = f"{SEED}:event:{index}"
         if key in event_refs:
             continue
-        session.add(HistoryEvent(
-            patient_id=patient.id, encounter_id=None, category=category,
-            fact_json={"synthetic": True, "text": narrative, "source": "Учебный сценарий UI-2A"},
-            priority="normal", source_ref=key,
-            occurred_at=reference + timedelta(days=offset),
-        ))
+        session.add(
+            HistoryEvent(
+                patient_id=patient.id,
+                encounter_id=None,
+                category=category,
+                fact_json={
+                    "synthetic": True,
+                    "text": narrative,
+                    "source": "Учебный сценарий UI-2A",
+                },
+                priority="normal",
+                source_ref=key,
+                occurred_at=reference + timedelta(days=offset),
+            )
+        )
         created["events"] += 1
 
-    obs_refs = set(session.scalars(
-        select(MedicalObservation.source_ref).where(MedicalObservation.patient_id == patient.id)
-    ).all())
+    obs_refs = set(
+        session.scalars(
+            select(MedicalObservation.source_ref).where(MedicalObservation.patient_id == patient.id)
+        ).all()
+    )
     for index, (offset, code, value) in enumerate(OBSERVATIONS, start=1):
         key = f"{SEED}:observation:{index}"
         if key in obs_refs:
             continue
-        session.add(MedicalObservation(
-            patient_id=patient.id, code_system="synthetic:ui2a",
-            code=code, observed_at=reference + timedelta(days=offset),
-            value_json={
-                "score": value, "min": 0, "max": 10, "synthetic": True,
-                "description": (
-                    "Учебная самооценка качества сна, не валидированная клиническая шкала"
-                ),
-            },
-            source_ref=key,
-        ))
+        session.add(
+            MedicalObservation(
+                patient_id=patient.id,
+                code_system="synthetic:ui2a",
+                code=code,
+                observed_at=reference + timedelta(days=offset),
+                value_json={
+                    "score": value,
+                    "min": 0,
+                    "max": 10,
+                    "synthetic": True,
+                    "description": (
+                        "Учебная самооценка качества сна, не валидированная клиническая шкала"
+                    ),
+                },
+                source_ref=key,
+            )
+        )
         created["observations"] += 1
     session.flush()
     return created

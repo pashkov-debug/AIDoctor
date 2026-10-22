@@ -1,4 +1,5 @@
 """UI-2B: неизменность источников и ограничений сценариев."""
+
 from pathlib import Path
 
 from backend.scripts.seed_ui2b_synthetic import (
@@ -20,8 +21,14 @@ def test_two_distinct_rich_synthetic_scenarios() -> None:
     assert len(SECOND_EVENTS) >= 12
     assert len(FIRST_OBSERVATIONS) >= 7
     assert len(SECOND_OBSERVATIONS) >= 9
-    for offsets in (FIRST_VISITS, SECOND_VISITS, FIRST_EVENTS, SECOND_EVENTS,
-                    FIRST_OBSERVATIONS, SECOND_OBSERVATIONS):
+    for offsets in (
+        FIRST_VISITS,
+        SECOND_VISITS,
+        FIRST_EVENTS,
+        SECOND_EVENTS,
+        FIRST_OBSERVATIONS,
+        SECOND_OBSERVATIONS,
+    ):
         assert max(row[0] for row in offsets) < 0
         assert min(row[0] for row in offsets) <= -30
 

@@ -37,13 +37,17 @@ def test_admin_public_shell_private_api_and_no_browser_token_storage() -> None:
         assert client.get("/admin/users").status_code == 404
         for route in ("/admin/users", "/admin/patients", "/admin/links", "/admin/audit"):
             assert client.get(f"/api/v1{route}").status_code == 401
-        assert client.post("/api/v1/admin/users", json={
-            "username": "demo", "password": "secure-passphrase", "role": "doctor"
-        }).status_code == 401
+        assert (
+            client.post(
+                "/api/v1/admin/users",
+                json={"username": "demo", "password": "secure-passphrase", "role": "doctor"},
+            ).status_code
+            == 401
+        )
         assert client.delete("/api/v1/admin/links/something").status_code == 401
-    script = (
-        Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js"
-    ).read_text(encoding="utf-8")
+    script = (Path(__file__).resolve().parents[1] / "app" / "web" / "assets" / "app.js").read_text(
+        encoding="utf-8"
+    )
     assert "localStorage" not in script
     assert "sessionStorage" not in script
     assert "innerHTML" not in script

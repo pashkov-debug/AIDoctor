@@ -33,9 +33,7 @@ def test_capture_payload_only_when_explicitly_requested(tmp_path):
     assert isinstance(captured.payload, bytes)
     storage.path_for_download(saved.key).write_bytes(b"CHANGED")
     assert captured.payload == payload
-    assert _read_quarantined_file(
-        storage, attachment, capture_payload=True
-    ).payload is None
+    assert _read_quarantined_file(storage, attachment, capture_payload=True).payload is None
     with pytest.raises(ProcessingProhibited):
         require_processing_clearance(attachment, None)
 

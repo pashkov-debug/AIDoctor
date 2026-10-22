@@ -96,9 +96,7 @@ def test_no_route_and_not_due_cannot_create(pg_engine, case):
     assert _count(pg_engine) == 0
 
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     with Session(pg_engine) as db:
         db.get(SafetyAlert, case["alert"]).created_at = utc_now()
         db.commit()
@@ -110,9 +108,7 @@ def test_no_route_and_not_due_cannot_create(pg_engine, case):
 def test_once_dedup_api_access_and_ack_hides(pg_engine, case, client):
     _overdue(pg_engine, case["alert"])
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     with Session(pg_engine) as db:
         assert create_one_due_followup(db) == "created"
     with Session(pg_engine) as db:
@@ -139,20 +135,14 @@ def test_once_dedup_api_access_and_ack_hides(pg_engine, case, client):
 def test_route_disable_link_revoke_and_soft_delete_hide(pg_engine, case):
     _overdue(pg_engine, case["alert"])
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
         assert create_one_due_followup(db) == "created"
 
     with Session(pg_engine) as db:
         assert len(list_own_open_followups(db, recipient_user_id=case["doctor"])) == 1
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=False
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=False)
         assert list_own_open_followups(db, recipient_user_id=case["doctor"]) == []
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
         assert len(list_own_open_followups(db, recipient_user_id=case["doctor"])) == 1
         db.query(DoctorPatient).filter_by(id=case["link"]).delete()
         db.commit()
@@ -169,9 +159,7 @@ def test_route_disable_link_revoke_and_soft_delete_hide(pg_engine, case):
 
 def test_bounded_rate_per_doctor_window(pg_engine, case):
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     _overdue(pg_engine, case["alert"])
     for i in range(MAX_FOLLOWUPS_PER_DOCTOR_WINDOW):
         if i:
@@ -202,9 +190,7 @@ def test_bounded_rate_per_doctor_window(pg_engine, case):
 def test_concurrent_runs_create_one(pg_engine, case):
     _overdue(pg_engine, case["alert"])
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
 
     def run():
         with Session(pg_engine) as db:

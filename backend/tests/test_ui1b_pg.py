@@ -61,6 +61,7 @@ def test_patient_portal_isolated_and_soft_delete(pg_engine) -> None:
     app.dependency_overrides[get_db] = override_db
     try:
         with TestClient(app) as client:
+
             def login(username: str) -> dict[str, str]:
                 response = client.post(
                     "/api/v1/auth/login",
@@ -120,9 +121,7 @@ def test_patient_portal_isolated_and_soft_delete(pg_engine) -> None:
             assert other_list.status_code == 200
             assert [p["id"] for p in other_list.json()["items"]] == [other_id]
 
-            assert (
-                client.post("/api/v1/auth/logout", headers=a_headers).status_code == 204
-            )
+            assert client.post("/api/v1/auth/logout", headers=a_headers).status_code == 204
             assert client.get(url, headers=a_headers).status_code == 401
     finally:
         app.dependency_overrides.clear()

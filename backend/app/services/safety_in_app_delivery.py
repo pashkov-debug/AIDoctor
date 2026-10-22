@@ -58,9 +58,7 @@ class InAppTransport:
                     raise TransportFailure("route_unavailable")
 
                 patient_id = session.scalar(
-                    select(SafetyAlert.patient_id).where(
-                        SafetyAlert.id == envelope.alert_id
-                    )
+                    select(SafetyAlert.patient_id).where(SafetyAlert.id == envelope.alert_id)
                 )
                 if patient_id is None:
                     raise TransportFailure("route_unavailable")
@@ -82,9 +80,7 @@ class InAppTransport:
                             recipient_user_id=route.recipient_user_id,
                             route_id=route.route_id,
                         )
-                        .on_conflict_do_nothing(
-                            constraint="uq_safety_in_app_outbox_recipient"
-                        )
+                        .on_conflict_do_nothing(constraint="uq_safety_in_app_outbox_recipient")
                     )
                 session.commit()
             except Exception:
@@ -92,9 +88,7 @@ class InAppTransport:
                 raise
 
         # Детерминированный технический receipt, НЕ доказательство прочтения.
-        digest = hashlib.sha256(
-            f"in_app:v1:{envelope.outbox_id}".encode("ascii")
-        ).hexdigest()
+        digest = hashlib.sha256(f"in_app:v1:{envelope.outbox_id}".encode("ascii")).hexdigest()
         return DeliveryReceipt(confirmation_id=f"in_app:{digest}")
 
 

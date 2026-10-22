@@ -71,8 +71,7 @@ def upgrade() -> None:
         sa.Column("error_code", sa.String(length=48), nullable=True),
         sa.ForeignKeyConstraint(["outbox_id"], ["safety_outbox.id"]),
         sa.CheckConstraint(
-            "event_type IN ('enqueued', 'claimed', 'retry_scheduled', "
-            "'delivered', 'exhausted')",
+            "event_type IN ('enqueued', 'claimed', 'retry_scheduled', 'delivered', 'exhausted')",
             name="ck_safety_outbox_events_type",
         ),
         sa.CheckConstraint(

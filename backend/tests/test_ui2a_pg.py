@@ -1,4 +1,5 @@
 """UI-2A: PostgreSQL integration tests — исключительно aidoctor_test."""
+
 from datetime import UTC, datetime
 from types import SimpleNamespace
 
@@ -30,23 +31,35 @@ def test_seed_is_idempotent_safe_and_context_compatible(pg_engine) -> None:
         second = seed_patient_timeline(session, synthetic, anchor)
         assert first == {"visits": 4, "events": 6, "observations": 3}
         assert second == {"visits": 0, "events": 0, "observations": 0}
-        assert session.scalar(
-            select(func.count(Encounter.id)).where(Encounter.patient_id == synthetic.id)
-        ) == 4
-        assert session.scalar(
-            select(func.count(HistoryEvent.id)).where(HistoryEvent.patient_id == synthetic.id)
-        ) == 6
-        assert session.scalar(
-            select(func.count(MedicalObservation.id)).where(
-                MedicalObservation.patient_id == synthetic.id
+        assert (
+            session.scalar(
+                select(func.count(Encounter.id)).where(Encounter.patient_id == synthetic.id)
             )
-        ) == 3
+            == 4
+        )
+        assert (
+            session.scalar(
+                select(func.count(HistoryEvent.id)).where(HistoryEvent.patient_id == synthetic.id)
+            )
+            == 6
+        )
+        assert (
+            session.scalar(
+                select(func.count(MedicalObservation.id)).where(
+                    MedicalObservation.patient_id == synthetic.id
+                )
+            )
+            == 3
+        )
         assert ContextBuilder(session).build(synthetic.id).excluded_attachments_count == 0
         with pytest.raises(ValueError, match="несинтетическую"):
             seed_patient_timeline(session, nonsynthetic, anchor)
-        assert session.scalar(
-            select(func.count(Encounter.id)).where(Encounter.patient_id == nonsynthetic.id)
-        ) == 0
+        assert (
+            session.scalar(
+                select(func.count(Encounter.id)).where(Encounter.patient_id == nonsynthetic.id)
+            )
+            == 0
+        )
         session.commit()
 
 
@@ -65,10 +78,14 @@ def test_clinical_internal_routes_isolate_doctors_and_patients(pg_engine) -> Non
         session.add(patient)
         session.flush()
         session.add(DoctorPatient(doctor_id=doctor.id, patient_id=patient.id))
-        session.add(HistoryEvent(
-            patient_id=patient.id, category="note", fact_json={"text": "Internal"},
-            source_ref="synthetic:ui2a:internal",
-        ))
+        session.add(
+            HistoryEvent(
+                patient_id=patient.id,
+                category="note",
+                fact_json={"text": "Internal"},
+                source_ref="synthetic:ui2a:internal",
+            )
+        )
         session.flush()
         record = Encounter(patient_id=patient.id, reason="initial", payload_json={})
         session.add(record)
@@ -97,19 +114,27 @@ def test_clinical_internal_routes_isolate_doctors_and_patients(pg_engine) -> Non
             ]
             for path in paths:
                 assert client.get(path).status_code == 200
-            assert client.post(
-                f"/api/v1/patients/{pid}/encounters", json={
-                    "reason": "follow_up", "complaints": ["Беспокойство"],
-                }
-            ).status_code == 201
+            assert (
+                client.post(
+                    f"/api/v1/patients/{pid}/encounters",
+                    json={
+                        "reason": "follow_up",
+                        "complaints": ["Беспокойство"],
+                    },
+                ).status_code
+                == 201
+            )
             current["actor"] = actors["stranger"]
             for path in paths:
                 assert client.get(path).status_code == 404
             current["actor"] = actors["patient"]
             for path in paths:
                 assert client.get(path).status_code == 403
-            assert client.post(
-                f"/api/v1/patients/{pid}/encounters", json={"reason": "follow_up"}
-            ).status_code == 403
+            assert (
+                client.post(
+                    f"/api/v1/patients/{pid}/encounters", json={"reason": "follow_up"}
+                ).status_code
+                == 403
+            )
     finally:
         app.dependency_overrides.clear()

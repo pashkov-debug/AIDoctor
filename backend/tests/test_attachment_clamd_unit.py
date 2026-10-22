@@ -65,8 +65,13 @@ def test_instream_protocol_reports_verdict_without_release(monkeypatch, reply, e
 
 @pytest.mark.parametrize(
     "reply",
-    [b"stream: malformed\x00", b"stream: OK\\n", b"stream: ERROR\x00",
-     b"stream: INSTREAM size limit exceeded. ERROR\x00", b""],
+    [
+        b"stream: malformed\x00",
+        b"stream: OK\\n",
+        b"stream: ERROR\x00",
+        b"stream: INSTREAM size limit exceeded. ERROR\x00",
+        b"",
+    ],
 )
 def test_unknown_or_incomplete_reply_fails_closed(monkeypatch, reply):
     simulated(monkeypatch, reply)

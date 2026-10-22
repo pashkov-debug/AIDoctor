@@ -17,8 +17,13 @@ depends_on = None
 def upgrade() -> None:
     op.create_table(
         "doctor_settings",
-        sa.Column("doctor_id", sa.String(36), sa.ForeignKey("users.id", ondelete="RESTRICT"),
-                  nullable=False, primary_key=True),
+        sa.Column(
+            "doctor_id",
+            sa.String(36),
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+            primary_key=True,
+        ),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("updated_at", sa.DateTime(timezone=True), nullable=False),
         sa.Column("version", sa.Integer(), nullable=False),
@@ -41,21 +46,25 @@ def upgrade() -> None:
         "doctor_settings_audit",
         sa.Column("id", sa.String(36), primary_key=True, nullable=False),
         sa.Column("created_at", sa.DateTime(timezone=True), nullable=False),
-        sa.Column("doctor_id", sa.String(36),
-                  sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
-        sa.Column("actor_id", sa.String(36),
-                  sa.ForeignKey("users.id", ondelete="RESTRICT"), nullable=False),
+        sa.Column(
+            "doctor_id",
+            sa.String(36),
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
+        sa.Column(
+            "actor_id",
+            sa.String(36),
+            sa.ForeignKey("users.id", ondelete="RESTRICT"),
+            nullable=False,
+        ),
         sa.Column("section", sa.String(20), nullable=False),
         sa.Column("from_version", sa.Integer(), nullable=False),
         sa.Column("to_version", sa.Integer(), nullable=False),
         sa.Column("changed_fields", JSONB(), nullable=False),
     )
-    op.create_index(
-        "ix_doctor_settings_audit_doctor_id", "doctor_settings_audit", ["doctor_id"]
-    )
+    op.create_index("ix_doctor_settings_audit_doctor_id", "doctor_settings_audit", ["doctor_id"])
 
 
 def downgrade() -> None:
-    raise RuntimeError(
-        "Downgrade настроек врача запрещён: сохраните медицинские настройки и аудит"
-    )
+    raise RuntimeError("Downgrade настроек врача запрещён: сохраните медицинские настройки и аудит")

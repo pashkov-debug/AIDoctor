@@ -29,9 +29,7 @@ from sqlalchemy.orm import Session
 # Поддержка означает только тип входного снимка, не наличие CDR-движка.
 CDR_INPUT_FORMATS = {
     ".pdf": "application/pdf",
-    ".docx": (
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
-    ),
+    ".docx": ("application/vnd.openxmlformats-officedocument.wordprocessingml.document"),
 }
 MAX_AV_REPORT_AGE = timedelta(hours=24)
 
@@ -191,9 +189,7 @@ def prepare_quarantined_cdr_candidate(
         .order_by(AttachmentAVScan.created_at.desc(), AttachmentAVScan.id.desc())
         .limit(1)
     )
-    reason = cdr_candidate_rejection_reason(
-        attachment, review, latest_av, now=utc_now()
-    )
+    reason = cdr_candidate_rejection_reason(attachment, review, latest_av, now=utc_now())
     if reason is not None:
         _audit_cdr_input(
             session,
@@ -205,9 +201,7 @@ def prepare_quarantined_cdr_candidate(
         raise ProcessingProhibited("CDR-кандидат не подготовлен, карантин сохранён")
 
     try:
-        inspection = _read_quarantined_file(
-            storage, attachment, capture_payload=True
-        )
+        inspection = _read_quarantined_file(storage, attachment, capture_payload=True)
     except InspectionUnavailable:
         _audit_cdr_input(
             session,

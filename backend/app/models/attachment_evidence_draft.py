@@ -35,15 +35,11 @@ class AttachmentEvidenceDraft(IdMixin, TimestampMixin, Base):
         ),
     )
 
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     attachment_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("medical_attachments.id"), nullable=False
     )
-    created_by_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    created_by_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     attachment_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     excerpt_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     source_locator: Mapped[str] = mapped_column(String(120), nullable=False)

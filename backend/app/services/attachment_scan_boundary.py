@@ -104,8 +104,9 @@ def capture_quarantined_scan_input(
         raise ScanAccessDenied("Вложение недоступно")
 
     review = session.scalar(
-        select(AttachmentSecurityReview)
-        .where(AttachmentSecurityReview.attachment_id == attachment.id)
+        select(AttachmentSecurityReview).where(
+            AttachmentSecurityReview.attachment_id == attachment.id
+        )
     )
     if (
         attachment.extraction_status != STATUS_QUARANTINED
@@ -129,9 +130,7 @@ def capture_quarantined_scan_input(
         raise ProcessingProhibited("Файл не готов к передаче AV-адаптеру")
 
     try:
-        inspection = _read_quarantined_file(
-            storage, attachment, capture_payload=True
-        )
+        inspection = _read_quarantined_file(storage, attachment, capture_payload=True)
     except InspectionUnavailable:
         _audit(
             session,

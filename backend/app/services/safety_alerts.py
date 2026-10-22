@@ -32,9 +32,7 @@ _KEY_PATTERN = re.compile(r"[A-Za-z0-9][A-Za-z0-9._:-]{7,127}", re.ASCII)
 def idempotency_key_digest(key: str) -> str:
     """Проверить ключ и вернуть SHA-256 вместо хранения его исходного значения."""
     if not isinstance(key, str) or _KEY_PATTERN.fullmatch(key) is None:
-        raise InvalidIdempotencyKey(
-            "Idempotency-Key: 8–128 символов ASCII, буквы/цифры/._:-"
-        )
+        raise InvalidIdempotencyKey("Idempotency-Key: 8–128 символов ASCII, буквы/цифры/._:-")
     return hashlib.sha256(b"safety-alert-key:v1:" + key.encode("ascii")).hexdigest()
 
 
@@ -66,9 +64,7 @@ def _existing_alert(
     if record is None:
         return None
     if record.request_digest != request_digest:
-        raise IdempotencyConflict(
-            "Idempotency-Key уже использован с другим содержимым запроса"
-        )
+        raise IdempotencyConflict("Idempotency-Key уже использован с другим содержимым запроса")
     alert = session.get(SafetyAlert, record.alert_id)
     if alert is None:
         raise RuntimeError("Нарушена ссылочная целостность ключа идемпотентности")
@@ -106,9 +102,7 @@ def create_alert(
 
     try:
         if key_digest is not None and request_digest is not None:
-            existing = _existing_alert(
-                session, patient_id, actor_id, key_digest, request_digest
-            )
+            existing = _existing_alert(session, patient_id, actor_id, key_digest, request_digest)
             if existing is not None:
                 return existing
 
@@ -121,11 +115,7 @@ def create_alert(
         )
         session.add(alert)
         session.flush()
-        session.add(
-            SafetyAlertEvent(
-                alert_id=alert.id, actor_id=actor_id, event_type="created"
-            )
-        )
+        session.add(SafetyAlertEvent(alert_id=alert.id, actor_id=actor_id, event_type="created"))
         enqueue_alert_created(session, alert.id)
 
         if key_digest is not None and request_digest is not None:
@@ -166,9 +156,7 @@ def acknowledge_alert(
     session: Session, patient_id: str, alert_id: str, actor_id: str
 ) -> SafetyAlert:
     alert = session.scalar(
-        select(SafetyAlert).where(
-            SafetyAlert.id == alert_id, SafetyAlert.patient_id == patient_id
-        )
+        select(SafetyAlert).where(SafetyAlert.id == alert_id, SafetyAlert.patient_id == patient_id)
     )
     if alert is None:
         raise AlertNotFoundError
@@ -193,9 +181,7 @@ def acknowledge_alert(
         )
         if acknowledged_id is not None:
             session.add(
-                SafetyAlertEvent(
-                    alert_id=alert_id, actor_id=actor_id, event_type="acknowledged"
-                )
+                SafetyAlertEvent(alert_id=alert_id, actor_id=actor_id, event_type="acknowledged")
             )
         session.commit()
         refreshed = session.get(SafetyAlert, alert_id)

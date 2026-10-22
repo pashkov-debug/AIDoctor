@@ -26,11 +26,14 @@ def test_disabled_cli_does_not_open_database(monkeypatch):
 def test_schema_and_metadata_have_no_clinical_text():
     table = metadata.tables["safety_followups"]
     assert set(table.columns.keys()) == {
-        "id", "created_at", "alert_id", "patient_id", "recipient_user_id", "route_id"
+        "id",
+        "created_at",
+        "alert_id",
+        "patient_id",
+        "recipient_user_id",
+        "route_id",
     }
-    assert set(SafetyFollowupRead.model_fields) == {
-        "id", "patient_id", "alert_id", "created_at"
-    }
+    assert set(SafetyFollowupRead.model_fields) == {"id", "patient_id", "alert_id", "created_at"}
 
 
 def test_policy_constants():

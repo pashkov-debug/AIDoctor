@@ -137,9 +137,7 @@ def process_one(
 def get_status_counts(session: Session) -> dict[str, int]:
     """Чтение только агрегатов без идентификаторов, адресов и медданных."""
     result = dict.fromkeys(_STATES, 0)
-    rows = session.execute(
-        select(SafetyOutbox.status, func.count()).group_by(SafetyOutbox.status)
-    )
+    rows = session.execute(select(SafetyOutbox.status, func.count()).group_by(SafetyOutbox.status))
     for status, count in rows:
         if status in result:
             result[status] = count
@@ -147,9 +145,7 @@ def get_status_counts(session: Session) -> dict[str, int]:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(
-        description="Диагностика Safety Outbox (отправка отключена)"
-    )
+    parser = argparse.ArgumentParser(description="Диагностика Safety Outbox (отправка отключена)")
     parser.add_argument(
         "--status", action="store_true", help="Только агрегаты PostgreSQL, без claim"
     )

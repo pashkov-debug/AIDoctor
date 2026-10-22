@@ -136,9 +136,14 @@ def test_audit_failure_rolls_back_report(scan_case, pg_engine):
         event.remove(pg_engine, "before_cursor_execute", fail_audit)
     with Session(pg_engine) as db:
         assert db.scalar(select(func.count()).select_from(AttachmentAVScan)) == 0
-        assert db.scalar(select(func.count()).select_from(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "scan_input"
-        )) == 1
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "scan_input")
+            )
+            == 1
+        )
 
 
 def test_role_revocation_during_scan_never_saves_clean(scan_case, pg_engine):

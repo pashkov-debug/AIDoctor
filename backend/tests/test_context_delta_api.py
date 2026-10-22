@@ -94,9 +94,10 @@ def test_doctor_without_link_does_not_access_digest_or_delta(delta_api):
 def test_missing_token_denied_before_medical_data():
     with TestClient(create_app()) as client:
         assert client.get("/api/v1/patients/unknown/context/digest").status_code == 401
-        assert client.post(
-            "/api/v1/patients/unknown/context/delta", json={"baseline": {}}
-        ).status_code == 401
+        assert (
+            client.post("/api/v1/patients/unknown/context/delta", json={"baseline": {}}).status_code
+            == 401
+        )
 
 
 def test_invalid_snapshot_returns_422(delta_api):

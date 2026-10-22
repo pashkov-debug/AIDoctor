@@ -22,15 +22,18 @@ def access_client(pg_engine) -> Iterator[tuple[TestClient, dict]]:
         session.add_all([admin, doctor_a, doctor_b, patient_user])
         session.flush()
 
-        owned = Patient(alias="OWNED", demographics_json={"synthetic": True},
-                        user_id=patient_user.id)
+        owned = Patient(
+            alias="OWNED", demographics_json={"synthetic": True}, user_id=patient_user.id
+        )
         other = Patient(alias="OTHER", demographics_json={"synthetic": True})
         session.add_all([owned, other])
         session.flush()
-        session.add_all([
-            DoctorPatient(doctor_id=doctor_a.id, patient_id=owned.id),
-            DoctorPatient(doctor_id=doctor_b.id, patient_id=other.id),
-        ])
+        session.add_all(
+            [
+                DoctorPatient(doctor_id=doctor_a.id, patient_id=owned.id),
+                DoctorPatient(doctor_id=doctor_b.id, patient_id=other.id),
+            ]
+        )
         state = {
             "admin": admin.id,
             "doctor_a": doctor_a.id,

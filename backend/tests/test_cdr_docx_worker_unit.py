@@ -67,16 +67,14 @@ def test_reject_external_relationship():
         b'Target="https://example.net/document.xml" TargetMode="External"',
     )
     with pytest.raises(docx_worker.DOCXConversionDenied):
-        docx_worker.validate_synthetic_docx(
-            _mutate(original, {"_rels/.rels": changed})
-        )
+        docx_worker.validate_synthetic_docx(_mutate(original, {"_rels/.rels": changed}))
 
 
 def test_reject_dde_field():
     docx = synthetic_docx()
     with zipfile.ZipFile(io.BytesIO(docx)) as archive:
         xml = archive.read("word/document.xml")
-    changed = xml.replace(b"<w:body>", b"<w:body><w:fldSimple w:instr=\"DDEAUTO\"/>")
+    changed = xml.replace(b"<w:body>", b'<w:body><w:fldSimple w:instr="DDEAUTO"/>')
     with pytest.raises(docx_worker.DOCXConversionDenied):
         docx_worker.validate_synthetic_docx(_mutate(docx, {"word/document.xml": changed}))
 
@@ -137,7 +135,8 @@ def test_conversion_runs_headless_then_raster(monkeypatch):
 
 def test_conversion_rejects_no_libreoffice_output(monkeypatch):
     monkeypatch.setattr(
-        docx_worker.subprocess, "run",
+        docx_worker.subprocess,
+        "run",
         lambda args, **kwargs: subprocess.CompletedProcess(args, 0),
     )
     with pytest.raises(docx_worker.DOCXConversionDenied, match="не создал"):
@@ -147,6 +146,7 @@ def test_conversion_rejects_no_libreoffice_output(monkeypatch):
 def test_conversion_rejects_lo_failure_without_details(monkeypatch):
     def fail(args, **kwargs):
         raise subprocess.CalledProcessError(1, args, b"SECRET")
+
     monkeypatch.setattr(docx_worker.subprocess, "run", fail)
     with pytest.raises(docx_worker.DOCXConversionDenied) as error:
         docx_worker.convert_docx(synthetic_docx())
@@ -156,6 +156,7 @@ def test_conversion_rejects_lo_failure_without_details(monkeypatch):
 def test_conversion_rejects_raster_failure(monkeypatch):
     def fake_run(argv, **kwargs):
         Path(argv[argv.index("--outdir") + 1], "input.pdf").write_bytes(b"%PDF-1.4\n%%EOF")
+
     monkeypatch.setattr(docx_worker.subprocess, "run", fake_run)
     monkeypatch.setattr(
         docx_worker.pdf_worker,

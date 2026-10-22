@@ -114,9 +114,7 @@ def create_synthetic_patient(
         details={"alias": patient.alias},
     )
     db.commit()
-    return AdminPatientRead(
-        id=patient.id, alias=patient.alias, synthetic=True, user_id=None
-    )
+    return AdminPatientRead(id=patient.id, alias=patient.alias, synthetic=True, user_id=None)
 
 
 @router.get("/links", response_model=list[AccessLinkRead])

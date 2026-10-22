@@ -45,17 +45,14 @@ class SyntheticCDRResult:
 
 def synthetic_pdf() -> bytes:
     """Минимальный корректный одностраничный PDF, не содержащий данных пациентов."""
-    content = (
-        b"BT /F1 18 Tf 60 730 Td (" + _SYNTHETIC_LABEL.encode("ascii") + b") Tj ET\n"
-    )
+    content = b"BT /F1 18 Tf 60 730 Td (" + _SYNTHETIC_LABEL.encode("ascii") + b") Tj ET\n"
     objects = [
         b"<< /Type /Catalog /Pages 2 0 R >>",
         b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
         b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
         b"/Resources << /Font << /F1 4 0 R >> >> /Contents 5 0 R >>",
         b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
-        b"<< /Length " + str(len(content)).encode() + b" >>\nstream\n"
-        + content + b"endstream",
+        b"<< /Length " + str(len(content)).encode() + b" >>\nstream\n" + content + b"endstream",
     ]
     result = bytearray(b"%PDF-1.4\n")
     offsets = [0]
@@ -67,8 +64,7 @@ def synthetic_pdf() -> bytes:
     for offset in offsets[1:]:
         result.extend(f"{offset:010d} 00000 n \n".encode())
     result.extend(
-        b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n"
-        + str(xref).encode() + b"\n%%EOF\n"
+        b"trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n" + str(xref).encode() + b"\n%%EOF\n"
     )
     return bytes(result)
 
@@ -211,9 +207,7 @@ def run_synthetic_pdf_cdr(
     container_name = f"aidoctor-cdr-{uuid4().hex}"
     docker_args = (*plan.docker_argv[:-2], f"--name={container_name}", *plan.docker_argv[-2:])
     try:
-        output_bytes = _capture_bounded_process(
-            docker_args, plan.stdin_payload, timeout=timeout
-        )
+        output_bytes = _capture_bounded_process(docker_args, plan.stdin_payload, timeout=timeout)
     finally:
         # docker rm -f безопасен и для уже удалённого (--rm) контейнера.
         # Не показываем stderr Docker и не используем shell.

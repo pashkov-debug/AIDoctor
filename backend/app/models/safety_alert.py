@@ -20,19 +20,13 @@ class SafetyAlert(IdMixin, TimestampMixin, Base):
         Index("ix_safety_alerts_patient_status_created", "patient_id", "status", "created_at"),
     )
 
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
-    created_by_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
+    created_by_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     reason_code: Mapped[str] = mapped_column(String(40), nullable=False)
     priority: Mapped[str] = mapped_column(String(12), nullable=False)
     status: Mapped[str] = mapped_column(String(16), nullable=False, default="open")
     acknowledged_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
-    acknowledged_by_id: Mapped[str | None] = mapped_column(
-        String(36), ForeignKey("users.id")
-    )
+    acknowledged_by_id: Mapped[str | None] = mapped_column(String(36), ForeignKey("users.id"))
 
 
 class SafetyAlertEvent(IdMixin, TimestampMixin, Base):
@@ -48,7 +42,5 @@ class SafetyAlertEvent(IdMixin, TimestampMixin, Base):
     alert_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("safety_alerts.id"), nullable=False
     )
-    actor_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     event_type: Mapped[str] = mapped_column(String(24), nullable=False)

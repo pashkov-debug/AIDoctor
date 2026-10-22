@@ -108,9 +108,7 @@ def list_snapshots(session: Session, patient_id: str) -> list[SnapshotSummary]:
     return [_summary(row) for row in rows]
 
 
-def get_snapshot(
-    session: Session, patient_id: str, snapshot_id: str
-) -> SnapshotWithContext:
+def get_snapshot(session: Session, patient_id: str, snapshot_id: str) -> SnapshotWithContext:
     row = session.scalar(
         select(ContextSnapshot).where(
             ContextSnapshot.id == snapshot_id,

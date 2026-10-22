@@ -40,9 +40,14 @@ def case(pg_engine):
         db.add(link)
         db.commit()
         return {
-            "doctor": doctor.id, "stranger": stranger.id, "admin": admin.id,
-            "patient_user": patient_user.id, "patient": patient.id,
-            "other": other.id, "link": link.id, "active": doctor.id,
+            "doctor": doctor.id,
+            "stranger": stranger.id,
+            "admin": admin.id,
+            "patient_user": patient_user.id,
+            "patient": patient.id,
+            "other": other.id,
+            "link": link.id,
+            "active": doctor.id,
         }
 
 
@@ -124,9 +129,7 @@ def test_rbac_and_channels_fail_closed(client, case, pg_engine):
 
 def test_deleted_patient_and_revoked_access_disable_resolution(pg_engine, case):
     with Session(pg_engine) as db:
-        configure_own_route(
-            db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True
-        )
+        configure_own_route(db, patient_id=case["patient"], actor_id=case["doctor"], enabled=True)
     with Session(pg_engine) as db:
         db.query(DoctorPatient).filter_by(id=case["link"]).delete()
         db.commit()
@@ -139,6 +142,7 @@ def test_deleted_patient_and_revoked_access_disable_resolution(pg_engine, case):
         db.add(DoctorPatient(doctor_id=case["doctor"], patient_id=case["patient"]))
         patient = db.get(Patient, case["patient"])
         from app.db.base import utc_now
+
         patient.deleted_at = utc_now()
         db.commit()
         assert eligible_routes(db, patient_id=case["patient"]) == ()
@@ -150,13 +154,16 @@ def test_unconfirmed_or_wrong_role_cannot_be_eligible(pg_engine, case):
             SafetyNotificationRoute(
                 patient_id=case["patient"],
                 recipient_user_id=case["doctor"],
-                channel="in_app", enabled=False, confirmed_at=None,
+                channel="in_app",
+                enabled=False,
+                confirmed_at=None,
             )
         )
         db.commit()
         assert eligible_routes(db, patient_id=case["patient"]) == ()
         route = db.scalar(select(SafetyNotificationRoute))
         from app.db.base import utc_now
+
         route.confirmed_at = utc_now()
         route.enabled = True
         db.commit()

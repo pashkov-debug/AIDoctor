@@ -13,8 +13,14 @@ from app.services.safety_alerts import (
 @pytest.mark.parametrize(
     "value",
     [
-        "", "short", "bad space1", "é" * 8, "A" * 129,
-        "\\nheader_injection", "key/with/slash", "ABC\t12345",
+        "",
+        "short",
+        "bad space1",
+        "é" * 8,
+        "A" * 129,
+        "\\nheader_injection",
+        "key/with/slash",
+        "ABC\t12345",
     ],
 )
 def test_rejects_invalid_keys(value):

@@ -56,9 +56,7 @@ def test_file_integrity_and_clinical_gate_are_independent(tmp_path):
     assert inspected.payload is None
     assert inspected.sha256 == saved.content_sha256
     with pytest.raises(ProcessingProhibited):
-        require_processing_clearance(
-            attachment, SimpleNamespace(status="prechecked_quarantined")
-        )
+        require_processing_clearance(attachment, SimpleNamespace(status="prechecked_quarantined"))
 
     path = storage.path_for_download(saved.key)
     modified = bytearray(path.read_bytes())
@@ -107,9 +105,7 @@ def test_adapter_error_always_reaches_database_report(monkeypatch, bad_scan):
         captured.append(kwargs)
         return kwargs
 
-    monkeypatch.setattr(
-        attachment_av_scan, "capture_quarantined_scan_input", fake_capture
-    )
+    monkeypatch.setattr(attachment_av_scan, "capture_quarantined_scan_input", fake_capture)
     monkeypatch.setattr(attachment_av_scan, "_persist_report", fake_persist)
     result = attachment_av_scan.scan_quarantined_attachment(
         object(),

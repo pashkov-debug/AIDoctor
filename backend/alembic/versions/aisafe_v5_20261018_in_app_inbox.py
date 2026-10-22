@@ -29,13 +29,15 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["recipient_user_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["route_id"], ["safety_notification_routes.id"]),
         sa.UniqueConstraint(
-            "outbox_id", "recipient_user_id",
+            "outbox_id",
+            "recipient_user_id",
             name="uq_safety_in_app_outbox_recipient",
         ),
     )
     op.create_index(
         "ix_safety_in_app_recipient_created",
-        "safety_in_app_notifications", ["recipient_user_id", "created_at"],
+        "safety_in_app_notifications",
+        ["recipient_user_id", "created_at"],
     )
 
 

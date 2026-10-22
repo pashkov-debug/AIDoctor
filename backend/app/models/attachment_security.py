@@ -37,15 +37,11 @@ class AttachmentSecurityReview(IdMixin, TimestampMixin, Base):
         ),
     )
 
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     attachment_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("medical_attachments.id"), nullable=False
     )
-    checked_by_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("users.id"), nullable=False
-    )
+    checked_by_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
     checked_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), default=utc_now, nullable=False
     )
@@ -72,9 +68,7 @@ class AttachmentSecurityEvent(IdMixin, TimestampMixin, Base):
     )
 
     actor_id: Mapped[str] = mapped_column(String(36), ForeignKey("users.id"), nullable=False)
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     attachment_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("medical_attachments.id"), nullable=False
     )

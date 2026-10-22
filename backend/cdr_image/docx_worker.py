@@ -27,9 +27,7 @@ _REL_NS = "http://schemas.openxmlformats.org/package/2006/relationships"
 _DOC_NS = "http://schemas.openxmlformats.org/wordprocessingml/2006/main"
 _OFFICE_REL = "http://schemas.openxmlformats.org/officeDocument/2006/relationships/officeDocument"
 _DOC_MIME = "application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"
-_ALLOWED_WORD_TAGS = {
-    f"{{{_DOC_NS}}}{tag}" for tag in ("document", "body", "p", "r", "t")
-}
+_ALLOWED_WORD_TAGS = {f"{{{_DOC_NS}}}{tag}" for tag in ("document", "body", "p", "r", "t")}
 _LABEL = "AIDoctor synthetic DOCX test only"
 _TIMEOUT = 70
 
@@ -105,7 +103,8 @@ def validate_synthetic_docx(payload: bytes) -> None:
             raise DOCXConversionDenied("Посторонний тип содержимого")
     if (
         len(types) != 3
-        or defaults != {
+        or defaults
+        != {
             "rels": "application/vnd.openxmlformats-package.relationships+xml",
             "xml": "application/xml",
         }
@@ -118,7 +117,8 @@ def validate_synthetic_docx(payload: bytes) -> None:
         rels.tag != f"{{{_REL_NS}}}Relationships"
         or len(rels) != 1
         or rels[0].tag != f"{{{_REL_NS}}}Relationship"
-        or rels[0].attrib != {
+        or rels[0].attrib
+        != {
             "Id": "rId1",
             "Type": _OFFICE_REL,
             "Target": "word/document.xml",
@@ -167,8 +167,10 @@ def convert_docx(payload: bytes) -> bytes:
                     "--nologo",
                     "--nodefault",
                     "--nofirststartwizard",
-                    "--convert-to", "pdf:writer_pdf_Export",
-                    "--outdir", str(directory),
+                    "--convert-to",
+                    "pdf:writer_pdf_Export",
+                    "--outdir",
+                    str(directory),
                     str(source),
                 ],
                 check=True,

@@ -25,9 +25,7 @@ SessionDependency = Annotated[Session, Depends(get_db)]
 UserDependency = Annotated[User, Depends(current_user)]
 
 
-def _authorized_route(
-    patient_id: str, session: SessionDependency, user: UserDependency
-) -> str:
+def _authorized_route(patient_id: str, session: SessionDependency, user: UserDependency) -> str:
     require_doctor(user)
     require_patient(session, user, patient_id)
     # Администратор не может подтвердить чужую учётную запись вместо врача.
@@ -52,8 +50,11 @@ def get_route(
         raise HTTPException(status_code=404, detail="Patient not found") from exc
     serialized = NotificationRouteRead.model_validate(result) if result is not None else None
     record_safety_read(
-        session, actor_id=user.id, scope="route_read",
-        patient_id=patient_id, returned_count=int(result is not None),
+        session,
+        actor_id=user.id,
+        scope="route_read",
+        patient_id=patient_id,
+        returned_count=int(result is not None),
     )
     return serialized
 

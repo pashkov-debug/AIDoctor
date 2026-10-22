@@ -26,9 +26,7 @@ SessionDependency = Annotated[Session, Depends(get_db)]
 UserDependency = Annotated[User, Depends(current_user)]
 
 
-def _authorized_clinician(
-    patient_id: str, session: SessionDependency, user: UserDependency
-) -> str:
+def _authorized_clinician(patient_id: str, session: SessionDependency, user: UserDependency) -> str:
     # Проверка как зависимость: до Pydantic-валидации тела запроса.
     require_doctor(user)
     require_patient(session, user, patient_id)
@@ -79,8 +77,11 @@ def get_safety_alerts(
     alerts = list_alerts(session, patient_id)
     result = [SafetyAlertRead.model_validate(item) for item in alerts]
     record_safety_read(
-        session, actor_id=user.id, scope="alerts_list",
-        patient_id=patient_id, returned_count=len(alerts),
+        session,
+        actor_id=user.id,
+        scope="alerts_list",
+        patient_id=patient_id,
+        returned_count=len(alerts),
     )
     return result
 

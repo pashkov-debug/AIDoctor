@@ -13,9 +13,7 @@ from app.workers.safety_outbox import process_one
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description="Safety Outbox → локальный in_app inbox")
-    parser.add_argument(
-        "--once", action="store_true", help="Обработать одну запись Outbox"
-    )
+    parser.add_argument("--once", action="store_true", help="Обработать одну запись Outbox")
     args = parser.parse_args(argv)
     if not args.once:
         parser.print_help()

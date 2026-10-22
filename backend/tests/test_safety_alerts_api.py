@@ -22,9 +22,7 @@ def safety_api(pg_engine) -> Iterator[tuple[TestClient, dict[str, str]]]:
         patient_user = User(username="safety-patient", password_hash="x", role="patient")
         session.add_all([doctor, stranger, patient_user])
         session.flush()
-        patient = Patient(
-            alias="SYNTHETIC-SAFETY", user_id=patient_user.id, demographics_json={}
-        )
+        patient = Patient(alias="SYNTHETIC-SAFETY", user_id=patient_user.id, demographics_json={})
         another_patient = Patient(alias="SYNTHETIC-OTHER", demographics_json={})
         session.add_all([patient, another_patient])
         session.flush()
@@ -60,9 +58,7 @@ def safety_api(pg_engine) -> Iterator[tuple[TestClient, dict[str, str]]]:
 def test_create_ack_idempotent_and_audited(safety_api, pg_engine):
     client, state = safety_api
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
-    created = client.post(
-        url, json={"reason_code": "clinician_review", "priority": "standard"}
-    )
+    created = client.post(url, json={"reason_code": "clinician_review", "priority": "standard"})
     assert created.status_code == 201, created.text
     item = created.json()
     assert item["status"] == "open"
@@ -98,9 +94,10 @@ def test_stranger_cannot_discover_patient_or_create(safety_api):
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
     state["active"] = state["stranger"]
     assert client.get(url).status_code == 404
-    assert client.post(
-        url, json={"reason_code": "unknown", "priority": "untrusted"}
-    ).status_code == 404
+    assert (
+        client.post(url, json={"reason_code": "unknown", "priority": "untrusted"}).status_code
+        == 404
+    )
     assert client.post(f"{url}/does-not-exist/ack").status_code == 404
 
 
@@ -109,17 +106,16 @@ def test_patient_cannot_use_internal_clinician_alerts(safety_api):
     state["active"] = state["patient_user"]
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
     assert client.get(url).status_code == 403
-    assert client.post(
-        url, json={"reason_code": "urgent_attention", "priority": "urgent"}
-    ).status_code == 403
+    assert (
+        client.post(url, json={"reason_code": "urgent_attention", "priority": "urgent"}).status_code
+        == 403
+    )
 
 
 def test_invalid_payload_does_not_create_alert(safety_api):
     client, state = safety_api
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
-    response = client.post(
-        url, json={"reason_code": "unknown", "priority": "urgent"}
-    )
+    response = client.post(url, json={"reason_code": "unknown", "priority": "urgent"})
     assert response.status_code == 422
     assert client.get(url).json() == []
 
@@ -127,9 +123,7 @@ def test_invalid_payload_does_not_create_alert(safety_api):
 def test_cross_patient_alert_id_is_not_accessible(safety_api):
     client, state = safety_api
     url = f"/api/v1/patients/{state['patient']}/safety-alerts"
-    created = client.post(
-        url, json={"reason_code": "urgent_attention", "priority": "urgent"}
-    )
+    created = client.post(url, json={"reason_code": "urgent_attention", "priority": "urgent"})
     alert_id = created.json()["id"]
     other = f"/api/v1/patients/{state['other_patient']}/safety-alerts"
     assert client.post(f"{other}/{alert_id}/ack").status_code == 404
@@ -139,7 +133,10 @@ def test_unauthenticated_requests_get_401():
     with TestClient(create_app()) as client:
         url = "/api/v1/patients/nonexistent/safety-alerts"
         assert client.get(url).status_code == 401
-        assert client.post(
-            url, json={"reason_code": "clinician_review", "priority": "standard"}
-        ).status_code == 401
+        assert (
+            client.post(
+                url, json={"reason_code": "clinician_review", "priority": "standard"}
+            ).status_code
+            == 401
+        )
         assert client.post(f"{url}/nonexistent/ack").status_code == 401

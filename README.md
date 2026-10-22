@@ -1,6 +1,6 @@
 # AIDoctor — универсальная медицинская платформа
 
-**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент), UI-1C (администратор) UI-2A и UI-2B (две синтетические истории и навигация к визитам) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
+**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент), UI-1C (администратор) UI-2A, UI-2B и UI-2C (управляемая публикация врачебных записей) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16+, Docker.
 - Рабочая среда: Windows 11, PyCharm, PowerShell.
@@ -9,7 +9,45 @@
 - Пользователи: врач, пациент, администратор с разными правами.
 
 
-## Текущий инкремент UI-2B — два пациента, история и навигация к визитам
+## Текущий инкремент UI-2C — подтверждение и публикация пациенту
+
+Существующие `HistoryEvent` остаются внутренними. Врач поштучно
+**подтверждает** источник и отдельным действием **публикует конкретный
+проверенный текст**, который видит только связанный с карточкой пациент.
+Исходные данные, контекст и визиты автоматически не открываются.
+Публикация имеет версии, автора, аудит и право отзыва. Исправленный
+источник автоматически скрывается в пациентском API. Новая миграция
+`ui2c_20261023`, без новых внешних библиотек и seed-скриптов.
+
+**Установка и запуск:**
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini check
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+**Проверки (PostgreSQL-тесты только `aidoctor_test`):**
+
+```powershell
+$env:PYTHONPATH = "backend"
+python -m ruff check backend
+python -m ruff format --check backend
+node --check backend/app/web/assets/app.js
+python -m pytest backend/tests/test_ui2c_unit.py -v
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_ui2c_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
+```
+
+Будущие кнопки AI «Уточнить», «Отклонить», **«Просмотр изменений БД»**
+и **«Одобрить выбранное»** описаны в
+[docs/ui2c_publication_and_ai_approval_contract.md](docs/ui2c_publication_and_ai_approval_contract.md).
+UI-2C не содержит AI-интеграции и не создаёт назначения.
+
+## Предыдущий инкремент UI-2B — два пациента, история и навигация к визитам
 
 UI-2B улучшает клиническую страницу: в списке пациентов кнопка
 **«Визиты и история →»**, на странице врача четыре явных раздела:

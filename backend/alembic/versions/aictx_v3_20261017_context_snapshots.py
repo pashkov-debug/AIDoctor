@@ -36,6 +36,4 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
-    raise RuntimeError(
-        "Удаление медицинских снимков через автоматический downgrade запрещено"
-    )
+    raise RuntimeError("Удаление медицинских снимков через автоматический downgrade запрещено")

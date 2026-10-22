@@ -92,10 +92,7 @@ def evidence_case(pg_engine):
 
 
 def _endpoint(state):
-    return (
-        f"/api/v1/patients/{state['patient']}"
-        f"/attachments/{state['attachment']}/evidence-drafts"
-    )
+    return f"/api/v1/patients/{state['patient']}/attachments/{state['attachment']}/evidence-drafts"
 
 
 def _payload():
@@ -116,9 +113,9 @@ def test_manual_provenance_dedup_and_context_isolation(evidence_case, pg_engine)
     assert body["excerpt_sha256"] == hashlib.sha256(body["excerpt"].encode()).hexdigest()
     assert first.headers["cache-control"] == "private, no-store"
 
-    repeated = client.post(url, json={
-        "source_locator": "стр. 2", "excerpt": "Синтетический фрагмент."
-    })
+    repeated = client.post(
+        url, json={"source_locator": "стр. 2", "excerpt": "Синтетический фрагмент."}
+    )
     assert repeated.status_code == 201
     assert repeated.json()["id"] == body["id"]
     listed = client.get(url)
@@ -223,7 +220,6 @@ def test_unauthenticated_requests_require_token():
         path = "/api/v1/patients/unknown/attachments/unknown/evidence-drafts"
         assert client.get(path).status_code == 401
         assert client.post(path, json=_payload()).status_code == 401
-
 
 
 def test_empty_read_is_audited(evidence_case, pg_engine):

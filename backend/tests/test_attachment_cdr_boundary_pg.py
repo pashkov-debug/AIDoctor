@@ -53,8 +53,10 @@ def cdr_case(scan_case, pg_engine):
 
 def _candidate(engine, state, storage, **overrides):
     kwargs = dict(
-        patient_id=state["patient"], attachment_id=state["attachment"],
-        actor_id=state["admin"], storage=storage,
+        patient_id=state["patient"],
+        attachment_id=state["attachment"],
+        actor_id=state["admin"],
+        storage=storage,
     )
     kwargs.update(overrides)
     with Session(engine) as db:
@@ -64,8 +66,7 @@ def _candidate(engine, state, storage, **overrides):
 def _events(engine):
     with Session(engine) as db:
         return db.scalars(
-            select(AttachmentSecurityEvent)
-            .where(AttachmentSecurityEvent.action == "cdr_input")
+            select(AttachmentSecurityEvent).where(AttachmentSecurityEvent.action == "cdr_input")
         ).all()
 
 
@@ -111,14 +112,20 @@ def test_latest_failed_report_supersedes_old_clean(cdr_case, pg_engine):
     state, storage, _, _ = cdr_case
     with Session(pg_engine) as db:
         old = db.scalar(select(AttachmentAVScan))
-        db.add(AttachmentAVScan(
-            actor_id=state["admin"], patient_id=state["patient"],
-            attachment_id=state["attachment"],
-            content_sha256=old.content_sha256, content_length=old.content_length,
-            status="error", reason_code="scanner_unavailable",
-            engine_name="clamd", engine_version=None,
-            created_at=old.created_at + timedelta(seconds=1),
-        ))
+        db.add(
+            AttachmentAVScan(
+                actor_id=state["admin"],
+                patient_id=state["patient"],
+                attachment_id=state["attachment"],
+                content_sha256=old.content_sha256,
+                content_length=old.content_length,
+                status="error",
+                reason_code="scanner_unavailable",
+                engine_name="clamd",
+                engine_version=None,
+                created_at=old.created_at + timedelta(seconds=1),
+            )
+        )
         db.commit()
     with pytest.raises(ProcessingProhibited):
         _candidate(pg_engine, state, storage)
@@ -212,9 +219,14 @@ def test_two_parallel_requests_have_two_committed_audits(cdr_case, pg_engine):
     with ThreadPoolExecutor(max_workers=2) as pool:
         assert list(pool.map(one_request, range(2))) == [payload, payload]
     with Session(pg_engine) as db:
-        assert db.scalar(select(func.count()).select_from(
-            AttachmentSecurityEvent
-        ).where(AttachmentSecurityEvent.action == "cdr_input")) == 2
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "cdr_input")
+            )
+            == 2
+        )
 
 
 def test_changes_to_extraction_state_block_candidate(cdr_case, pg_engine):
@@ -243,6 +255,11 @@ def test_rejection_and_audit_rollback_atomically(cdr_case, pg_engine):
         event.remove(pg_engine, "before_cursor_execute", fail_audit)
     with Session(pg_engine) as db:
         assert db.scalar(select(AttachmentSecurityReview)).status == "prechecked_quarantined"
-        assert db.scalar(select(func.count()).select_from(AttachmentSecurityEvent).where(
-            AttachmentSecurityEvent.action == "cdr_input"
-        )) == 0
+        assert (
+            db.scalar(
+                select(func.count())
+                .select_from(AttachmentSecurityEvent)
+                .where(AttachmentSecurityEvent.action == "cdr_input")
+            )
+            == 0
+        )

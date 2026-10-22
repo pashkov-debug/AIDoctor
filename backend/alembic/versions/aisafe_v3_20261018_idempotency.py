@@ -27,12 +27,12 @@ def upgrade() -> None:
         sa.ForeignKeyConstraint(["actor_id"], ["users.id"]),
         sa.ForeignKeyConstraint(["alert_id"], ["safety_alerts.id"]),
         sa.UniqueConstraint(
-            "patient_id", "actor_id", "key_digest",
+            "patient_id",
+            "actor_id",
+            "key_digest",
             name="uq_safety_alert_requests_scope_key",
         ),
-        sa.UniqueConstraint(
-            "alert_id", name="uq_safety_alert_requests_alert"
-        ),
+        sa.UniqueConstraint("alert_id", name="uq_safety_alert_requests_alert"),
         sa.CheckConstraint(
             "length(key_digest) = 64 AND length(request_digest) = 64",
             name="ck_safety_alert_requests_digests",

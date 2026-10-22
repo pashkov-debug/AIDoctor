@@ -91,9 +91,7 @@ def _validate_synthetic_result(
         synthetic_pdf() if isinstance(result, SyntheticCDRResult) else synthetic_docx()
     )
     if (
-        not compare_digest(
-            output.source_sha256, hashlib.sha256(synthetic_input).hexdigest()
-        )
+        not compare_digest(output.source_sha256, hashlib.sha256(synthetic_input).hexdigest())
         or not compare_digest(result.source_sha256, output.source_sha256)
         or not compare_digest(result.output_sha256, output.output_sha256)
         or compare_digest(output.source_sha256, output.output_sha256)

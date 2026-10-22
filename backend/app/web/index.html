@@ -125,8 +125,23 @@
               </form>
             </section>
             <section class="panel" id="clinical-history-section">
-              <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Временная шкала. Исправления и подтверждение фактов — отдельный этап.</p></div></div>
+              <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Внутренние записи. Подтверждение и публикация пациенту — отдельные врачебные действия.</p></div></div>
               <div id="clinical-history" class="clinical-list"></div>
+              <form id="clinical-publication-form" class="admin-form" hidden>
+                <h3>Публикация конкретной записи пациенту</h3>
+                <p id="clinical-publication-source" class="muted"></p>
+                <input type="hidden" id="clinical-publication-id">
+                <input type="hidden" id="clinical-publication-version">
+                <label for="clinical-publication-text">Текст, который увидит пациент (не копируется автоматически)</label>
+                <textarea id="clinical-publication-text" required minlength="1" maxlength="2000" rows="5"></textarea>
+                <label><input type="checkbox" id="clinical-publication-confirm" required>
+                  Я проверил текст и разрешаю показать именно его пациенту</label>
+                <div class="form-actions">
+                  <button type="submit" class="button primary">Опубликовать выбранный текст в БД</button>
+                  <button type="button" id="clinical-publication-cancel" class="button subtle">Отмена</button>
+                </div>
+              </form>
+              <p class="message" id="clinical-publication-status" role="status" aria-live="polite"></p>
             </section>
           </div>
           <section class="panel clinical-digest" id="clinical-observations-section">
@@ -141,7 +156,7 @@
           </section>
           <div class="visibility-info"><strong>Кто видит эти данные?</strong>
             <p>Врач: визиты, события, наблюдения и Digest разрешённых пациентов.
-              Пациент: пока только собственное обозначение, номер и дату создания карточки.
+              Пациент: собственную карточку и только специально опубликованный врачом текст.
               Врачебные черновики, внутренние события и AI-ответы пациенту не показываются.</p>
           </div>
           <div class="notice"><strong>Граница UI-2B</strong>
@@ -165,11 +180,16 @@
             <p class="message" role="status" aria-live="polite" id="patient-status">Загрузка карточки…</p>
           </div>
           <section class="panel clinical-digest">
+            <div class="panel-heading"><div><h2>Опубликованные врачом сведения</h2>
+              <p>Только явно подтверждённый и опубликованный текст, без внутренних записей врача.</p></div></div>
+            <div id="patient-publications" class="clinical-list">Загрузка…</div>
+          </section>
+          <section class="panel clinical-digest">
             <div class="panel-heading"><div><h2>Что мне доступно сейчас</h2>
               <p>Разделение прав на уровне FastAPI, а не только интерфейса.</p></div></div>
             <div class="access-rows">
-              <div><strong>Видно:</strong> мой псевдоним, идентификатор карточки и дата её создания.</div>
-              <div><strong>Ещё не опубликовано:</strong> визиты и внутренние записи врача, симптомы и наблюдения, Digest, результаты психологических тестов, документы и назначения.</div>
+              <div><strong>Видно:</strong> моя карточка и тексты, отдельно опубликованные врачом.</div>
+              <div><strong>Ещё не опубликовано:</strong> исходные визиты и внутренние записи, Digest, результаты тестов, документы и назначения.</div>
               <div><strong>Позже:</strong> врачебно утверждённые назначения, назначенные тесты и разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
             </div>
           </section>

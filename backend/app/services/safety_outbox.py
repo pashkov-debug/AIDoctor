@@ -95,9 +95,7 @@ def _record(
     )
 
 
-def _failed_attempt(
-    session: Session, item: SafetyOutbox, now: datetime, error_code: str
-) -> None:
+def _failed_attempt(session: Session, item: SafetyOutbox, now: datetime, error_code: str) -> None:
     item.claim_token = None
     item.lease_expires_at = None
     item.last_error_code = error_code
@@ -174,13 +172,9 @@ def claim_due(
         raise
 
 
-def _locked_claim(
-    session: Session, claim: OutboxClaim, now: datetime
-) -> SafetyOutbox:
+def _locked_claim(session: Session, claim: OutboxClaim, now: datetime) -> SafetyOutbox:
     item = session.scalar(
-        select(SafetyOutbox)
-        .where(SafetyOutbox.id == claim.outbox_id)
-        .with_for_update()
+        select(SafetyOutbox).where(SafetyOutbox.id == claim.outbox_id).with_for_update()
     )
     if (
         item is None
@@ -196,9 +190,7 @@ def _locked_claim(
     return item
 
 
-def mark_delivered(
-    session: Session, claim: OutboxClaim, *, now: datetime | None = None
-) -> None:
+def mark_delivered(session: Session, claim: OutboxClaim, *, now: datetime | None = None) -> None:
     """Только после подтверждения реальной доставки будущим адаптером."""
     moment = _now_or_raise(now)
     try:

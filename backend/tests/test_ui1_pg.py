@@ -16,16 +16,30 @@ from sqlalchemy.orm import Session, sessionmaker
 def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
     factory = sessionmaker(bind=pg_engine, expire_on_commit=False)
     with factory() as db:
-        db.add_all([
-            User(username="ui1_doctor", password_hash=hash_password("secure-passphrase"),
-                 role="doctor"),
-            User(username="ui1_other", password_hash=hash_password("secure-passphrase"),
-                 role="doctor"),
-            User(username="ui1_patient", password_hash=hash_password("secure-passphrase"),
-                 role="patient"),
-            User(username="ui1_admin", password_hash=hash_password("secure-passphrase"),
-                 role="admin"),
-        ])
+        db.add_all(
+            [
+                User(
+                    username="ui1_doctor",
+                    password_hash=hash_password("secure-passphrase"),
+                    role="doctor",
+                ),
+                User(
+                    username="ui1_other",
+                    password_hash=hash_password("secure-passphrase"),
+                    role="doctor",
+                ),
+                User(
+                    username="ui1_patient",
+                    password_hash=hash_password("secure-passphrase"),
+                    role="patient",
+                ),
+                User(
+                    username="ui1_admin",
+                    password_hash=hash_password("secure-passphrase"),
+                    role="admin",
+                ),
+            ]
+        )
         db.commit()
         doctor = db.scalar(select(User).where(User.username == "ui1_doctor"))
         # Синтетический пациент доступен только привязанному врачу.
@@ -43,10 +57,15 @@ def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
     app.dependency_overrides[get_db] = override_db
     try:
         with TestClient(app) as client:
+
             def login(name: str) -> dict[str, str]:
-                r = client.post("/api/v1/auth/login", json={
-                    "username": name, "password": "secure-passphrase",
-                })
+                r = client.post(
+                    "/api/v1/auth/login",
+                    json={
+                        "username": name,
+                        "password": "secure-passphrase",
+                    },
+                )
                 assert r.status_code == 200, r.text
                 return {"Authorization": "Bearer " + r.json()["access_token"]}
 
@@ -69,8 +88,12 @@ def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
             assert client.get(base_url + "/settings", headers=patient).status_code == 403
             assert client.get(base_url + "/settings", headers=admin).status_code == 403
             assert client.get(base_url + "/doctor-context", headers=patient).status_code == 403
-            assert client.put(base_url + "/settings/profile", headers=admin,
-                              json={"expected_version": 0}).status_code == 403
+            assert (
+                client.put(
+                    base_url + "/settings/profile", headers=admin, json={"expected_version": 0}
+                ).status_code
+                == 403
+            )
             initial = client.get(base_url + "/settings", headers=doctor)
             assert initial.status_code == 200
             assert initial.json()["version"] == 0
@@ -91,7 +114,8 @@ def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
             assert p.json()["profile"]["full_name"] == "Учебный врач"
 
             clinical = {
-                "expected_version": 1, "practice_country": "Россия",
+                "expected_version": 1,
+                "practice_country": "Россия",
                 "rki_mode": "consider_if_verified",
                 "institution_type": "Амбулаторная клиника",
                 "clinical_specialty": "Психиатрия",
@@ -114,13 +138,15 @@ def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
             assert stale.status_code == 409
             assert client.get(base_url + "/settings", headers=doctor).json()["version"] == 2
             repeat = client.put(
-                base_url + "/settings/clinical", headers=doctor,
+                base_url + "/settings/clinical",
+                headers=doctor,
                 json={**clinical, "expected_version": 2},
             )
             assert repeat.status_code == 200
             assert repeat.json()["version"] == 2  # идентичное сохранение не пишет аудит
             invalid = client.put(
-                base_url + "/settings/clinical", headers=doctor,
+                base_url + "/settings/clinical",
+                headers=doctor,
                 json={**clinical, "expected_version": 2, "rki_mode": "automatic"},
             )
             assert invalid.status_code == 422
@@ -135,9 +161,9 @@ def test_doctor_settings_persistence_roles_versions_audit(pg_engine) -> None:
             assert saved.practice_country == "Россия"
             assert saved.version == 2
             events = db.scalars(
-                select(DoctorSettingsAudit).where(
-                    DoctorSettingsAudit.doctor_id == own.id
-                ).order_by(DoctorSettingsAudit.to_version)
+                select(DoctorSettingsAudit)
+                .where(DoctorSettingsAudit.doctor_id == own.id)
+                .order_by(DoctorSettingsAudit.to_version)
             ).all()
             assert len(events) == 2
             assert [event.section for event in events] == ["profile", "clinical"]

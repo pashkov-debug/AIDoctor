@@ -18,16 +18,15 @@ class SafetyFollowup(IdMixin, TimestampMixin, Base):
         ),
         Index(
             "ix_safety_followups_recipient_created",
-            "recipient_user_id", "created_at",
+            "recipient_user_id",
+            "created_at",
         ),
     )
 
     alert_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("safety_alerts.id"), nullable=False
     )
-    patient_id: Mapped[str] = mapped_column(
-        String(36), ForeignKey("patients.id"), nullable=False
-    )
+    patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
     recipient_user_id: Mapped[str] = mapped_column(
         String(36), ForeignKey("users.id"), nullable=False
     )

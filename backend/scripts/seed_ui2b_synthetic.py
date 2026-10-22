@@ -3,6 +3,7 @@
 Не создаёт реальные назначения или диагностические заключения.
 По умолчанию только проверяет цель; изменения — исключительно с --apply.
 """
+
 import argparse
 from datetime import UTC, datetime, timedelta
 
@@ -26,18 +27,48 @@ SECOND_ALIAS = "Синтетическая С-002 — сниженное нас�
 
 # Смещение в днях, тип визита, жалобы, влияние на повседневность, вопрос врачу.
 FIRST_VISITS = (
-    (-57, "initial", ("Тревога в конце рабочего дня", "Затруднения засыпания"), "moderate",
-     "Уточнить динамику сна и влияние тревоги на активность."),
-    (-49, "follow_up", ("Частые пробуждения", "Усталость утром"), "moderate",
-     "Оценить регулярность сна по дневнику."),
-    (-40, "review", ("Напряжение при нагрузке",), "moderate",
-     "Сопоставить самочувствие с нагрузкой."),
-    (-20, "follow_up", ("В отдельные дни беспокойство сохраняется",), "mild",
-     "Проверить полноту анамнеза и факторы риска."),
-    (-7, "review", ("Засыпание несколько легче", "Периодическая усталость"), "mild",
-     "Какие сведения дополнительно собрать на приёме?"),
-    (-1, "follow_up", ("Колебания напряжения",), "mild",
-     "Требуется повторная врачебная оценка динамики."),
+    (
+        -57,
+        "initial",
+        ("Тревога в конце рабочего дня", "Затруднения засыпания"),
+        "moderate",
+        "Уточнить динамику сна и влияние тревоги на активность.",
+    ),
+    (
+        -49,
+        "follow_up",
+        ("Частые пробуждения", "Усталость утром"),
+        "moderate",
+        "Оценить регулярность сна по дневнику.",
+    ),
+    (
+        -40,
+        "review",
+        ("Напряжение при нагрузке",),
+        "moderate",
+        "Сопоставить самочувствие с нагрузкой.",
+    ),
+    (
+        -20,
+        "follow_up",
+        ("В отдельные дни беспокойство сохраняется",),
+        "mild",
+        "Проверить полноту анамнеза и факторы риска.",
+    ),
+    (
+        -7,
+        "review",
+        ("Засыпание несколько легче", "Периодическая усталость"),
+        "mild",
+        "Какие сведения дополнительно собрать на приёме?",
+    ),
+    (
+        -1,
+        "follow_up",
+        ("Колебания напряжения",),
+        "mild",
+        "Требуется повторная врачебная оценка динамики.",
+    ),
 )
 FIRST_EVENTS = (
     (-57, "self_report", "Начал вести учебный дневник сна; данные со слов пациента."),
@@ -62,24 +93,63 @@ FIRST_OBSERVATIONS = (
 )
 
 SECOND_VISITS = (
-    (-65, "initial", ("Снижение интереса к привычным занятиям", "Утомляемость"), "moderate",
-     "Уточнить длительность симптомов и дифференциальные причины."),
-    (-56, "follow_up", ("Трудности сосредоточения", "Нестабильный режим сна"), "moderate",
-     "Оценить изменения нагрузки и сна."),
-    (-48, "follow_up", ("Колебания настроения",), "moderate",
-     "Собрать недостающую информацию о повседневной активности."),
-    (-39, "review", ("Усталость к вечеру",), "moderate",
-     "Проверить динамику субъективных оценок."),
-    (-30, "follow_up", ("Сниженная активность в отдельные дни",), "moderate",
-     "Уточнить факторы, связанные с утомлением."),
-    (-22, "follow_up", ("В отдельные дни легче выполнять привычные дела",), "mild",
-     "Оценить устойчивость изменений."),
-    (-15, "review", ("Трудности концентрации сохраняются",), "mild",
-     "Обсудить возможные дополнительные обследования."),
-    (-8, "follow_up", ("Настроение изменчивое",), "mild",
-     "Повторно уточнить выраженность функциональных ограничений."),
-    (-2, "review", ("Жалобы на утомляемость",), "mild",
-     "Нужна очная оценка; автоматических диагнозов нет."),
+    (
+        -65,
+        "initial",
+        ("Снижение интереса к привычным занятиям", "Утомляемость"),
+        "moderate",
+        "Уточнить длительность симптомов и дифференциальные причины.",
+    ),
+    (
+        -56,
+        "follow_up",
+        ("Трудности сосредоточения", "Нестабильный режим сна"),
+        "moderate",
+        "Оценить изменения нагрузки и сна.",
+    ),
+    (
+        -48,
+        "follow_up",
+        ("Колебания настроения",),
+        "moderate",
+        "Собрать недостающую информацию о повседневной активности.",
+    ),
+    (-39, "review", ("Усталость к вечеру",), "moderate", "Проверить динамику субъективных оценок."),
+    (
+        -30,
+        "follow_up",
+        ("Сниженная активность в отдельные дни",),
+        "moderate",
+        "Уточнить факторы, связанные с утомлением.",
+    ),
+    (
+        -22,
+        "follow_up",
+        ("В отдельные дни легче выполнять привычные дела",),
+        "mild",
+        "Оценить устойчивость изменений.",
+    ),
+    (
+        -15,
+        "review",
+        ("Трудности концентрации сохраняются",),
+        "mild",
+        "Обсудить возможные дополнительные обследования.",
+    ),
+    (
+        -8,
+        "follow_up",
+        ("Настроение изменчивое",),
+        "mild",
+        "Повторно уточнить выраженность функциональных ограничений.",
+    ),
+    (
+        -2,
+        "review",
+        ("Жалобы на утомляемость",),
+        "mild",
+        "Нужна очная оценка; автоматических диагнозов нет.",
+    ),
 )
 SECOND_EVENTS = (
     (-65, "self_report", "Со слов пациента: снизился интерес к досугу."),
@@ -159,60 +229,83 @@ def seed_extra_records(
 
     visits_seen = {
         p.payload_json.get("seed_key")
-        for p in session.scalars(
-            select(Encounter).where(Encounter.patient_id == patient.id)
-        ).all()
+        for p in session.scalars(select(Encounter).where(Encounter.patient_id == patient.id)).all()
         if isinstance(p.payload_json, dict)
     }
-    events_seen = set(session.scalars(
-        select(HistoryEvent.source_ref).where(HistoryEvent.patient_id == patient.id)
-    ).all())
-    observations_seen = set(session.scalars(
-        select(MedicalObservation.source_ref).where(MedicalObservation.patient_id == patient.id)
-    ).all())
+    events_seen = set(
+        session.scalars(
+            select(HistoryEvent.source_ref).where(HistoryEvent.patient_id == patient.id)
+        ).all()
+    )
+    observations_seen = set(
+        session.scalars(
+            select(MedicalObservation.source_ref).where(MedicalObservation.patient_id == patient.id)
+        ).all()
+    )
 
     result = {"visits": 0, "events": 0, "observations": 0}
     for number, (offset, reason, complaints, impact, question) in enumerate(visits, 1):
         key = f"{SEED_VERSION}:{scenario}:visit:{number}"
         if key in visits_seen:
             continue
-        session.add(Encounter(
-            patient_id=patient.id, reason=reason, status="draft",
-            occurred_at=anchor + timedelta(days=offset),
-            payload_json={
-                "seed_key": key, "synthetic": True, "complaints": list(complaints),
-                "functional_impact": impact, "clinician_question": question,
-            },
-        ))
+        session.add(
+            Encounter(
+                patient_id=patient.id,
+                reason=reason,
+                status="draft",
+                occurred_at=anchor + timedelta(days=offset),
+                payload_json={
+                    "seed_key": key,
+                    "synthetic": True,
+                    "complaints": list(complaints),
+                    "functional_impact": impact,
+                    "clinician_question": question,
+                },
+            )
+        )
         result["visits"] += 1
 
     for number, (offset, category, narrative) in enumerate(events, 1):
         key = f"{SEED_VERSION}:{scenario}:event:{number}"
         if key in events_seen:
             continue
-        session.add(HistoryEvent(
-            patient_id=patient.id, category=category, encounter_id=None,
-            fact_json={"synthetic": True, "text": narrative, "source": "Учебный сценарий UI-2B"},
-            occurred_at=anchor + timedelta(days=offset),
-            source_ref=key, priority="normal",
-        ))
+        session.add(
+            HistoryEvent(
+                patient_id=patient.id,
+                category=category,
+                encounter_id=None,
+                fact_json={
+                    "synthetic": True,
+                    "text": narrative,
+                    "source": "Учебный сценарий UI-2B",
+                },
+                occurred_at=anchor + timedelta(days=offset),
+                source_ref=key,
+                priority="normal",
+            )
+        )
         result["events"] += 1
 
     for number, (offset, code, value) in enumerate(observations, 1):
         key = f"{SEED_VERSION}:{scenario}:observation:{number}"
         if key in observations_seen:
             continue
-        session.add(MedicalObservation(
-            patient_id=patient.id,
-            code_system="synthetic:ui2b",
-            code=code,
-            observed_at=anchor + timedelta(days=offset),
-            value_json={
-                "score": value, "min": 0, "max": 10, "synthetic": True,
-                "description": "Учебная субъективная оценка, не клинический опросник",
-            },
-            source_ref=key,
-        ))
+        session.add(
+            MedicalObservation(
+                patient_id=patient.id,
+                code_system="synthetic:ui2b",
+                code=code,
+                observed_at=anchor + timedelta(days=offset),
+                value_json={
+                    "score": value,
+                    "min": 0,
+                    "max": 10,
+                    "synthetic": True,
+                    "description": "Учебная субъективная оценка, не клинический опросник",
+                },
+                source_ref=key,
+            )
+        )
         result["observations"] += 1
     session.flush()
     return result
@@ -250,12 +343,22 @@ def main() -> None:
             # Первую историю UI-2A восстанавливаем аддитивно, если её ещё не заполняли.
             first_base = seed_patient_timeline(session, first, anchor)
             first_extra = seed_extra_records(
-                session, first, anchor, "anxiety", FIRST_VISITS, FIRST_EVENTS,
+                session,
+                first,
+                anchor,
+                "anxiety",
+                FIRST_VISITS,
+                FIRST_EVENTS,
                 FIRST_OBSERVATIONS,
             )
             second = get_or_create_second_patient(session, doctor)
             second_extra = seed_extra_records(
-                session, second, anchor, "mood", SECOND_VISITS, SECOND_EVENTS,
+                session,
+                second,
+                anchor,
+                "mood",
+                SECOND_VISITS,
+                SECOND_EVENTS,
                 SECOND_OBSERVATIONS,
             )
             session.commit()

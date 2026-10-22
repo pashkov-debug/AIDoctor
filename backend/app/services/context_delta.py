@@ -73,9 +73,7 @@ def _check_snapshot(context: ClinicalContext, patient_id: str) -> None:
         raise SnapshotValidationError("Нельзя сравнивать усечённый снимок")
     if len(context.items) > MAX_SNAPSHOT_FACTS:
         raise SnapshotValidationError("Снимок превышает лимит записей")
-    if not hmac.compare_digest(
-        context.content_sha256, calculate_content_sha256(context)
-    ):
+    if not hmac.compare_digest(context.content_sha256, calculate_content_sha256(context)):
         raise SnapshotValidationError("Контрольная сумма контекста не совпадает")
     _items_by_key(context)
 

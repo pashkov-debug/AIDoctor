@@ -22,8 +22,8 @@ def test_synthetic_pdf_xref_is_structurally_valid():
     payload = execution.synthetic_pdf()
     tail = payload.split(b"startxref\n", 1)[1]
     xref = int(tail.split(b"\n", 1)[0])
-    assert payload[xref:xref + 5] == b"xref\n"
-    assert b"0 6\n" in payload[xref:xref + 16]
+    assert payload[xref : xref + 5] == b"xref\n"
+    assert b"0 6\n" in payload[xref : xref + 16]
 
 
 def test_pinned_local_id_and_isolation_and_no_phi():
@@ -71,9 +71,7 @@ def test_fail_closed_if_output_unmodified(monkeypatch):
 
 
 def test_fail_closed_if_output_not_pdf(monkeypatch):
-    monkeypatch.setattr(
-        execution, "_capture_bounded_process", lambda *args, **kwargs: b"garbage"
-    )
+    monkeypatch.setattr(execution, "_capture_bounded_process", lambda *args, **kwargs: b"garbage")
     with pytest.raises(execution.CDRExecutionDenied, match="Выход CDR"):
         execution.run_synthetic_pdf_cdr(image_id=IMAGE_ID)
 
@@ -96,15 +94,20 @@ def test_result_stays_untrusted_with_mock_worker(monkeypatch):
 
 def _call_python(script, *, size_limit=1024, timeout=2):
     return execution._capture_bounded_process(
-        (sys.executable, "-S", "-c", script), b"synthetic", timeout=timeout,
+        (sys.executable, "-S", "-c", script),
+        b"synthetic",
+        timeout=timeout,
         output_limit=size_limit,
     )
 
 
 def test_bounded_process_success():
-    assert _call_python(
-        "import sys; data=sys.stdin.buffer.read(); sys.stdout.buffer.write(data[::-1])"
-    ) == b"citehtnys"
+    assert (
+        _call_python(
+            "import sys; data=sys.stdin.buffer.read(); sys.stdout.buffer.write(data[::-1])"
+        )
+        == b"citehtnys"
+    )
 
 
 def test_bounded_process_rejects_large_stdout():
@@ -132,8 +135,7 @@ def test_bounded_process_fails_on_nonzero():
 def test_do_not_echo_secret_stderr():
     with pytest.raises(execution.CDRExecutionDenied) as captured:
         _call_python(
-            "import sys; sys.stderr.write('SECRET_MEDICAL'); "
-            "sys.stdin.buffer.read(); sys.exit(2)"
+            "import sys; sys.stderr.write('SECRET_MEDICAL'); sys.stdin.buffer.read(); sys.exit(2)"
         )
     assert "SECRET_MEDICAL" not in str(captured.value)
 
@@ -145,7 +147,9 @@ def test_do_not_echo_secret_stderr():
 def test_invalid_timeouts_rejected_without_start(timeout):
     with pytest.raises(execution.CDRExecutionDenied):
         execution._capture_bounded_process(
-            (sys.executable, "-c", "print(1)"), b"synthetic", timeout=timeout,
+            (sys.executable, "-c", "print(1)"),
+            b"synthetic",
+            timeout=timeout,
         )
 
 

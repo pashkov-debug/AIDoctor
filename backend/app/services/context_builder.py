@@ -45,9 +45,7 @@ class ContextBuilder:
         self._session = session
 
     def _read_limited(self, statement: Any) -> tuple[list[Any], bool]:
-        results = list(
-            self._session.scalars(statement.limit(MAX_ITEMS_PER_SOURCE + 1)).all()
-        )
+        results = list(self._session.scalars(statement.limit(MAX_ITEMS_PER_SOURCE + 1)).all())
         return results[:MAX_ITEMS_PER_SOURCE], len(results) > MAX_ITEMS_PER_SOURCE
 
     def build(self, patient_id: str) -> ClinicalContext:
@@ -193,9 +191,7 @@ class ContextBuilder:
                 item.record_id,
             )
         )
-        serialized = [
-            item.model_dump(mode="json", exclude_none=False) for item in items
-        ]
+        serialized = [item.model_dump(mode="json", exclude_none=False) for item in items]
         canonical = json.dumps(
             {
                 "schema_version": CONTEXT_VERSION,

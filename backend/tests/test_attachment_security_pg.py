@@ -103,10 +103,7 @@ def security_case(pg_engine, tmp_path, monkeypatch):
 
 
 def _url(state):
-    return (
-        f"/api/v1/patients/{state['patient']}/"
-        f"attachments/{state['attachment']}/security"
-    )
+    return f"/api/v1/patients/{state['patient']}/attachments/{state['attachment']}/security"
 
 
 def test_quarantine_precheck_audit_and_context_isolation(security_case, pg_engine):
@@ -199,9 +196,7 @@ def test_prechecked_file_tampered_again_is_rejected(security_case, pg_engine):
         assert db.scalar(select(func.count(AttachmentSecurityReview.id))) == 1
 
 
-def test_io_failure_records_error_but_remains_quarantined(
-    security_case, pg_engine, monkeypatch
-):
+def test_io_failure_records_error_but_remains_quarantined(security_case, pg_engine, monkeypatch):
     client, state, _, _ = security_case
     import app.services.attachment_security as security_module
 
