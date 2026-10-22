@@ -73,6 +73,7 @@ def list_patient_encounters(
     session: SessionDependency,
     user: Annotated[User, Depends(current_user)],
 ) -> EncounterListResponse:
+    require_doctor(user)
     require_patient(session, user, patient_id)
     service = EncounterService(session)
 
@@ -96,6 +97,7 @@ def get_encounter(
     session: SessionDependency,
     user: Annotated[User, Depends(current_user)],
 ) -> EncounterRead:
+    require_doctor(user)
     require_encounter(session, user, encounter_id)
     service = EncounterService(session)
 

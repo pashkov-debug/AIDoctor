@@ -1,6 +1,6 @@
 # AIDoctor — универсальная медицинская платформа
 
-**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент) и UI-1C (администратор) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
+**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент), UI-1C (администратор) UI-2A и UI-2B (две синтетические истории и навигация к визитам) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16+, Docker.
 - Рабочая среда: Windows 11, PyCharm, PowerShell.
@@ -8,6 +8,95 @@
 - Версионированный HTTP API: `/api/v1`.
 - Пользователи: врач, пациент, администратор с разными правами.
 
+
+## Текущий инкремент UI-2B — два пациента, история и навигация к визитам
+
+UI-2B улучшает клиническую страницу: в списке пациентов кнопка
+**«Визиты и история →»**, на странице врача четыре явных раздела:
+визиты, события истории, субъективные наблюдения и Context Builder.
+Для пациента медицинские данные не публикуются: он видит только
+собственный псевдоним, ID карточки и дату создания. Врач по прежнему
+получает только разрешённые ему записи; admin не читает внутреннюю
+клиническую историю.
+
+Однократное аддитивное создание второго синтетического пациента и
+расширение истории первого в **постоянной локальной** БД `aidoctor`:
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini upgrade head
+$env:PYTHONPATH = "backend"
+python -m backend.scripts.seed_ui2b_synthetic
+python -m backend.scripts.seed_ui2b_synthetic --apply
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+Второй пациент не имеет аккаунта по умолчанию: это самостоятельная
+карточка, привязанная к врачу `doctor_ui1`. Для отдельного пациентского
+входа создать `patient_ui2` через `backend.scripts.create_user` и связать
+его с карточкой через кабинет администратора. Повторный `--apply`
+не создаёт дубликатов. **Seed запрещён на любой БД кроме локальной `aidoctor`.**
+
+Проверки (автоматические PostgreSQL-тесты уничтожают таблицы **только**
+`aidoctor_test`):
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+node --check backend/app/web/assets/app.js
+python -m pytest backend/tests/test_ui2b_unit.py -v
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_ui2b_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL
+python -m alembic -c alembic.ini check
+```
+
+Детальное описание: [docs/ui2b_two_patients_and_visits.md](docs/ui2b_two_patients_and_visits.md).
+
+## Текущий инкремент UI-2A — клиническая карточка врача
+
+Врач открывает разрешённого пациента и видит визиты, хронологию событий
+и Digest действующего Context Builder. Создание нового визита через
+существующий API записывает `draft`; UI не утверждает и не публикует
+лечебные назначения. До появления отдельной политики публикации
+**пациенту закрыто чтение внутренних визитов и истории** — это
+намеренное ужесточение прав прежних GET-контрактов.
+
+Для постоянной локальной демонстрации подготовлена команда
+`python -m backend.scripts.seed_ui2a_synthetic --apply`: она добавляет
+идемпотентно **4 визита, 6 событий, 3 субъективных наблюдения** за
+35 дней в существующую `synthetic=true` карточку `patient_ui1`, доступную
+`doctor_ui1`. Запись строго запрещена в production, `aidoctor_test`
+или при подключении к удалённой БД. Ни одной таблицы UI-2A не создаёт.
+
+Короткий запуск и проверка на Windows:
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini upgrade head
+$env:PYTHONPATH = "backend"
+python -m backend.scripts.seed_ui2a_synthetic
+python -m backend.scripts.seed_ui2a_synthetic --apply
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+Проверки — **автоматические PostgreSQL-тесты только в `aidoctor_test`**:
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+node --check backend/app/web/assets/app.js
+python -m pytest backend/tests/test_ui2a_unit.py -v
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_ui2a_pg.py -v -rs
+python -m pytest backend/tests -v -rs
+Remove-Item Env:TEST_DATABASE_URL
+python -m alembic -c alembic.ini check
+```
+
+Полный контракт, критерии готовности, границы и риски описаны в
+[docs/ui2a_doctor_clinical_card.md](docs/ui2a_doctor_clinical_card.md).
 
 ## Текущий инкремент UI-1C — администратор
 

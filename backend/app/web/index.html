@@ -16,7 +16,7 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1C</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-2B</span>
         <h1>Ваше клиническое пространство</h1>
         <p>Доступны кабинеты врача, пациента и администратора.</p>
       </div>
@@ -42,11 +42,12 @@
       <div class="sidebar-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav class="nav" id="navigation">
         <button type="button" id="overview-nav" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
+        <button type="button" class="nav-link" data-view="clinical" id="clinical-nav" hidden><span>▤</span> Визиты и история</button>
         <button type="button" class="nav-link" data-view="patient" id="patient-nav" hidden><span>♙</span> Моя карточка</button>
         <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
         <button type="button" class="nav-link" data-view="admin" id="admin-nav" hidden><span>▣</span> Администрирование</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-1C</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-2B</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -70,12 +71,83 @@
           </div>
           <div class="panel">
             <div class="panel-heading"><div><h2>Пациенты</h2><p>Список запрашивается через действующий API с проверкой доступа.</p></div></div>
+            <p class="clinical-hint"><strong>Где визиты?</strong> Нажмите «Визиты и история» напротив нужного пациента. Откроются его визиты, события, наблюдения и Digest.</p>
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
           <div class="notice"><strong>Границы текущего этапа</strong>
-            <p id="overview-notice">Просмотр визитов, назначений, тестов и AI-область будут добавляться отдельными инкрементами. На UI-1B назначения не создаются.</p></div>
+            <p id="overview-notice">Клиническая карточка доступна врачу. Назначения, тесты и AI-анализ пока не подключены.</p></div>
         </section>
 
+
+        <section id="clinical-view" class="page" hidden>
+          <div class="page-intro"><span class="eyebrow">КЛИНИЧЕСКАЯ КАРТОЧКА · ТОЛЬКО ДЛЯ ВРАЧА</span>
+            <h1 id="clinical-title">Карточка пациента</h1>
+            <p id="clinical-identity">Визиты, события истории и состав клинического контекста.</p>
+            <p class="clinical-hint">Эта страница доступна только врачу. Данные двух пациентов хранятся отдельно. Черновики и внутренние записи не опубликованы пациенту.</p>
+          </div>
+          <div class="clinical-actions">
+            <button type="button" id="clinical-back" class="button subtle">← К списку пациентов</button>
+            <button type="button" id="clinical-refresh" class="button subtle">Обновить карточку</button>
+            <span id="clinical-card-status" role="status" aria-live="polite" class="message"></span>
+          </div>
+          <nav class="clinical-jumps" aria-label="Разделы карточки">
+            <button class="button subtle" type="button" data-clinical-target="clinical-visits-section">Визиты</button>
+            <button class="button subtle" type="button" data-clinical-target="clinical-history-section">История</button>
+            <button class="button subtle" type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
+            <button class="button subtle" type="button" data-clinical-target="clinical-digest-section">Context Builder</button>
+          </nav>
+          <div class="clinical-grid">
+            <section class="panel" id="clinical-visits-section">
+              <div class="panel-heading"><div><h2>Визиты <span id="clinical-visits-count" class="count-marker">—</span></h2><p>Внутренние черновики врача, не опубликованные пациенту.</p></div></div>
+              <div id="clinical-encounters" class="clinical-list"></div>
+              <form id="clinical-encounter-form" class="admin-form">
+                <h3>Новый визит</h3>
+                <label for="clinical-reason">Тип визита</label>
+                <select id="clinical-reason" required>
+                  <option value="initial">Первичный</option>
+                  <option value="follow_up">Повторный</option>
+                  <option value="review">Оценка динамики</option>
+                </select>
+                <label for="clinical-complaints">Жалобы (по одной на строку, до 50)</label>
+                <textarea id="clinical-complaints" maxlength="3000" rows="3"></textarea>
+                <label for="clinical-impact">Функциональные ограничения</label>
+                <select id="clinical-impact">
+                  <option value="">Не указано</option>
+                  <option value="none">Нет</option>
+                  <option value="mild">Лёгкие</option>
+                  <option value="moderate">Умеренные</option>
+                  <option value="severe">Выраженные</option>
+                </select>
+                <label for="clinical-question">Вопрос врача (не отправляется AI)</label>
+                <textarea id="clinical-question" maxlength="2000" rows="3"></textarea>
+                <button type="submit" class="button primary">Сохранить визит</button>
+                <p class="message" id="clinical-save-status" role="status" aria-live="polite"></p>
+              </form>
+            </section>
+            <section class="panel" id="clinical-history-section">
+              <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Временная шкала. Исправления и подтверждение фактов — отдельный этап.</p></div></div>
+              <div id="clinical-history" class="clinical-list"></div>
+            </section>
+          </div>
+          <section class="panel clinical-digest" id="clinical-observations-section">
+            <div class="panel-heading"><div><h2>Наблюдения <span id="clinical-observations-count" class="count-marker">—</span></h2>
+              <p>Учебные субъективные оценки, не валидированные психологические тесты.</p></div></div>
+            <div id="clinical-observations" class="clinical-list"></div>
+          </section>
+          <section class="panel clinical-digest" id="clinical-digest-section">
+            <div class="panel-heading"><div><h2>Context Builder / Digest</h2>
+              <p>Состав и даты фактов. Без AI-интерпретации; непроверенные вложения исключены.</p></div></div>
+            <div id="clinical-context" class="clinical-list"></div>
+          </section>
+          <div class="visibility-info"><strong>Кто видит эти данные?</strong>
+            <p>Врач: визиты, события, наблюдения и Digest разрешённых пациентов.
+              Пациент: пока только собственное обозначение, номер и дату создания карточки.
+              Врачебные черновики, внутренние события и AI-ответы пациенту не показываются.</p>
+          </div>
+          <div class="notice"><strong>Граница UI-2B</strong>
+            <p>Визиты сохраняются как черновики. Ни одно действие на этом экране не назначает лечение и не публикует медицинские сведения пациенту.</p>
+          </div>
+        </section>
 
         <section id="patient-view" class="page" hidden>
           <div class="page-intro"><span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span>
@@ -92,10 +164,15 @@
             </dl>
             <p class="message" role="status" aria-live="polite" id="patient-status">Загрузка карточки…</p>
           </div>
-          <div class="notice"><strong>Медицинские сведения ещё не опубликованы в кабинете</strong>
-            <p>Пока не реализованы проверенные правила видимости, не показываются визиты, результаты тестов, документы, внутренние записи и AI-черновики.
-               Назначения появятся только после отдельной реализации врачебного утверждения и публикации.</p>
-          </div>
+          <section class="panel clinical-digest">
+            <div class="panel-heading"><div><h2>Что мне доступно сейчас</h2>
+              <p>Разделение прав на уровне FastAPI, а не только интерфейса.</p></div></div>
+            <div class="access-rows">
+              <div><strong>Видно:</strong> мой псевдоним, идентификатор карточки и дата её создания.</div>
+              <div><strong>Ещё не опубликовано:</strong> визиты и внутренние записи врача, симптомы и наблюдения, Digest, результаты психологических тестов, документы и назначения.</div>
+              <div><strong>Позже:</strong> врачебно утверждённые назначения, назначенные тесты и разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
+            </div>
+          </section>
         </section>
 
         <section id="admin-view" class="page" hidden>

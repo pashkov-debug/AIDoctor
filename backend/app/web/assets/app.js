@@ -1,7 +1,7 @@
 "use strict";
 
 // Токен только в оперативной памяти вкладки; после перезагрузки нужен новый вход.
-const state = { token: null, user: null, settings: null, view: "overview" };
+const state = { token: null, user: null, settings: null, view: "overview", clinicalPatient: null };
 const $ = (id) => document.getElementById(id);
 const roleNames = { doctor: "Врач", patient: "Пациент", admin: "Администратор" };
 
@@ -20,6 +20,7 @@ function endSession(message = "") {
   state.user = null;
   state.settings = null;
   state.view = "overview";
+  state.clinicalPatient = null;
   $("patient-details").hidden = true;
   showMessage("patient-status", "");
   clearAdminData();
@@ -63,6 +64,7 @@ function roleLayout(user) {
   $("role-breadcrumb").textContent = `Кабинет: ${roleNames[user.role]}`;
   $("overview-nav").hidden = !doctor;
   $("settings-nav").hidden = !doctor;
+  $("clinical-nav").hidden = !doctor || !state.clinicalPatient;
   $("patient-nav").hidden = !patient;
   $("admin-nav").hidden = !admin;
   if (doctor) {
@@ -71,7 +73,7 @@ function roleLayout(user) {
     $("overview-description").textContent =
       "Доступные вам пациенты и настройки для будущего клинического контекста.";
     $("overview-notice").textContent =
-      "Просмотр визитов, назначения, тесты и AI-область подключаются следующими инкрементами. На UI-1B назначения не создаются.";
+      "Выберите пациента для просмотра истории и визитов. Назначения, тесты и AI-область пока не подключены.";
   }
   showView(doctor ? "overview" : patient ? "patient" : "admin");
 }
@@ -79,12 +81,13 @@ function roleLayout(user) {
 function showView(name) {
   if (!state.user) return;
   const permitted = state.user.role === "doctor"
-    ? ["overview", "settings"] : state.user.role === "patient" ? ["patient"] : ["admin"];
-  if (!permitted.includes(name)) return;
+    ? ["overview", "settings", "clinical"] : state.user.role === "patient" ? ["patient"] : ["admin"];
+  if (!permitted.includes(name) || (name === "clinical" && !state.clinicalPatient)) return;
   state.view = name;
   $("overview-view").hidden = name !== "overview";
   $("patient-view").hidden = name !== "patient";
   $("settings-view").hidden = name !== "settings";
+  $("clinical-view").hidden = name !== "clinical";
   $("admin-view").hidden = name !== "admin";
   document.querySelectorAll("[data-view]").forEach((node) => {
     const active = node.dataset.view === name;
@@ -95,6 +98,7 @@ function showView(name) {
   if (name === "settings") loadSettings();
   if (name === "patient") loadPatientPortal();
   if (name === "admin") loadAdmin();
+  if (name === "clinical" && state.clinicalPatient) loadClinical();
 }
 
 function formatDate(value) {
@@ -133,6 +137,18 @@ function patientItem(patient) {
   const id = document.createElement("small");
   id.textContent = `ID: ${patient.id}`;
   row.append(title, id);
+  if (state.user?.role === "doctor") {
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "button subtle";
+    open.textContent = "Визиты и история →";
+    open.addEventListener("click", () => {
+      state.clinicalPatient = { id: patient.id, alias: patient.alias };
+      $("clinical-nav").hidden = false;
+      showView("clinical");
+    });
+    row.append(open);
+  }
   return row;
 }
 
@@ -157,6 +173,178 @@ async function loadOverview() {
     root.textContent = "Не удалось получить пациентов: " + error.message;
   }
 }
+
+const clinicalReasons = {
+  initial: "Первичный", follow_up: "Повторный", review: "Оценка динамики",
+};
+const clinicalImpactLabels = {
+  none: "Нет", mild: "Лёгкие", moderate: "Умеренные", severe: "Выраженные",
+};
+const clinicalKinds = {
+  encounter: "Визит", history_event: "Событие",
+  observation: "Наблюдение", questionnaire: "Опросник",
+};
+
+function clinicalLine(title, details, note) {
+  const row = document.createElement("div");
+  row.className = "clinical-entry";
+  const strong = document.createElement("strong");
+  strong.textContent = title;
+  const info = document.createElement("span");
+  info.textContent = details;
+  row.append(strong, info);
+  if (note) {
+    const small = document.createElement("small");
+    small.textContent = note;
+    row.append(small);
+  }
+  return row;
+}
+
+function showClinicalRecords(elementId, records, renderer, empty) {
+  const target = $(elementId);
+  target.replaceChildren();
+  if (!records.length) {
+    target.textContent = empty;
+    return;
+  }
+  records.slice(0, 100).forEach((item) => target.append(renderer(item)));
+  if (records.length > 100) target.append(clinicalLine("Показано 100 записей", "Для просмотра остальных потребуется отдельная пагинация."));
+}
+
+function renderClinicalVisits(items) {
+  $("clinical-visits-count").textContent = String(items.length);
+  showClinicalRecords("clinical-encounters", items, (item) =>
+    clinicalLine(
+      `${formatDate(item.occurred_at)} · ${clinicalReasons[item.reason] || item.reason}`,
+      (item.complaints || []).join("; ") || "Жалобы не внесены",
+      `Статус: ${item.status}; ограничения: ${clinicalImpactLabels[item.functional_impact] || "не указаны"}` +
+      (item.clinician_question ? `; вопрос врача: ${item.clinician_question}` : ""),
+    ), "Визитов пока нет. Для постоянного заполнения истории выполните seed UI-2B.");
+}
+
+function renderClinicalHistory(items) {
+  $("clinical-history-count").textContent = String(items.length);
+  showClinicalRecords("clinical-history", items, (item) => {
+    const fact = item.fact || {};
+    const description = typeof fact.text === "string"
+      ? fact.text : JSON.stringify(fact).slice(0, 500);
+    return clinicalLine(
+      `${formatDate(item.occurred_at)} · ${item.category}`,
+      description, `Источник: ${item.source_ref}; приоритет: ${item.priority}`,
+    );
+  }, "Событий пока нет.");
+}
+
+const observationNames = {
+  subjective_anxiety: "Самооценка тревожности",
+  subjective_energy: "Самооценка энергии",
+  subjective_sleep_quality: "Самооценка качества сна",
+};
+
+function renderClinicalObservations(context) {
+  const items = (context.items || []).filter((item) => item.kind === "observation")
+    .sort((a, b) => new Date(b.at) - new Date(a.at));
+  $("clinical-observations-count").textContent = String(items.length);
+  showClinicalRecords("clinical-observations", items, (item) => {
+    const values = item.payload?.value || {};
+    const score = typeof values.score === "number" && Number.isFinite(values.score)
+      ? `${values.score} из ${values.max ?? 10}` : "Значение не указано";
+    return clinicalLine(
+      `${formatDate(item.at)} · ${observationNames[item.payload?.code] || item.payload?.code || "Наблюдение"}`,
+      `${score}. ${values.description || "Описание отсутствует"}`,
+      `Источник: ${item.source_ref}; только для врача`,
+    );
+  }, "Наблюдений пока нет.");
+}
+
+function renderClinicalDigest(digest) {
+  const counts = Object.entries(digest.counts_by_kind || {})
+    .map(([kind, n]) => `${clinicalKinds[kind] || kind}: ${n}`).join(" · ");
+  $("clinical-context").replaceChildren(
+    clinicalLine(`Фактов в контексте: ${digest.total_facts}`, counts,
+      `Версия ${digest.schema_version}; SHA-256: ${digest.context_sha256}`),
+    clinicalLine("Временной диапазон",
+      digest.earliest_fact_at
+        ? `${formatDate(digest.earliest_fact_at)} — ${formatDate(digest.latest_fact_at)}`
+        : "Фактов пока нет"),
+    clinicalLine("Контроль границ", digest.complete
+      ? "Контекст не усечён" : `Усечены источники: ${digest.truncated_sources.join(", ")}`,
+    `Непроверенных вложений исключено: ${digest.excluded_attachments_count}`),
+  );
+}
+
+async function loadClinical() {
+  const patient = state.clinicalPatient;
+  if (!patient || state.user?.role !== "doctor") return;
+  $("clinical-title").textContent = patient.alias;
+  $("clinical-identity").textContent = `ID: ${patient.id} · Внутренняя клиническая карточка врача`;
+  showMessage("clinical-card-status", "Загрузка…");
+  ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
+    $(id).textContent = "Загрузка…";
+  });
+  try {
+    const [visits, history, context, digest] = await Promise.all([
+      api(`/patients/${encodeURIComponent(patient.id)}/encounters`),
+      api(`/patients/${encodeURIComponent(patient.id)}/history-events`),
+      api(`/patients/${encodeURIComponent(patient.id)}/context`),
+      api(`/patients/${encodeURIComponent(patient.id)}/context/digest`),
+    ]);
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
+    renderClinicalVisits(visits.items || []);
+    renderClinicalHistory(history.items || []);
+    renderClinicalObservations(context);
+    renderClinicalDigest(digest);
+    showMessage("clinical-card-status", "Данные обновлены", true);
+  } catch (error) {
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
+    showMessage("clinical-card-status", `Ошибка загрузки: ${error.message}`);
+    ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
+      $(id).textContent = "Данные недоступны.";
+    });
+  }
+}
+
+document.querySelectorAll("[data-clinical-target]").forEach((button) => {
+  button.addEventListener("click", () => {
+    if (state.view !== "clinical") return;
+    const target = $(button.dataset.clinicalTarget);
+    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+  });
+});
+$("clinical-back").addEventListener("click", () => showView("overview"));
+$("clinical-refresh").addEventListener("click", loadClinical);
+$("clinical-encounter-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patient = state.clinicalPatient;
+  if (!patient || state.user?.role !== "doctor") return;
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const complaints = $("clinical-complaints").value.split(/\r?\n/)
+    .map((text) => text.trim()).filter(Boolean);
+  if (complaints.length > 50) {
+    showMessage("clinical-save-status", "Максимум 50 жалоб.");
+    return;
+  }
+  const question = $("clinical-question").value.trim();
+  button.disabled = true;
+  showMessage("clinical-save-status", "Сохранение…");
+  try {
+    await api(`/patients/${encodeURIComponent(patient.id)}/encounters`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        reason: $("clinical-reason").value, complaints,
+        functional_impact: $("clinical-impact").value || null,
+        clinician_question: question || null,
+      }),
+    });
+    form.reset();
+    showMessage("clinical-save-status", "Черновик визита сохранён в PostgreSQL", true);
+    await loadClinical();
+  } catch (error) {
+    showMessage("clinical-save-status", `Не сохранено: ${error.message}`);
+  } finally { button.disabled = false; }
+});
 
 const profileMapping = {
   full_name: "profile-full-name", specialty: "profile-specialty",

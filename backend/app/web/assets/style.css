@@ -144,3 +144,37 @@ code { background: #e9f1f3; padding: 2px 5px; border-radius: 4px; }
 .admin-form .button { justify-self: start; margin-top: 9px; }
 .admin-form select { min-width: 0; width: 100%; }
 @media (max-width: 1020px) { .admin-grid { grid-template-columns: 1fr; } }
+
+/* UI-2A: внутренняя клиническая карточка врача. */
+.clinical-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:20px; }
+.clinical-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:18px; align-items:start; }
+.clinical-grid > .panel { min-width:0; }
+.clinical-list { display:grid; gap:0; max-height:440px; overflow:auto; }
+.clinical-entry { display:grid; gap:6px; padding:13px 0; border-bottom:1px solid #e8eef2; overflow-wrap:anywhere; }
+.clinical-entry:last-child { border:0; }
+.clinical-entry strong { color:#163d4e; font-size:.88rem; }
+.clinical-entry span { color:#385565; font-size:.85rem; white-space:pre-wrap; }
+.clinical-entry small { color:#77909c; font-size:.76rem; }
+.clinical-digest { margin-top:18px; }
+@media (max-width:1020px) { .clinical-grid { grid-template-columns:1fr; } }
+
+/* UI-2B: явная навигация к визитам и разграничение видимости. */
+.clinical-hint { margin: 12px 0 20px; padding: 13px 16px; background: #f0f7fa;
+  color: #335968; border-radius: 9px; font-size: .9rem; }
+.clinical-hint strong { color: #12665c; }
+.patient-entry { align-items:center; flex-wrap:wrap; }
+.patient-entry > span { font-weight:700; }
+.patient-entry > small { flex:1 1 180px; }
+.patient-entry > .button { margin-left:auto; }
+.clinical-jumps { display:flex; gap:9px; flex-wrap:wrap; margin: 0 0 18px; }
+.clinical-jumps button { min-height: 39px; }
+.count-marker { display:inline-block; padding: 2px 9px; border-radius: 50px;
+  background:#e5f4f0; color:#126b5e; font-size: .82rem; vertical-align:middle; }
+.visibility-info { padding: 16px 20px; border: 1px solid #c7e4e4; background:#f4faf9;
+  border-radius:10px; margin-top:19px; font-size:.88rem; }
+.visibility-info p { margin: 6px 0 0; }
+.access-rows { display:grid; gap: 12px; }
+.access-rows > div { border-bottom: 1px solid #e8eff0; padding: 8px 0 14px; }
+.access-rows > div:last-child { border-bottom:none; }
+#clinical-visits-section, #clinical-history-section,
+#clinical-observations-section, #clinical-digest-section { scroll-margin-top: 24px; }

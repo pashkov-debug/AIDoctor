@@ -9,7 +9,7 @@ from fastapi import (
 from sqlalchemy.orm import Session
 
 from app.api.auth import current_user
-from app.core.access import require_patient
+from app.core.access import require_doctor, require_patient
 from app.db.session import get_db
 from app.models.access import User
 from app.schemas.history_event import (
@@ -41,6 +41,8 @@ def list_history_events(
     session: SessionDependency,
     user: Annotated[User, Depends(current_user)],
 ) -> HistoryEventList:
+    # Внутренние клинические события не публикуются пациенту без отдельной политики.
+    require_doctor(user)
     require_patient(session, user, patient_id)
     service = HistoryEventService(session)
 
