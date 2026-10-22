@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta name="color-scheme" content="light">
+  <title>AIDoctor — кабинет врача</title>
+  <link rel="stylesheet" href="/app/assets/style.css">
+  <script defer src="/app/assets/app.js"></script>
+</head>
+<body>
+  <section id="login-screen" class="login-screen">
+    <div class="login-panel">
+      <div class="brand brand-large"><span class="brand-mark">✚</span>
+        <span>AIDoctor <small>Clinical Compass Agent</small></span>
+      </div>
+      <div class="login-heading">
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1A</span>
+        <h1>Ваше клиническое пространство</h1>
+        <p>На первом этапе доступен кабинет врача. Кабинеты пациента и администратора реализуются отдельно.</p>
+      </div>
+      <form id="login-form">
+        <label for="login-username">Имя пользователя</label>
+        <input id="login-username" name="username" autocomplete="username" required maxlength="120">
+        <label for="login-password">Пароль</label>
+        <input id="login-password" type="password" name="password" autocomplete="current-password" required>
+        <button class="button primary full" type="submit">Войти</button>
+      </form>
+      <p id="login-status" class="message" role="status" aria-live="polite"></p>
+      <p class="login-footnote">Для локальной проверки только с синтетическими данными. Не предназначено для клинического применения.</p>
+    </div>
+    <div class="login-aside" aria-hidden="true">
+      <div class="aside-card"><span>Клинический процесс</span><b>Врач принимает окончательное решение.</b>
+      <p>Контекст пациента, безопасность вложений и утверждение назначений — самостоятельные контуры.</p></div>
+    </div>
+  </section>
+
+  <div id="workspace" class="workspace" hidden>
+    <aside class="sidebar" aria-label="Основная навигация">
+      <div class="brand"><span class="brand-mark">✚</span><span>AIDoctor<small>Clinical Compass</small></span></div>
+      <div class="sidebar-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
+      <nav class="nav" id="navigation">
+        <button type="button" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
+        <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
+      </nav>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-1A</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
+    </aside>
+    <div class="main-column">
+      <header class="topbar">
+        <div><span class="eyebrow">AIDoctor / <span id="role-breadcrumb">Кабинет</span></span>
+          <div class="mobile-brand">AIDoctor</div>
+        </div>
+        <div class="account"><div class="avatar" id="account-avatar">U</div>
+          <div class="account-meta"><strong id="account-name"></strong><span id="account-role"></span></div>
+          <button type="button" id="logout-button" class="button subtle">Выйти</button>
+        </div>
+      </header>
+      <main class="main-content">
+        <section id="overview-view" class="page">
+          <div class="page-intro"><span class="eyebrow">РАБОЧАЯ ПАНЕЛЬ</span>
+            <h1 id="overview-title">Кабинет врача</h1><p id="overview-description">Ваши пациенты и клинические настройки.</p>
+          </div>
+          <div class="stat-row">
+            <div class="stat"><span>Активная роль</span><strong id="stat-role">—</strong><small>Права проверяются сервером</small></div>
+            <div class="stat"><span>Доступных пациентов</span><strong id="stat-patients">—</strong><small>Доступных текущему врачу</small></div>
+            <div class="stat"><span>Интеграция AI</span><strong>Отключена</strong><small>До отдельного этапа</small></div>
+          </div>
+          <div class="panel">
+            <div class="panel-heading"><div><h2>Пациенты</h2><p>Список запрашивается через действующий API с проверкой доступа.</p></div></div>
+            <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
+          </div>
+          <div class="notice"><strong>Границы текущего этапа</strong>
+            <p id="overview-notice">Просмотр визитов, назначений, тестов и AI-область будут добавляться отдельными инкрементами. На UI-1A назначения не создаются.</p></div>
+        </section>
+
+        <section id="settings-view" class="page" hidden>
+          <div class="page-intro"><span class="eyebrow">ЛИЧНЫЕ ПАРАМЕТРЫ</span>
+            <h1>Настройки врача</h1><p>Изменения записываются в PostgreSQL и версионируются.</p></div>
+          <div class="panel settings-panel">
+            <div class="tabs" role="tablist" aria-label="Раздел настроек">
+              <button type="button" id="tab-profile" class="tab selected" role="tab" aria-selected="true" aria-controls="profile-form" data-tab="profile">Профиль врача</button>
+              <button type="button" id="tab-clinical" class="tab" role="tab" aria-selected="false" aria-controls="clinical-form" data-tab="clinical">Клинические настройки / Контекст AI</button>
+            </div>
+            <p class="version-note" id="settings-version">Версия настроек: —</p>
+            <form id="profile-form" class="settings-form">
+              <div class="form-heading"><h2>Профессиональный профиль</h2><p>Данные отображаются только в кабинете текущего врача.</p></div>
+              <div class="field-grid">
+                <div class="field"><label for="profile-full-name">ФИО</label><input id="profile-full-name" name="full_name" maxlength="160" autocomplete="name"></div>
+                <div class="field"><label for="profile-specialty">Специальность</label><input id="profile-specialty" name="specialty" maxlength="120"></div>
+                <div class="field"><label for="profile-institution">Учреждение</label><input id="profile-institution" name="institution" maxlength="200"></div>
+                <div class="field"><label for="profile-email">Контактный email</label><input id="profile-email" name="contact_email" type="email" maxlength="254" autocomplete="email"></div>
+                <div class="field wide"><label for="profile-info">Профессиональная информация</label><textarea id="profile-info" name="professional_info" maxlength="2000" rows="4"></textarea></div>
+              </div>
+              <div class="form-actions"><button type="submit" class="button primary">Сохранить профиль</button><span id="profile-status" role="status" aria-live="polite"></span></div>
+            </form>
+
+            <form id="clinical-form" class="settings-form" hidden>
+              <div class="form-heading"><h2>Клинический контекст</h2>
+                <p>Настройки будут доступны отдельным версионированным блоком <code>doctor_context</code>. Это предпочтения врача, не подтверждение применимости рекомендаций.</p></div>
+              <div class="field-grid">
+                <div class="field"><label for="clinical-country">Страна практики</label><input id="clinical-country" name="practice_country" maxlength="120" placeholder="Например, Россия"></div>
+                <div class="field"><label for="clinical-rki">Российские клинические рекомендации, утверждённые Минздравом России</label>
+                  <select id="clinical-rki" name="rki_mode">
+                    <option value="disabled">Не учитывать</option>
+                    <option value="consider_if_verified">Учитывать после проверки источника и применимости</option>
+                  </select>
+                </div>
+                <div class="field"><label for="clinical-institution">Тип медицинского учреждения</label><input id="clinical-institution" name="institution_type" maxlength="120" placeholder="Например, амбулаторное"></div>
+                <div class="field"><label for="clinical-specialty">Специальность для AI-контекста</label><input id="clinical-specialty" name="clinical_specialty" maxlength="120"></div>
+              </div>
+              <div class="notice notice-compact"><strong>Важно</strong><p>На UI-1 система не ищет и не проверяет клинические рекомендации. В будущем понадобится отдельная проверка версии, официального статуса и применимости документа.</p></div>
+              <div class="form-actions"><button type="submit" class="button primary">Сохранить клинические настройки</button><span id="clinical-status" role="status" aria-live="polite"></span></div>
+            </form>
+          </div>
+        </section>
+        <p id="global-status" class="message" role="status" aria-live="polite"></p>
+      </main>
+    </div>
+  </div>
+</body>
+</html>

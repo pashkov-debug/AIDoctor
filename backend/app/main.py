@@ -1,4 +1,8 @@
+from pathlib import Path
+
 from fastapi import FastAPI
+from fastapi.responses import FileResponse, RedirectResponse
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.access import router as access_router
 from app.api.routes.attachment_evidence import router as attachment_evidence_router
@@ -6,6 +10,7 @@ from app.api.routes.attachment_security import router as attachment_security_rou
 from app.api.routes.attachments import router as attachments_router
 from app.api.routes.auth import router as auth_router
 from app.api.routes.context import router as context_router
+from app.api.routes.doctor_settings import router as doctor_settings_router
 from app.api.routes.encounters import router as encounters_router
 from app.api.routes.health import router as health_router
 from app.api.routes.history_events import router as history_events_router
@@ -29,6 +34,7 @@ def create_app() -> FastAPI:
     routers = (
         health_router,
         auth_router,
+        doctor_settings_router,
         access_router,
         patients_router,
         encounters_router,
@@ -45,6 +51,32 @@ def create_app() -> FastAPI:
     )
     for router in routers:
         application.include_router(router, prefix=settings.api_v1_prefix)
+    web_dir = Path(__file__).resolve().parent / "web"
+    application.mount(
+        "/app/assets", StaticFiles(directory=web_dir / "assets"), name="web-assets"
+    )
+
+    @application.get("/", include_in_schema=False)
+    def home_redirect() -> RedirectResponse:
+        return RedirectResponse("/app", status_code=307)
+
+    @application.get("/app", include_in_schema=False)
+    @application.get("/app/", include_in_schema=False)
+    def web_app() -> FileResponse:
+        return FileResponse(
+            web_dir / "index.html",
+            headers={
+                "Cache-Control": "no-store",
+                "X-Content-Type-Options": "nosniff",
+                "X-Frame-Options": "DENY",
+                "Content-Security-Policy": (
+                    "default-src 'none'; script-src 'self'; style-src 'self'; "
+                    "connect-src 'self'; img-src 'self'; base-uri 'none'; "
+                    "form-action 'self'; frame-ancestors 'none'"
+                ),
+            },
+        )
+
     return application
 
 

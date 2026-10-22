@@ -7,6 +7,7 @@ from app.models.attachment_evidence_draft import (
 from app.models.attachment_security import AttachmentSecurityEvent, AttachmentSecurityReview
 from app.models.auth_session import AuthSession
 from app.models.context_snapshot import ContextSnapshot
+from app.models.doctor_settings import DoctorSettings, DoctorSettingsAudit
 from app.models.encounter import Encounter
 from app.models.history_event import HistoryEvent
 from app.models.medical_record import MedicalAttachment, MedicalObservation
@@ -32,6 +33,8 @@ __all__ = [
     "AuthSession",
     "ContextSnapshot",
     "DoctorPatient",
+    "DoctorSettings",
+    "DoctorSettingsAudit",
     "Encounter",
     "HistoryEvent",
     "MedicalAttachment",
