@@ -49,8 +49,11 @@ def test_ui1_web_public_but_no_private_data() -> None:
         assert "no-store" in response.headers["cache-control"]
         assert "default-src 'none'" in response.headers["content-security-policy"]
         assert 'id="workspace"' in response.text
-        assert "На первом этапе доступен кабинет врача" in response.text
-        assert "Российские клинические рекомендации, утверждённые Минздравом России" in response.text
+        assert "Доступны кабинеты врача и пациента" in response.text
+        assert (
+            "Российские клинические рекомендации, утверждённые Минздравом России"
+            in response.text
+        )
         assert 'id="clinical-rki"' in response.text
         assert client.get("/app/assets/app.js").status_code == 200
         assert client.get("/").status_code == 200
@@ -62,5 +65,5 @@ def test_ui1_web_public_but_no_private_data() -> None:
     assert "localStorage" not in script
     assert "sessionStorage" not in script
     assert "innerHTML" not in script
-    assert 'user.role !== "doctor"' in script
-    assert "Кабинеты пациента и администратора ещё не реализованы" in script
+    assert '["doctor", "patient"]' in script
+    assert "Кабинет администратора ещё не реализован" in script

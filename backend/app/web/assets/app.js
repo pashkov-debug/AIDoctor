@@ -3,7 +3,7 @@
 // Токен только в оперативной памяти вкладки; после перезагрузки нужен новый вход.
 const state = { token: null, user: null, settings: null, view: "overview" };
 const $ = (id) => document.getElementById(id);
-const roleNames = { doctor: "Врач" };
+const roleNames = { doctor: "Врач", patient: "Пациент" };
 
 class ApiError extends Error {
   constructor(message, status) { super(message); this.status = status; }
@@ -19,6 +19,9 @@ function endSession(message = "") {
   state.token = null;
   state.user = null;
   state.settings = null;
+  state.view = "overview";
+  $("patient-details").hidden = true;
+  showMessage("patient-status", "");
   $("workspace").hidden = true;
   $("login-screen").hidden = false;
   $("login-password").value = "";
@@ -48,26 +51,35 @@ async function api(path, options = {}) {
 }
 
 function roleLayout(user) {
+  const doctor = user.role === "doctor";
   $("login-screen").hidden = true;
   $("workspace").hidden = false;
   $("account-name").textContent = user.username;
   $("account-avatar").textContent = user.username.charAt(0).toUpperCase();
   $("account-role").textContent = roleNames[user.role];
   $("role-breadcrumb").textContent = `Кабинет: ${roleNames[user.role]}`;
-  $("stat-role").textContent = roleNames[user.role];
-  $("settings-nav").hidden = user.role !== "doctor";
-  $("overview-title").textContent = `Кабинет ${roleNames[user.role].toLowerCase()}`;
-  $("overview-description").textContent =
-    "Доступные вам пациенты и настройки для будущего клинического контекста.";
-  $("overview-notice").textContent =
-    "Просмотр визитов, назначения, тесты и AI-область подключаются следующими инкрементами. На UI-1A назначения не создаются.";
-  showView("overview");
+  $("overview-nav").hidden = !doctor;
+  $("settings-nav").hidden = !doctor;
+  $("patient-nav").hidden = doctor;
+  if (doctor) {
+    $("stat-role").textContent = roleNames[user.role];
+    $("overview-title").textContent = "Кабинет врача";
+    $("overview-description").textContent =
+      "Доступные вам пациенты и настройки для будущего клинического контекста.";
+    $("overview-notice").textContent =
+      "Просмотр визитов, назначения, тесты и AI-область подключаются следующими инкрементами. На UI-1B назначения не создаются.";
+  }
+  showView(doctor ? "overview" : "patient");
 }
 
 function showView(name) {
-  if (name === "settings" && state.user?.role !== "doctor") return;
+  if (!state.user) return;
+  const permitted = state.user.role === "doctor"
+    ? ["overview", "settings"] : ["patient"];
+  if (!permitted.includes(name)) return;
   state.view = name;
   $("overview-view").hidden = name !== "overview";
+  $("patient-view").hidden = name !== "patient";
   $("settings-view").hidden = name !== "settings";
   document.querySelectorAll("[data-view]").forEach((node) => {
     const active = node.dataset.view === name;
@@ -76,6 +88,35 @@ function showView(name) {
     else node.removeAttribute("aria-current");
   });
   if (name === "settings") loadSettings();
+  if (name === "patient") loadPatientPortal();
+}
+
+function formatDate(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Дата неизвестна" : date.toLocaleDateString("ru-RU");
+}
+
+async function loadPatientPortal() {
+  const accountId = state.user?.id;
+  if (state.user?.role !== "patient") return;
+  $("patient-details").hidden = true;
+  showMessage("patient-status", "Загрузка карточки…");
+  try {
+    const record = await api("/patients/me/portal");
+    if (state.user?.id !== accountId || state.view !== "patient") return;
+    $("patient-alias").textContent = record.alias;
+    $("patient-id").textContent = record.patient_id;
+    $("patient-created").textContent = formatDate(record.created_at);
+    $("patient-details").hidden = false;
+    showMessage("patient-status", "");
+  } catch (error) {
+    if (state.user?.id !== accountId || state.view !== "patient") return;
+    const message = error.status === 404
+      ? "Учётная запись пока не связана с активной карточкой пациента. Попросите администратора выполнить привязку."
+      : `Не удалось загрузить карточку: ${error.message}`;
+    showMessage("patient-status", message);
+  }
 }
 
 function patientItem(patient) {
@@ -200,15 +241,15 @@ $("login-form").addEventListener("submit", async (event) => {
     });
     state.token = tokens.access_token;
     const user = await api("/auth/me");
-    if (user.role !== "doctor") {
+    if (!["doctor", "patient"].includes(user.role)) {
       try { await api("/auth/logout", { method: "POST" }); }
       catch { /* Токен в любом случае будет забыт этой вкладкой. */ }
-      throw new Error("На UI-1A доступен только кабинет врача. Кабинеты пациента и администратора ещё не реализованы.");
+      throw new Error("Кабинет администратора ещё не реализован в UI-1B.");
     }
     state.user = user;
     $("login-password").value = "";
     roleLayout(user);
-    await loadOverview();
+    if (user.role === "doctor") await loadOverview();
   } catch (error) { endSession(error.message); }
   finally { btn.disabled = false; }
 });

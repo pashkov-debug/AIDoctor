@@ -14,6 +14,7 @@ from app.api.routes.doctor_settings import router as doctor_settings_router
 from app.api.routes.encounters import router as encounters_router
 from app.api.routes.health import router as health_router
 from app.api.routes.history_events import router as history_events_router
+from app.api.routes.patient_portal import router as patient_portal_router
 from app.api.routes.patients import router as patients_router
 from app.api.routes.questionnaires import router as questionnaires_router
 from app.api.routes.safety_alerts import router as safety_router
@@ -36,6 +37,7 @@ def create_app() -> FastAPI:
         auth_router,
         doctor_settings_router,
         access_router,
+        patient_portal_router,
         patients_router,
         encounters_router,
         questionnaires_router,

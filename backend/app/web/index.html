@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
-  <title>AIDoctor — кабинет врача</title>
+  <title>AIDoctor — кабинеты врача и пациента</title>
   <link rel="stylesheet" href="/app/assets/style.css">
   <script defer src="/app/assets/app.js"></script>
 </head>
@@ -16,9 +16,9 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1A</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-1B</span>
         <h1>Ваше клиническое пространство</h1>
-        <p>На первом этапе доступен кабинет врача. Кабинеты пациента и администратора реализуются отдельно.</p>
+        <p>Доступны кабинеты врача и пациента. Кабинет администратора ещё не реализован.</p>
       </div>
       <form id="login-form">
         <label for="login-username">Имя пользователя</label>
@@ -41,10 +41,11 @@
       <div class="brand"><span class="brand-mark">✚</span><span>AIDoctor<small>Clinical Compass</small></span></div>
       <div class="sidebar-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
       <nav class="nav" id="navigation">
-        <button type="button" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
+        <button type="button" id="overview-nav" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
+        <button type="button" class="nav-link" data-view="patient" id="patient-nav" hidden><span>♙</span> Моя карточка</button>
         <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-1A</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-1B</span><p>AI и назначения пока не подключены. Клинические данные не передаются внешним сервисам.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -71,7 +72,29 @@
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
           <div class="notice"><strong>Границы текущего этапа</strong>
-            <p id="overview-notice">Просмотр визитов, назначений, тестов и AI-область будут добавляться отдельными инкрементами. На UI-1A назначения не создаются.</p></div>
+            <p id="overview-notice">Просмотр визитов, назначений, тестов и AI-область будут добавляться отдельными инкрементами. На UI-1B назначения не создаются.</p></div>
+        </section>
+
+
+        <section id="patient-view" class="page" hidden>
+          <div class="page-intro"><span class="eyebrow">ЛИЧНЫЙ КАБИНЕТ</span>
+            <h1>Кабинет пациента</h1>
+            <p>Только сведения из карточки, связанной с вашей учётной записью. Все запросы проверяются сервером.</p>
+          </div>
+          <div class="panel patient-panel">
+            <div class="panel-heading"><div><h2>Моя карточка</h2>
+              <p>Общая идентификационная информация из PostgreSQL без внутренних записей врача.</p></div></div>
+            <dl class="patient-details" id="patient-details" hidden>
+              <div><dt>Обозначение пациента</dt><dd id="patient-alias">—</dd></div>
+              <div><dt>Номер карточки</dt><dd id="patient-id">—</dd></div>
+              <div><dt>Карточка создана</dt><dd id="patient-created">—</dd></div>
+            </dl>
+            <p class="message" role="status" aria-live="polite" id="patient-status">Загрузка карточки…</p>
+          </div>
+          <div class="notice"><strong>Медицинские сведения ещё не опубликованы в кабинете</strong>
+            <p>Пока не реализованы проверенные правила видимости, не показываются визиты, результаты тестов, документы, внутренние записи и AI-черновики.
+               Назначения появятся только после отдельной реализации врачебного утверждения и публикации.</p>
+          </div>
         </section>
 
         <section id="settings-view" class="page" hidden>
