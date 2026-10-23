@@ -7,6 +7,7 @@ from app.models.ai_workspace import AIRequest, AIRequestAudit
 from app.models.context_snapshot import ContextSnapshot
 from app.models.medical_record import MedicalAttachment
 from app.schemas.ai_workspace import AIRequestCreate, AIRequestRead
+from app.services.ai_agent_context import build_orders_review, review_hash
 from app.services.context_builder import ContextBuilder
 from app.services.context_snapshots import SnapshotIntegrityError, _validate_current
 from app.services.doctor_settings import read_doctor_context
@@ -31,6 +32,7 @@ def _result(row: AIRequest) -> AIRequestRead:
         context_sha256=row.context_sha256,
         doctor_context=row.doctor_context_json,
         attachment_manifest=row.attachment_manifest_json,
+        orders_review_available=row.review_orders_json is not None,
     )
 
 
@@ -97,6 +99,7 @@ def create_request(
         current = ContextBuilder(db).build(patient_id)
         snapshot_payload = _validate_current(current)
         doctor_context = read_doctor_context(db, doctor_id).model_dump(mode="json")
+        review_orders = build_orders_review(db, patient_id)
         snapshot = ContextSnapshot(
             patient_id=patient_id,
             created_by_id=doctor_id,
@@ -117,6 +120,8 @@ def create_request(
             context_sha256=current.content_sha256,
             doctor_context_json=doctor_context,
             attachment_manifest_json=manifest,
+            review_orders_json=review_orders,
+            review_orders_sha256=review_hash(review_orders),
             status="prepared",
             revision=1,
         )

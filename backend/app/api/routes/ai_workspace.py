@@ -11,7 +11,9 @@ from app.core.access import require_patient
 from app.db.session import get_db
 from app.models.access import DoctorPatient, User
 from app.models.patient import Patient
+from app.schemas.ai_agent_context import AIAgentContextRead
 from app.schemas.ai_workspace import AIRequestCreate, AIRequestRead, AIWorkspaceInfo
+from app.services.ai_agent_context import get_agent_context
 from app.services.ai_workspace import create_request, get_request, list_requests
 
 router = APIRouter(tags=["ai-workspace"])
@@ -69,3 +71,16 @@ def prepare_request(
     _authorize(db, actor, patient_id)
     response.headers["Cache-Control"] = "private, no-store"
     return create_request(db, actor.id, patient_id, payload)
+
+
+@router.get(
+    "/patients/{patient_id}/ai-requests/{request_id}/agent-context",
+    response_model=AIAgentContextRead,
+    summary="Сохранённый контекст для проверки проектов назначений (без отправки AI)",
+)
+def agent_context(
+    patient_id: str, request_id: str, db: DB, actor: Actor, response: Response
+) -> AIAgentContextRead:
+    _authorize(db, actor, patient_id)
+    response.headers["Cache-Control"] = "private, no-store"
+    return get_agent_context(db, actor.id, patient_id, request_id)

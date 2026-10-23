@@ -51,6 +51,7 @@ class AIRequestRead(BaseModel):
     status: Literal["prepared"] = "prepared"
     revision: Literal[1] = 1
     ai_response_available: Literal[False] = False
+    orders_review_available: bool = False
 
 
 class AIWorkspaceInfo(BaseModel):

@@ -15,6 +15,11 @@ class AIRequest(IdMixin, TimestampMixin, Base):
         CheckConstraint("status = 'prepared'", name="ck_ai_requests_prepared_only"),
         CheckConstraint("schema_version = 'ai_request.v1'", name="ck_ai_requests_schema_v1"),
         CheckConstraint("revision = 1", name="ck_ai_requests_revision_one"),
+        CheckConstraint(
+            "(review_orders_json IS NULL AND review_orders_sha256 IS NULL) OR "
+            "(review_orders_json IS NOT NULL AND review_orders_sha256 IS NOT NULL)",
+            name="ck_ai_requests_review_orders_pair",
+        ),
     )
 
     patient_id: Mapped[str] = mapped_column(String(36), ForeignKey("patients.id"), nullable=False)
@@ -28,6 +33,9 @@ class AIRequest(IdMixin, TimestampMixin, Base):
     context_sha256: Mapped[str] = mapped_column(String(64), nullable=False)
     doctor_context_json: Mapped[dict] = mapped_column(JSONB, nullable=False)
     attachment_manifest_json: Mapped[list] = mapped_column(JSONB, nullable=False, default=list)
+    # Неизменяемые данные новых запросов; NULL у запросов до UI-6A.
+    review_orders_json: Mapped[dict | None] = mapped_column(JSONB, nullable=True)
+    review_orders_sha256: Mapped[str | None] = mapped_column(String(64), nullable=True)
     status: Mapped[str] = mapped_column(String(24), nullable=False, default="prepared")
     revision: Mapped[int] = mapped_column(Integer, nullable=False, default=1)
 

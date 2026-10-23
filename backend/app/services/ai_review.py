@@ -17,6 +17,7 @@ from app.models.questionnaire_assignment import (
 )
 from app.schemas.ai_review import DraftImport, DraftRead, RejectDraft, ReviewAction, ReviewCommit
 from app.schemas.clinical_order import OrderDraftCreate
+from app.services.ai_agent_context import current_orders_match
 from app.services.clinical_order import _audit as audit_order
 from app.services.clinical_order import _check_ready
 from app.services.context_builder import ContextBuilder
@@ -220,6 +221,8 @@ def _fresh(db: Session, request: AIRequest) -> None:
     settings = read_doctor_context(db, request.doctor_id).model_dump(mode="json")
     if settings != request.doctor_context_json:
         raise HTTPException(409, "Настройки врача изменены: создайте новый AI-запрос")
+    if not current_orders_match(db, request):
+        raise HTTPException(409, "Список назначений изменён: создайте новый AI-запрос")
 
 
 def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: ReviewAction) -> dict:
