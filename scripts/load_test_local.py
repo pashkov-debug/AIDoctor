@@ -71,8 +71,12 @@ class LocalHttp:
         return self.request(path, token=token)
 
     def request(
-        self, path: str, *, method: str = "GET",
-        token: str | None = None, payload: dict | None = None,
+        self,
+        path: str,
+        *,
+        method: str = "GET",
+        token: str | None = None,
+        payload: dict | None = None,
     ) -> dict | list:
         if not path.startswith("/") or path.startswith("//") or "://" in path:
             raise ValueError("Некорректный путь API")
@@ -100,7 +104,8 @@ def authenticate(client: LocalHttp, username: str) -> str:
     password = getpass.getpass(f"Пароль {username}: ")
     try:
         result = client.request(
-            "/api/v1/auth/login", method="POST",
+            "/api/v1/auth/login",
+            method="POST",
             payload={"username": username, "password": password},
         )
     finally:
@@ -123,7 +128,8 @@ def preflight_app(client: LocalHttp, doctor: str, patient: str) -> dict:
         raise RuntimeError("Указанные учётные записи должны быть врачом и пациентом")
     visible = client.get("/api/v1/patients", doctor_token)
     synthetic_ids = {
-        item.get("id") for item in visible.get("items", [])
+        item.get("id")
+        for item in visible.get("items", [])
         if isinstance(item, dict)
         and isinstance(item.get("demographics"), dict)
         and item["demographics"].get("synthetic") is True
@@ -221,8 +227,13 @@ def summarize(samples: list[Observation], duration_s: float, users: int) -> dict
 
 def stage(
     client: LocalHttp,
-    *, users: int, duration: float, doctor_share: float,
-    think_ms: int, mode: str, plan: dict | None,
+    *,
+    users: int,
+    duration: float,
+    doctor_share: float,
+    think_ms: int,
+    mode: str,
+    plan: dict | None,
 ) -> dict:
     finished = threading.Event()
     collected: list[Observation] = []
@@ -342,7 +353,8 @@ def main() -> None:
             "client_host": platform.platform(),
             "client_logical_cpus": os.cpu_count(),
             "role_mix": {"doctor_share": args.doctor_share, "patient_share": 1 - args.doctor_share}
-                if args.mode == "app" else None,
+            if args.mode == "app"
+            else None,
             "test_parameters": {
                 "duration_per_level_s": args.duration,
                 "think_ms": args.think_ms,

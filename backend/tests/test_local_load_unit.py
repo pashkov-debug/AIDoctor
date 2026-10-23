@@ -3,7 +3,6 @@
 import json
 import threading
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
-from urllib.error import HTTPError
 
 import pytest
 
@@ -32,9 +31,13 @@ def test_percentiles_and_empty_samples():
     assert percentile([1, 2, 3, 4, 5], 0.50) == 3
     assert percentile([1, 2, 3, 4, 5], 0.95) == 5
     result = summarize(
-        [Observation("doctor", 20, True), Observation("doctor", 40, True),
-         Observation("patient", 50, False, "http_503")],
-        duration_s=2, users=3,
+        [
+            Observation("doctor", 20, True),
+            Observation("doctor", 40, True),
+            Observation("patient", 50, False, "http_503"),
+        ],
+        duration_s=2,
+        users=3,
     )
     assert result["requests"] == 3
     assert result["errors"] == 1
@@ -78,9 +81,13 @@ class Stub(BaseHTTPRequestHandler):
             role = "doctor" if token == "Bearer doctor_token" else "patient"
             return self._json({"role": role})
         if self.path == "/api/v1/patients":
-            return self._json({"items": [
-                {"id": "syn1", "demographics": {"synthetic": True}},
-            ]})
+            return self._json(
+                {
+                    "items": [
+                        {"id": "syn1", "demographics": {"synthetic": True}},
+                    ]
+                }
+            )
         if self.path == "/api/v1/patients/me/portal":
             return self._json({"patient_id": "syn1"})
         if self.path.startswith("/api/v1/"):
@@ -116,8 +123,13 @@ def test_synthetic_local_preflight_and_read_only_load(stub_server):
     plan = preflight_app(client, "doctor", "patient")
     assert plan["paths"]["doctor"]
     result = stage(
-        client, users=2, duration=0.1, doctor_share=0.5,
-        think_ms=20, mode="app", plan=plan,
+        client,
+        users=2,
+        duration=0.1,
+        doctor_share=0.5,
+        think_ms=20,
+        mode="app",
+        plan=plan,
     )
     assert result["requests"] > 0
     assert result["errors"] == 0
@@ -127,6 +139,7 @@ def test_synthetic_local_preflight_and_read_only_load(stub_server):
 def test_production_is_forbidden(stub_server):
     class ProductionStub(Stub):
         environment = "production"
+
     stub_server.RequestHandlerClass = ProductionStub
     client = LocalHttp(f"http://127.0.0.1:{stub_server.server_port}")
     with pytest.raises(RuntimeError, match="APP_ENV"):

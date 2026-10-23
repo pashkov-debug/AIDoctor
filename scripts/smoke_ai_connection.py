@@ -39,12 +39,17 @@ def canonical_sha256(value: dict) -> str:
 
 
 def http_json(
-    base: str, path: str, *, method: str = "GET", token: str | None = None,
+    base: str,
+    path: str,
+    *,
+    method: str = "GET",
+    token: str | None = None,
     payload: dict | None = None,
 ) -> dict | list:
     data = (
         json.dumps(payload, ensure_ascii=False, allow_nan=False).encode("utf-8")
-        if payload is not None else None
+        if payload is not None
+        else None
     )
     headers = {"Accept": "application/json"}
     if data is not None:
@@ -66,7 +71,8 @@ def http_json(
 
 def choose_patient(items: list, patient_id: str | None = None) -> dict:
     candidates = [
-        item for item in items
+        item
+        for item in items
         if isinstance(item, dict)
         and isinstance(item.get("demographics"), dict)
         and item["demographics"].get("synthetic") is True
@@ -89,7 +95,9 @@ def run(doctor: str, patient_id: str | None, app_port: int, mock_port: int, fres
     if not password:
         raise ValueError("Пароль пуст")
     login = http_json(
-        app, "/api/v1/auth/login", method="POST",
+        app,
+        "/api/v1/auth/login",
+        method="POST",
         payload={"username": doctor, "password": password},
     )
     password = ""
@@ -109,7 +117,10 @@ def run(doctor: str, patient_id: str | None, app_port: int, mock_port: int, fres
         print("[3/5] Повторно использован подготовленный AI-запрос")
     else:
         created = http_json(
-            app, base, token=token, method="POST",
+            app,
+            base,
+            token=token,
+            method="POST",
             payload={
                 "request_key": str(uuid4()),
                 "question": "Проверка маршрута связи с AI без клинического анализа.",
@@ -174,7 +185,8 @@ def main() -> None:
     parser.add_argument("--app-port", type=int, default=8000)
     parser.add_argument("--mock-port", type=int, default=8765)
     parser.add_argument(
-        "--fresh", action="store_true",
+        "--fresh",
+        action="store_true",
         help="Создать новый снимок AI-запроса вместо повторного использования",
     )
     args = parser.parse_args()

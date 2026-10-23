@@ -7,9 +7,7 @@ from alembic.script import ScriptDirectory
 
 ROOT = Path(__file__).resolve().parents[1]
 REVISION = "aictx_v3_20261017"
-DESTINATION = (
-    ROOT / "backend" / "alembic" / "versions" / f"{REVISION}_context_snapshots.py"
-)
+DESTINATION = ROOT / "backend" / "alembic" / "versions" / f"{REVISION}_context_snapshots.py"
 
 TEMPLATE = """\
 \"\"\"Неизменяемые серверные снимки медицинского контекста.

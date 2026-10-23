@@ -13,15 +13,17 @@ from uuid import UUID
 REQUEST_SCHEMA = "aidoctor.mock_connection.v1"
 RESPONSE_SCHEMA = "aidoctor.mock_receipt.v1"
 MAX_REQUEST_BYTES = 4096
-REQUIRED_FIELDS = frozenset({
-    "schema_version",
-    "request_id",
-    "context_sha256",
-    "context_schema",
-    "synthetic_confirmed",
-    "approved_count",
-    "draft_count",
-})
+REQUIRED_FIELDS = frozenset(
+    {
+        "schema_version",
+        "request_id",
+        "context_sha256",
+        "context_schema",
+        "synthetic_confirmed",
+        "approved_count",
+        "draft_count",
+    }
+)
 
 
 def validate_envelope(value: object) -> dict:
@@ -68,11 +70,14 @@ class MockHandler(BaseHTTPRequestHandler):
 
     def do_GET(self) -> None:
         if self.path == "/health":
-            self.send_json(200, {
-                "status": "ready",
-                "service": "local_ai_mock",
-                "llm_connected": False,
-            })
+            self.send_json(
+                200,
+                {
+                    "status": "ready",
+                    "service": "local_ai_mock",
+                    "llm_connected": False,
+                },
+            )
         else:
             self.send_json(404, {"error": "Маршрут не найден"})
 
@@ -99,20 +104,23 @@ class MockHandler(BaseHTTPRequestHandler):
         except (UnicodeDecodeError, ValueError, json.JSONDecodeError):
             self.send_json(422, {"error": "Некорректный технический запрос"})
             return
-        self.send_json(200, {
-            "schema_version": RESPONSE_SCHEMA,
-            "service": "local_ai_mock",
-            "origin": "synthetic_connection_test",
-            "request_id": request["request_id"],
-            "received_context_sha256": request["context_sha256"],
-            "approved_count": request["approved_count"],
-            "draft_count": request["draft_count"],
-            "delivery_confirmed": True,
-            "llm_connected": False,
-            "analysis_performed": False,
-            "recommendations": [],
-            "message": "Связь проверена. Анализ AI не выполнялся.",
-        })
+        self.send_json(
+            200,
+            {
+                "schema_version": RESPONSE_SCHEMA,
+                "service": "local_ai_mock",
+                "origin": "synthetic_connection_test",
+                "request_id": request["request_id"],
+                "received_context_sha256": request["context_sha256"],
+                "approved_count": request["approved_count"],
+                "draft_count": request["draft_count"],
+                "delivery_confirmed": True,
+                "llm_connected": False,
+                "analysis_performed": False,
+                "recommendations": [],
+                "message": "Связь проверена. Анализ AI не выполнялся.",
+            },
+        )
 
 
 def main() -> None:
