@@ -129,6 +129,13 @@ def _required_text(record: ClinicalOrder, keys: tuple[str, ...]) -> list[str]:
 
 
 def _check_ready(record: ClinicalOrder) -> None:
+    # UI-5: неизменяемые учебные кандидаты намеренно содержат ошибки.
+    # Даже при заполнении всех полей они не могут стать назначением пациенту.
+    if (record.source_reference or "").startswith("synthetic:ui5:v1:candidate:"):
+        raise HTTPException(
+            422,
+            detail="Учебный проект назначения UI-5 запрещено утверждать. Создайте отдельное проверенное назначение.",
+        )
     missing = _required_text(record, ("name", "indication", "rationale"))
     if record.kind == "medication":
         missing.extend(
