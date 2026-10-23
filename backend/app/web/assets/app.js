@@ -22,6 +22,12 @@ function endSession(message = "") {
   state.view = "overview";
   state.clinicalPatient = null;
   state.clinicalPublications = [];
+  doctorPatients = [];
+  $("sidebar-patient-select").replaceChildren();
+  activePanels.clinical = "visits";
+  activePanels.patient = "profile";
+  activePanels.admin = "users";
+  clearAIWorkspace();
   orderEditing = null;
   orderApproval = null;
   orderPendingKey = null;
@@ -69,53 +75,132 @@ async function api(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
+// Навигация: ровно один подраздел открыт в правой области.
+const panelNames = {
+  clinical: { visits: "Визиты", history: "Клиническая история",
+    observations: "Наблюдения", orders: "Назначения",
+    tests: "Психологические тесты", digest: "Context Builder" },
+  patient: { profile: "Моя карточка", publications: "Записи врача",
+    orders: "Мои назначения", tests: "Мои тесты" },
+  admin: { users: "Пользователи", patients: "Карточки пациентов",
+    links: "Связи врач–пациент", accounts: "Привязка аккаунта", audit: "Аудит" },
+};
+const activePanels = { clinical: "visits", patient: "profile", admin: "users" };
+let doctorPatients = [];
+
 function roleLayout(user) {
   const doctor = user.role === "doctor";
-  const patient = user.role === "patient";
-  const admin = user.role === "admin";
   $("login-screen").hidden = true;
   $("workspace").hidden = false;
   $("account-name").textContent = user.username;
   $("account-avatar").textContent = user.username.charAt(0).toUpperCase();
   $("account-role").textContent = roleNames[user.role];
   $("role-breadcrumb").textContent = `Кабинет: ${roleNames[user.role]}`;
-  $("overview-nav").hidden = !doctor;
-  $("settings-nav").hidden = !doctor;
-  $("clinical-nav").hidden = !doctor || !state.clinicalPatient;
-  $("patient-nav").hidden = !patient;
-  $("admin-nav").hidden = !admin;
+  // Список пунктов роли — единственный источник истины о видимости меню.
+  document.querySelectorAll("[data-role]").forEach((node) => {
+    node.hidden = node.dataset.role !== user.role;
+  });
   if (doctor) {
     $("stat-role").textContent = roleNames[user.role];
     $("overview-title").textContent = "Кабинет врача";
-    $("overview-description").textContent =
-      "Доступные вам пациенты и настройки для будущего клинического контекста.";
+    $("overview-description").textContent = "Выберите пациента в списке или слева.";
     $("overview-notice").textContent =
-      "Визиты, назначения и учебные тесты доступны; AI пока не подключён.";
+      "Визиты, назначения, учебные тесты и подготовка AI-запросов доступны. Модель AI не подключена.";
   }
-  showView(doctor ? "overview" : patient ? "patient" : "admin");
+  showView(doctor ? "overview" : user.role === "patient" ? "patient" : "admin");
 }
 
-function showView(name) {
+function renderActivePanels(name) {
+  document.querySelectorAll("[data-panel-group]").forEach((node) => {
+    const isActive = node.dataset.panelGroup === name
+      && node.dataset.panel === activePanels[name];
+    node.hidden = !isActive || (name === "clinical" && !state.clinicalPatient);
+  });
+  $("clinical-no-patient").hidden = name !== "clinical" || Boolean(state.clinicalPatient);
+  $("clinical-refresh").disabled = !state.clinicalPatient;
+  $("clinical-open-ai").disabled = !state.clinicalPatient;
+}
+
+function showView(name, panel = null) {
   if (!state.user) return;
   const permitted = state.user.role === "doctor"
-    ? ["overview", "settings", "clinical"] : state.user.role === "patient" ? ["patient"] : ["admin"];
-  if (!permitted.includes(name) || (name === "clinical" && !state.clinicalPatient)) return;
+    ? ["overview", "settings", "clinical", "ai"]
+    : state.user.role === "patient" ? ["patient"] : ["admin"];
+  if (!permitted.includes(name)) return;
+  if (panel !== null && panelNames[name] && panelNames[name][panel]) {
+    activePanels[name] = panel;
+  }
+  const previousView = state.view;
   state.view = name;
-  $("overview-view").hidden = name !== "overview";
-  $("patient-view").hidden = name !== "patient";
-  $("settings-view").hidden = name !== "settings";
-  $("clinical-view").hidden = name !== "clinical";
-  $("admin-view").hidden = name !== "admin";
+  for (const view of ["overview", "patient", "settings", "clinical", "admin", "ai"]) {
+    $(view + "-view").hidden = view !== name;
+  }
+  renderActivePanels(name);
   document.querySelectorAll("[data-view]").forEach((node) => {
-    const active = node.dataset.view === name;
+    const active = node.dataset.view === name
+      && (!node.dataset.panel || node.dataset.panel === activePanels[name]);
     node.classList.toggle("active", active);
     if (active) node.setAttribute("aria-current", "page");
     else node.removeAttribute("aria-current");
   });
-  if (name === "settings") loadSettings();
-  if (name === "patient") loadPatientPortal();
-  if (name === "admin") loadAdmin();
-  if (name === "clinical" && state.clinicalPatient) loadClinical();
+  const title = panelNames[name]?.[activePanels[name]] || (
+    {overview: "Пациенты", settings: "Настройки врача", ai: "Рабочая область AI"}[name]
+  );
+  $("role-breadcrumb").textContent = `${roleNames[state.user.role]} / ${title}`;
+  window.scrollTo(0, 0);
+  if (name === "settings" && previousView !== name) loadSettings();
+  if (name === "patient" && previousView !== name) loadPatientPortal();
+  if (name === "admin" && previousView !== name) loadAdmin();
+  if (name === "clinical" && state.clinicalPatient && previousView !== name) loadClinical();
+  if (name === "ai" && previousView !== name) loadAIWorkspace();
+}
+
+function chooseDoctorPatient(id, openClinical = false) {
+  if (state.user?.role !== "doctor") return;
+  const patient = doctorPatients.find((item) => item.id === id);
+  const changed = state.clinicalPatient?.id !== (patient?.id || null);
+  state.clinicalPatient = patient
+    ? { id: patient.id, alias: patient.alias || "Пациент" } : null;
+  $("sidebar-patient-select").value = patient ? patient.id : "";
+  if (changed) {
+    state.clinicalPublications = [];
+    clearAIWorkspace();
+    $("clinical-title").textContent = patient?.alias || "Карточка пациента";
+    $("clinical-identity").textContent = patient ? `ID: ${patient.id}` : "Пациент не выбран.";
+  }
+  if (openClinical) {
+    const wasClinical = state.view === "clinical";
+    showView("clinical", "visits");
+    if (changed && wasClinical && patient) loadClinical();
+  } else if (changed && state.view === "clinical") {
+    showView("clinical");
+    if (patient) loadClinical();
+  } else if (changed && state.view === "ai") {
+    loadAIWorkspace();
+  }
+}
+
+function updateDoctorPatientPicker(patients) {
+  doctorPatients = patients;
+  const select = $("sidebar-patient-select");
+  select.replaceChildren();
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Выберите пациента";
+  select.append(placeholder);
+  patients.forEach((patient) => {
+    const option = document.createElement("option");
+    option.value = patient.id;
+    option.textContent = patient.alias || patient.id;
+    select.append(option);
+  });
+  const selectedId = state.clinicalPatient?.id;
+  if (selectedId && !patients.some((patient) => patient.id === selectedId)) {
+    state.clinicalPatient = null;
+    clearAIWorkspace();
+    if (state.view === "clinical") showView("clinical");
+  }
+  select.value = state.clinicalPatient?.id || "";
 }
 
 function formatDate(value) {
@@ -185,9 +270,7 @@ function patientItem(patient) {
     open.className = "button subtle";
     open.textContent = "Визиты и история →";
     open.addEventListener("click", () => {
-      state.clinicalPatient = { id: patient.id, alias: patient.alias };
-      $("clinical-nav").hidden = false;
-      showView("clinical");
+      chooseDoctorPatient(patient.id, true);
     });
     row.append(open);
   }
@@ -202,6 +285,7 @@ async function loadOverview() {
     const data = await api("/patients");
     const patients = Array.isArray(data.items) ? data.items : [];
     $("stat-patients").textContent = String(data.total ?? patients.length);
+    updateDoctorPatientPicker(patients);
     if (!patients.length) {
       const empty = document.createElement("p");
       empty.className = "muted";
@@ -621,8 +705,12 @@ $("logout-button").addEventListener("click", async () => {
 });
 
 document.querySelectorAll("[data-view]").forEach((node) => {
-  node.addEventListener("click", () => showView(node.dataset.view));
+  node.addEventListener("click", () => showView(node.dataset.view, node.dataset.panel || null));
 });
+$("sidebar-patient-select").addEventListener("change", (event) => {
+  chooseDoctorPatient(event.currentTarget.value);
+});
+$("clinical-select-from-overview").addEventListener("click", () => showView("overview"));
 document.querySelectorAll("[data-tab]").forEach((node) => {
   node.addEventListener("click", () => selectTab(node.dataset.tab));
 });
@@ -1349,6 +1437,206 @@ $("patient-test-form").addEventListener("submit", async (event) => {
     await loadPatientTests(state.user.id);
   } catch (error) {
     showMessage("patient-test-status", `Ошибка сохранения: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+// UI-4A. Данные рабочей области очищаются при смене пациента и выходе.
+let aiPendingKey = null;
+let aiLoadEpoch = 0;
+
+function clearAIWorkspace() {
+  aiLoadEpoch += 1;
+  aiPendingKey = null;
+  for (const id of ["ai-files", "ai-requests"]) $(id).replaceChildren();
+  $("ai-patient-select").replaceChildren();
+  $("ai-question").value = "";
+  $("ai-upload").value = "";
+  $("ai-response").textContent =
+    "Ответ AI отсутствует. Никаких рекомендаций или назначений автоматически не создаётся.";
+  showMessage("ai-workspace-status", "");
+}
+
+async function loadAIWorkspace() {
+  if (state.user?.role !== "doctor") return;
+  const epoch = ++aiLoadEpoch;
+  showMessage("ai-workspace-status", "Получение доступных пациентов…");
+  try {
+    const data = await api("/patients");
+    if (epoch !== aiLoadEpoch || state.view !== "ai") return;
+    const select = $("ai-patient-select");
+    const previous = select.value || state.clinicalPatient?.id;
+    select.replaceChildren();
+    const patients = Array.isArray(data.items) ? data.items : [];
+    for (const patient of patients) {
+      const option = document.createElement("option");
+      option.value = patient.id;
+      option.textContent = patient.alias || patient.id;
+      select.append(option);
+    }
+    if (patients.some((patient) => patient.id === previous)) select.value = previous;
+    if (!patients.length) {
+      showMessage("ai-workspace-status", "Нет доступных пациентов.");
+      return;
+    }
+    await loadAIForPatient();
+  } catch (error) {
+    if (epoch === aiLoadEpoch) showMessage("ai-workspace-status", error.message);
+  }
+}
+
+async function loadAIForPatient() {
+  const patientId = $("ai-patient-select").value;
+  const epoch = ++aiLoadEpoch;
+  aiPendingKey = null;
+  $("ai-files").replaceChildren();
+  $("ai-requests").replaceChildren();
+  if (!patientId || state.user?.role !== "doctor") return;
+  state.clinicalPatient = {
+    id: patientId, alias: $("ai-patient-select").selectedOptions[0]?.textContent || patientId,
+  };
+  // Единый выбранный пациент для клинических экранов и области AI.
+  $("sidebar-patient-select").value = patientId;
+  showMessage("ai-workspace-status", "Загрузка рабочей области…");
+  try {
+    const [info, files, requests] = await Promise.all([
+      api(`/patients/${encodeURIComponent(patientId)}/ai-workspace`),
+      api(`/patients/${encodeURIComponent(patientId)}/attachments`),
+      api(`/patients/${encodeURIComponent(patientId)}/ai-requests`),
+    ]);
+    if (epoch !== aiLoadEpoch || state.view !== "ai" ||
+        $("ai-patient-select").value !== patientId) return;
+    if (info.dispatch_enabled || info.llm_connected) {
+      showMessage("ai-workspace-status", "Режим интеграции изменился — обновите страницу.");
+      return;
+    }
+    renderAIFiles(files);
+    renderAIRequests(requests);
+    showMessage("ai-workspace-status", "Локальный режим: запросы сохраняются без отправки модели.", true);
+  } catch (error) {
+    if (epoch === aiLoadEpoch) showMessage("ai-workspace-status", error.message);
+  }
+}
+
+function renderAIFiles(files) {
+  const target = $("ai-files");
+  target.replaceChildren();
+  if (!files.length) {
+    target.textContent = "Вложений у пациента пока нет.";
+    return;
+  }
+  for (const file of files) {
+    const row = document.createElement("div");
+    row.className = "ai-file-row";
+    const label = document.createElement("label");
+    const checkbox = document.createElement("input");
+    checkbox.type = "checkbox";
+    checkbox.value = file.id;
+    checkbox.className = "ai-attachment-choice";
+    checkbox.addEventListener("change", () => { aiPendingKey = null; });
+    const title = document.createElement("span");
+    title.textContent = file.filename;
+    label.append(checkbox, title);
+    const status = document.createElement("small");
+    status.textContent =
+      `Статус: ${file.extraction_status || "не проверен"} · содержимое исключено из запроса и AI`;
+    row.append(label, status);
+    target.append(row);
+  }
+}
+
+function renderAIRequests(requests) {
+  const target = $("ai-requests");
+  target.replaceChildren();
+  if (!requests.length) {
+    target.textContent = "Подготовленных запросов ещё нет.";
+    return;
+  }
+  for (const item of requests) {
+    const row = document.createElement("div");
+    row.className = "admin-entry";
+    const detail = document.createElement("div");
+    const title = document.createElement("strong");
+    title.textContent = `${formatDate(item.created_at)} · Подготовлен, не отправлен`;
+    const question = document.createElement("p");
+    question.textContent = item.question;
+    const meta = document.createElement("small");
+    meta.textContent =
+      `Контекст: ${item.context_sha256.slice(0, 12)}… · Снимок ${item.context_snapshot_id} · Настройки врача v${item.doctor_context.profile_version} · Вложений (только ссылки): ${item.attachment_manifest.length}`;
+    detail.append(title, question, meta);
+    row.append(detail);
+    target.append(row);
+  }
+}
+
+$("clinical-open-ai").addEventListener("click", () => showView("ai"));
+$("ai-patient-select").addEventListener("change", () => {
+  $("ai-question").value = "";
+  $("ai-upload").value = "";
+  loadAIForPatient();
+});
+$("ai-question").addEventListener("input", () => { aiPendingKey = null; });
+$("ai-refresh-files").addEventListener("click", () => loadAIForPatient());
+$("ai-upload-button").addEventListener("click", async () => {
+  const file = $("ai-upload").files[0];
+  const patientId = $("ai-patient-select").value;
+  if (!file || !patientId || state.user?.role !== "doctor") {
+    showMessage("ai-workspace-status", "Выберите пациента и файл.");
+    return;
+  }
+  const button = $("ai-upload-button");
+  button.disabled = true;
+  try {
+    const data = new FormData();
+    data.append("file", file);
+    await api(`/patients/${encodeURIComponent(patientId)}/attachments`, {
+      method: "POST", body: data,
+    });
+    if (state.user?.role === "doctor" && $("ai-patient-select").value === patientId) {
+      $("ai-upload").value = "";
+      await loadAIForPatient();
+      showMessage("ai-workspace-status", "Файл загружен в карантин. Для AI он недоступен.", true);
+    }
+  } catch (error) {
+    showMessage("ai-workspace-status", `Ошибка вложения: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+$("ai-request-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patientId = $("ai-patient-select").value;
+  if (!patientId || state.user?.role !== "doctor") return;
+  const question = $("ai-question").value.trim();
+  if (question.length < 10) {
+    showMessage("ai-workspace-status", "Напишите вопрос длиной не менее 10 символов.");
+    return;
+  }
+  const attachment_ids = [...document.querySelectorAll(".ai-attachment-choice:checked")]
+    .map((node) => node.value);
+  if (attachment_ids.length > 10) {
+    showMessage("ai-workspace-status", "Можно выбрать не более десяти файлов.");
+    return;
+  }
+  if (!aiPendingKey) aiPendingKey = crypto.randomUUID();
+  const button = $("ai-prepare");
+  button.disabled = true;
+  try {
+    const result = await api(`/patients/${encodeURIComponent(patientId)}/ai-requests`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ request_key: aiPendingKey, question, attachment_ids }),
+    });
+    if (state.user?.role === "doctor" && $("ai-patient-select").value === patientId) {
+      aiPendingKey = null;
+      await loadAIForPatient();
+      showMessage("ai-workspace-status",
+        `Запрос ${result.id} сохранён. AI не вызывался, назначения не создавались.`, true);
+    }
+  } catch (error) {
+    showMessage("ai-workspace-status", `Не удалось сохранить запрос: ${error.message}`);
   } finally {
     button.disabled = false;
   }

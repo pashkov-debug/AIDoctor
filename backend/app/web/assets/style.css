@@ -205,3 +205,79 @@ code { background: #e9f1f3; padding: 2px 5px; border-radius: 4px; }
   justify-content: flex-end; height: 100%; gap: .3rem; min-width: 2rem; }
 .test-trend-bar { display: block; background: #377c8b; min-width: 1.4rem;
   border-radius: .25rem .25rem 0 0; }
+
+
+/* UI-4A: три явные области рабочей области AI */
+.ai-three-panels { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:1rem; margin:1rem 0; }
+.ai-three-panels .panel { min-width:0; }
+.ai-three-panels textarea { width:100%; box-sizing:border-box; }
+.ai-three-panels .button { margin:.25rem 0; }
+.ai-file-row { padding:.6rem 0; border-bottom:1px solid #dce5ec; }
+.ai-file-row label { display:flex; align-items:flex-start; gap:.5rem; overflow-wrap:anywhere; }
+.ai-file-row small { display:block; margin-left:1.4rem; opacity:.75; }
+@media (max-width:1100px) { .ai-three-panels { grid-template-columns:1fr; } }
+
+
+/* UI-4A/NAV: единое левое меню для всех кабинетов. */
+.sidebar {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow-y: auto;
+  align-self: start;
+}
+.sidebar .brand { padding-bottom: 20px; }
+.nav { align-content: start; gap: 3px; }
+.nav-group-label {
+  padding: 17px 13px 5px;
+  color: #95b9c7;
+  font-size: .67rem;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+}
+.nav-link { display: block; width: 100%; padding: 11px 13px; line-height: 1.35; }
+.nav-link.active { border-left: 3px solid #57d2ba; padding-left: 10px; }
+.nav-link:focus-visible { outline: 2px solid #7de6d1; outline-offset: 1px; }
+.nav-link-ai { color: #defbf3; font-weight: 800; }
+.sidebar-patient-picker { padding: 7px 9px 12px; }
+.sidebar-patient-picker label {
+  display: block;
+  margin-bottom: 7px;
+  color: #b5dce3;
+  font-size: .76rem;
+}
+.sidebar-patient-picker select {
+  width: 100%;
+  min-height: 39px;
+  color: #1f3040;
+  background: #fff;
+  font-size: .83rem;
+}
+.sidebar-bottom { margin-top: 25px; }
+.clinical-grid, .admin-grid { grid-template-columns: minmax(0, 1fr); }
+.clinical-grid .panel, .admin-grid .panel { max-width: 1100px; width: 100%; }
+.clinical-empty { max-width: 650px; }
+#clinical-view [data-panel-group="clinical"],
+#patient-view [data-panel-group="patient"],
+#admin-view [data-panel-group="admin"] { scroll-margin-top: 20px; }
+#ai-view .ai-three-panels { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+#ai-view .ai-three-panels > .panel:last-child .button { margin-right: 6px; }
+@media(max-width: 1270px) {
+  #ai-view .ai-three-panels { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  #ai-view .ai-three-panels > .panel:last-child { grid-column: 1 / -1; }
+}
+@media(max-width: 950px) {
+  #ai-view .ai-three-panels { grid-template-columns: minmax(0, 1fr); }
+  #ai-view .ai-three-panels > .panel:last-child { grid-column: 1; }
+}
+@media(max-width: 650px) {
+  .sidebar { position: static; height: auto; overflow: visible; }
+  .sidebar .brand, .sidebar-caption { display: none; }
+  .sidebar-patient-picker { padding: 0 0 12px; }
+  .nav { display: flex; gap: 5px; overflow-x: auto; padding-bottom: 4px; }
+  .nav-group-label { display: none; }
+  .nav-link { width: auto; flex: 0 0 auto; white-space: nowrap; }
+  .nav-link.active { border-left: 0; border-bottom: 3px solid #57d2ba; padding-left: 13px; }
+  .main-content { padding-top: 20px; }
+}

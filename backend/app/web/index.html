@@ -6,8 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
   <title>AIDoctor — кабинеты врача, пациента и администратора</title>
-  <link rel="stylesheet" href="/app/assets/style.css">
-  <script defer src="/app/assets/app.js"></script>
+  <link rel="stylesheet" href="/app/assets/style.css?v=ui4a-nav-1">
+  <script defer src="/app/assets/app.js?v=ui4a-nav-1"></script>
 </head>
 <body>
   <section id="login-screen" class="login-screen">
@@ -16,7 +16,7 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-3B</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-4A / НАВИГАЦИЯ</span>
         <h1>Ваше клиническое пространство</h1>
         <p>Доступны кабинеты врача, пациента и администратора.</p>
       </div>
@@ -39,15 +39,38 @@
   <div id="workspace" class="workspace" hidden>
     <aside class="sidebar" aria-label="Основная навигация">
       <div class="brand"><span class="brand-mark">✚</span><span>AIDoctor<small>Clinical Compass</small></span></div>
-      <div class="sidebar-caption">РАБОЧЕЕ ПРОСТРАНСТВО</div>
-      <nav class="nav" id="navigation">
-        <button type="button" id="overview-nav" class="nav-link active" data-view="overview" aria-current="page"><span>▦</span> Обзор</button>
-        <button type="button" class="nav-link" data-view="clinical" id="clinical-nav" hidden><span>▤</span> Визиты и история</button>
-        <button type="button" class="nav-link" data-view="patient" id="patient-nav" hidden><span>♙</span> Моя карточка</button>
-        <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
-        <button type="button" class="nav-link" data-view="admin" id="admin-nav" hidden><span>▣</span> Администрирование</button>
+      <div class="sidebar-caption">РАЗДЕЛЫ КАБИНЕТА</div>
+      <div class="sidebar-patient-picker" id="sidebar-patient-picker" data-role="doctor" hidden>
+        <label for="sidebar-patient-select">Текущий пациент</label>
+        <select id="sidebar-patient-select" aria-label="Выбрать пациента для работы">
+          <option value="">Выберите пациента</option>
+        </select>
+      </div>
+      <nav class="nav" id="navigation" aria-label="Разделы кабинета">
+        <div class="nav-group-label" data-role="doctor" hidden>Работа врача</div>
+        <button type="button" data-role="doctor" id="overview-nav" class="nav-link active" data-view="overview" hidden>▦ Пациенты</button>
+        <button type="button" data-role="doctor" id="clinical-nav" class="nav-link" data-view="clinical" data-panel="visits" hidden>▤ Визиты</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="history" hidden>◫ Клиническая история</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="observations" hidden>◷ Наблюдения</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="orders" hidden>▣ Назначения</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="tests" hidden>✓ Психологические тесты</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="digest" hidden>≡ Context Builder</button>
+        <div class="nav-group-label" data-role="doctor" hidden>Анализ и профиль</div>
+        <button type="button" data-role="doctor" class="nav-link nav-link-ai" data-view="ai" id="ai-nav" hidden>✧ Рабочая область AI</button>
+        <button type="button" data-role="doctor" class="nav-link" data-view="settings" id="settings-nav" hidden>⚙ Настройки врача</button>
+        <div class="nav-group-label" data-role="patient" hidden>Кабинет пациента</div>
+        <button type="button" data-role="patient" class="nav-link" data-view="patient" data-panel="profile" id="patient-nav" hidden>♙ Моя карточка</button>
+        <button type="button" data-role="patient" class="nav-link" data-view="patient" data-panel="publications" hidden>▤ Записи от врача</button>
+        <button type="button" data-role="patient" class="nav-link" data-view="patient" data-panel="orders" hidden>▣ Мои назначения</button>
+        <button type="button" data-role="patient" class="nav-link" data-view="patient" data-panel="tests" hidden>✓ Мои тесты</button>
+        <div class="nav-group-label" data-role="admin" hidden>Администрирование</div>
+        <button type="button" data-role="admin" class="nav-link" id="admin-nav" data-view="admin" data-panel="users" hidden>♙ Пользователи</button>
+        <button type="button" data-role="admin" class="nav-link" data-view="admin" data-panel="patients" hidden>▤ Карточки пациентов</button>
+        <button type="button" data-role="admin" class="nav-link" data-view="admin" data-panel="links" hidden>⇄ Врач и пациент</button>
+        <button type="button" data-role="admin" class="nav-link" data-view="admin" data-panel="accounts" hidden>▣ Привязка аккаунта</button>
+        <button type="button" data-role="admin" class="nav-link" data-view="admin" data-panel="audit" hidden>≡ Аудит</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-3B</span><p>AI отключён; назначения создаются и утверждаются врачом вручную.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">UI-4A · Локальная разработка</span><p>AI отключён; запросы сохраняются без отправки модели.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -75,7 +98,7 @@
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
           <div class="notice"><strong>Границы текущего этапа</strong>
-            <p id="overview-notice">Клиническая карточка доступна врачу. Ручные назначения доступны врачу. Учебные психологические тесты доступны. AI-анализ пока не подключён.</p></div>
+            <p id="overview-notice">Клиническая карточка доступна врачу. Ручные назначения доступны врачу. Учебные психологические тесты доступны. Запросы AI можно подготовить, но отправка модели отключена.</p></div>
         </section>
 
 
@@ -90,16 +113,16 @@
             <button type="button" id="clinical-refresh" class="button subtle">Обновить карточку</button>
             <span id="clinical-card-status" role="status" aria-live="polite" class="message"></span>
           </div>
-          <nav class="clinical-jumps" aria-label="Разделы карточки">
-            <button class="button subtle" type="button" data-clinical-target="clinical-visits-section">Визиты</button>
-            <button class="button subtle" type="button" data-clinical-target="clinical-history-section">История</button>
-            <button class="button subtle" type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
-            <button class="button subtle" type="button" data-clinical-target="clinical-orders-section">Назначения</button>
-            <button class="button subtle" type="button" data-clinical-target="clinical-tests-section">Психологические тесты</button>
-            <button class="button subtle" type="button" data-clinical-target="clinical-digest-section">Context Builder</button>
-          </nav>
+          <div class="clinical-actions">
+            <button type="button" id="clinical-open-ai" class="button subtle">✧ Перейти к AI для этого пациента</button>
+          </div>
+          <div id="clinical-no-patient" class="panel clinical-empty" hidden>
+            <h2>Выберите пациента</h2>
+            <p>Используйте переключатель «Текущий пациент» слева или список в разделе «Пациенты».</p>
+            <button type="button" class="button subtle" id="clinical-select-from-overview">К списку пациентов</button>
+          </div>
           <div class="clinical-grid">
-            <section class="panel" id="clinical-visits-section">
+            <section class="panel" id="clinical-visits-section" data-panel-group="clinical" data-panel="visits">
               <div class="panel-heading"><div><h2>Визиты <span id="clinical-visits-count" class="count-marker">—</span></h2><p>Внутренние черновики врача, не опубликованные пациенту.</p></div></div>
               <div id="clinical-encounters" class="clinical-list"></div>
               <form id="clinical-encounter-form" class="admin-form">
@@ -126,7 +149,7 @@
                 <p class="message" id="clinical-save-status" role="status" aria-live="polite"></p>
               </form>
             </section>
-            <section class="panel" id="clinical-history-section">
+            <section class="panel" id="clinical-history-section" data-panel-group="clinical" data-panel="history">
               <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Внутренние записи. Подтверждение и публикация пациенту — отдельные врачебные действия.</p></div></div>
               <div id="clinical-history" class="clinical-list"></div>
               <form id="clinical-publication-form" class="admin-form" hidden>
@@ -146,17 +169,17 @@
               <p class="message" id="clinical-publication-status" role="status" aria-live="polite"></p>
             </section>
           </div>
-          <section class="panel clinical-digest" id="clinical-observations-section">
+          <section class="panel clinical-digest" id="clinical-observations-section" data-panel-group="clinical" data-panel="observations">
             <div class="panel-heading"><div><h2>Наблюдения <span id="clinical-observations-count" class="count-marker">—</span></h2>
               <p>Учебные субъективные оценки, не валидированные психологические тесты.</p></div></div>
             <div id="clinical-observations" class="clinical-list"></div>
           </section>
-          <section class="panel clinical-digest" id="clinical-digest-section">
+          <section class="panel clinical-digest" id="clinical-digest-section" data-panel-group="clinical" data-panel="digest">
             <div class="panel-heading"><div><h2>Context Builder / Digest</h2>
               <p>Состав и даты фактов. Без AI-интерпретации; непроверенные вложения исключены.</p></div></div>
             <div id="clinical-context" class="clinical-list"></div>
           </section>
-          <section class="panel clinical-digest" id="clinical-orders-section">
+          <section class="panel clinical-digest" id="clinical-orders-section" data-panel-group="clinical" data-panel="orders">
             <div class="panel-heading"><div><h2>Назначения врача <span id="clinical-orders-count" class="count-marker">—</span></h2>
               <p>Черновик виден только врачу. После отдельного утверждения пациент видит структурированное назначение.</p></div></div>
             <div id="clinical-orders-list" class="clinical-list">Загрузка…</div>
@@ -207,7 +230,7 @@
               </div>
             </form>
           </section>
-          <section class="panel clinical-digest" id="clinical-tests-section">
+          <section class="panel clinical-digest" id="clinical-tests-section" data-panel-group="clinical" data-panel="tests">
             <div class="panel-heading"><div>
               <h2>Учебные психологические тесты <span id="clinical-tests-count" class="count-marker">—</span></h2>
               <p>Невалидированные синтетические опросники. Результат — сумма баллов, а не диагноз.</p>
@@ -235,14 +258,64 @@
             </div>
             <p id="order-approval-status" role="status" class="message"></p>
           </dialog>
-          <div class="visibility-info"><strong>Кто видит эти данные?</strong>
+          <div class="visibility-info" data-panel-group="clinical" data-panel="digest"><strong>Кто видит эти данные?</strong>
             <p>Врач: визиты, события, наблюдения и Digest разрешённых пациентов.
               Пациент: собственную карточку, опубликованный врачом текст и активные утверждённые назначения.
               Врачебные черновики, внутренние события и AI-ответы пациенту не показываются.</p>
           </div>
-          <div class="notice"><strong>Граница UI-3B</strong>
+          <div class="notice" data-panel-group="clinical" data-panel="digest"><strong>Граница UI-3B</strong>
             <p>Визиты сохраняются как черновики. Назначения создаются отдельно, публикуются пациенту только после явного ручного утверждения врачом.</p>
           </div>
+        </section>
+
+
+        <section id="ai-view" class="page" hidden>
+          <div class="page-intro">
+            <span class="eyebrow">UI-4A · ПОДГОТОВКА К АНАЛИЗУ · ТОЛЬКО ВРАЧ</span>
+            <h1>Рабочая область AI</h1>
+            <p>Сохраняйте вопрос и версию клинического контекста. До подключения LLM никакие данные модели не отправляются.</p>
+          </div>
+          <label for="ai-patient-select">Выберите пациента</label>
+          <select id="ai-patient-select"><option value="">Загрузка пациентов…</option></select>
+          <p id="ai-workspace-status" class="message" role="status" aria-live="polite"></p>
+          <div class="ai-three-panels">
+            <section class="panel">
+              <h2>1. Запрос врача</h2>
+              <form id="ai-request-form">
+                <label for="ai-question">Вопрос или клиническая задача</label>
+                <textarea id="ai-question" rows="9" minlength="10" maxlength="5000"
+                  placeholder="Например: какие дополнительные сведения нужны для оценки динамики состояния?"></textarea>
+                <p class="clinical-hint">При сохранении создаётся отдельный неизменяемый снимок пациентского контекста и копия настроек врача, включая РКИ.</p>
+                <button id="ai-prepare" class="button primary" type="submit">Сохранить запрос и контекст</button>
+                <button type="button" class="button subtle" disabled title="Ожидает подключения проверенного LLM Gateway">Отправить AI (недоступно)</button>
+              </form>
+            </section>
+            <section class="panel">
+              <h2>2. Вложения</h2>
+              <p class="clinical-hint">Документы загружаются в существующий карантин. Можно сохранить ссылки на них в запросе, но содержимое не попадает ни в AI, ни в Context Builder.</p>
+              <label for="ai-upload">Добавить документ в карантин пациента</label>
+              <input id="ai-upload" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
+              <button id="ai-upload-button" class="button subtle" type="button">Загрузить в карантин</button>
+              <button id="ai-refresh-files" class="button subtle" type="button">Обновить список</button>
+              <div id="ai-files" class="clinical-list" aria-live="polite"></div>
+            </section>
+            <section class="panel">
+              <h2>3. Ответ AI</h2>
+              <p class="clinical-hint"><strong>Модель не подключена.</strong> Сохранённый запрос не является ответом AI. Клиническая сводка, риски, препараты, исследования, источники и кнопки согласования станут доступны после валидации структурированного ответа.</p>
+              <div id="ai-response" class="clinical-list">
+                Ответ AI отсутствует. Никаких рекомендаций или назначений автоматически не создаётся.
+              </div>
+              <button class="button subtle" disabled>Уточнить (недоступно)</button>
+              <button class="button subtle" disabled>Отклонить AI-черновик (недоступно)</button>
+              <button class="button subtle" disabled>Одобрить выбранное (недоступно)</button>
+              <button class="button subtle" disabled>Одобрить с изменениями (недоступно)</button>
+            </section>
+          </div>
+          <section class="panel">
+            <div class="panel-heading"><div><h2>История подготовленных запросов</h2>
+              <p>Запросы доступны только врачу-автору и сохраняются между входами в приложение.</p></div></div>
+            <div id="ai-requests" class="clinical-list"></div>
+          </section>
         </section>
 
         <section id="patient-view" class="page" hidden>
@@ -250,7 +323,7 @@
             <h1>Кабинет пациента</h1>
             <p>Только сведения из карточки, связанной с вашей учётной записью. Все запросы проверяются сервером.</p>
           </div>
-          <div class="panel patient-panel">
+          <div class="panel patient-panel" data-panel-group="patient" data-panel="profile">
             <div class="panel-heading"><div><h2>Моя карточка</h2>
               <p>Общая идентификационная информация из PostgreSQL без внутренних записей врача.</p></div></div>
             <dl class="patient-details" id="patient-details" hidden>
@@ -260,17 +333,17 @@
             </dl>
             <p class="message" role="status" aria-live="polite" id="patient-status">Загрузка карточки…</p>
           </div>
-          <section class="panel clinical-digest">
+          <section class="panel clinical-digest" data-panel-group="patient" data-panel="publications">
             <div class="panel-heading"><div><h2>Опубликованные врачом сведения</h2>
               <p>Только явно подтверждённый и опубликованный текст, без внутренних записей врача.</p></div></div>
             <div id="patient-publications" class="clinical-list">Загрузка…</div>
           </section>
-          <section class="panel clinical-digest">
+          <section class="panel clinical-digest" data-panel-group="patient" data-panel="orders">
             <div class="panel-heading"><div><h2>Мои утверждённые назначения</h2>
               <p>Препараты и обследования, отдельно утверждённые врачом. Черновики недоступны.</p></div></div>
             <div id="patient-orders" class="clinical-list">Загрузка…</div>
           </section>
-          <section class="panel clinical-digest" id="patient-tests-section">
+          <section class="panel clinical-digest" id="patient-tests-section" data-panel-group="patient" data-panel="tests">
             <div class="panel-heading"><div><h2>Назначенные психологические тесты</h2>
               <p>Только назначенные вам учебные опросники. Ответы сохраняются в PostgreSQL.</p></div></div>
             <div id="patient-tests-list" class="clinical-list">Загрузка…</div>
@@ -286,7 +359,7 @@
             </form>
             <p class="muted">Если есть непосредственная опасность для жизни или здоровья — обращайтесь за экстренной помощью, не ожидая ответа в приложении.</p>
           </section>
-          <section class="panel clinical-digest">
+          <section class="panel clinical-digest" data-panel-group="patient" data-panel="profile">
             <div class="panel-heading"><div><h2>Что мне доступно сейчас</h2>
               <p>Разделение прав на уровне FastAPI, а не только интерфейса.</p></div></div>
             <div class="access-rows">
@@ -307,7 +380,7 @@
             <span class="message" id="admin-status" role="status" aria-live="polite"></span>
           </div>
           <div class="admin-grid">
-            <section class="panel">
+            <section class="panel" data-panel-group="admin" data-panel="users">
               <div class="panel-heading"><div><h2>Пользователи</h2><p>Существующие аккаунты и роли (до 500 записей).</p></div></div>
               <div id="admin-users" class="admin-list" aria-live="polite"></div>
               <form id="admin-user-form" class="admin-form">
@@ -322,7 +395,7 @@
                 <p class="message" id="admin-user-status" role="status" aria-live="polite"></p>
               </form>
             </section>
-            <section class="panel">
+            <section class="panel" data-panel-group="admin" data-panel="patients">
               <div class="panel-heading"><div><h2>Карточки пациентов</h2><p>Список активных карточек без медицинских данных.</p></div></div>
               <div id="admin-patients" class="admin-list" aria-live="polite"></div>
               <form id="admin-patient-form" class="admin-form">
@@ -333,7 +406,7 @@
                 <p class="message" id="admin-patient-status" role="status" aria-live="polite"></p>
               </form>
             </section>
-            <section class="panel">
+            <section class="panel" data-panel-group="admin" data-panel="links">
               <div class="panel-heading"><div><h2>Связи врач–пациент</h2><p>Назначить врача или отозвать доступ к карточке.</p></div></div>
               <div id="admin-links" class="admin-list" aria-live="polite"></div>
               <form id="admin-link-form" class="admin-form">
@@ -346,7 +419,7 @@
                 <p class="message" id="admin-link-status" role="status" aria-live="polite"></p>
               </form>
             </section>
-            <section class="panel">
+            <section class="panel" data-panel-group="admin" data-panel="accounts">
               <div class="panel-heading"><div><h2>Пациентский аккаунт</h2><p>Привязка допускается только для свободной карточки и свободной учётной записи.</p></div></div>
               <form id="admin-bind-form" class="admin-form">
                 <label for="admin-patient-account-select">Учётная запись пациента</label>
@@ -361,7 +434,7 @@
               </div>
             </section>
           </div>
-          <section class="panel admin-audit-panel">
+          <section class="panel admin-audit-panel" data-panel-group="admin" data-panel="audit">
             <div class="panel-heading"><div><h2>Аудит администратора</h2><p>Последние 50 операций UI-1C и маршрутов управления связями.</p></div></div>
             <div id="admin-audit" class="admin-list" aria-live="polite"></div>
           </section>

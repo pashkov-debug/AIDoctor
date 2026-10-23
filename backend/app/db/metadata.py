@@ -3,6 +3,8 @@
 from app.db.base import Base
 from app.models import (
     AdminAuditEvent,
+    AIRequest,
+    AIRequestAudit,
     AttachmentAVScan,
     AttachmentEvidenceDraft,
     AttachmentEvidenceReadAudit,
@@ -40,6 +42,8 @@ from app.models import (
 )
 
 REGISTERED_MODELS = (
+    AIRequest,
+    AIRequestAudit,
     AdminAuditEvent,
     AttachmentAVScan,
     AttachmentEvidenceDraft,

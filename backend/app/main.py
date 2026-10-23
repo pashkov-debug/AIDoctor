@@ -6,6 +6,7 @@ from fastapi.staticfiles import StaticFiles
 
 from app.api.routes.access import router as access_router
 from app.api.routes.admin import router as admin_router
+from app.api.routes.ai_workspace import router as ai_workspace_router
 from app.api.routes.attachment_evidence import router as attachment_evidence_router
 from app.api.routes.attachment_security import router as attachment_security_router
 from app.api.routes.attachments import router as attachments_router
@@ -51,6 +52,7 @@ def create_app() -> FastAPI:
         questionnaire_assignments_router,
         history_events_router,
         context_router,
+        ai_workspace_router,
         attachments_router,
         attachment_security_router,
         attachment_evidence_router,
