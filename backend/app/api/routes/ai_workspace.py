@@ -14,6 +14,7 @@ from app.models.patient import Patient
 from app.schemas.ai_agent_context import AIAgentContextRead
 from app.schemas.ai_workspace import AIRequestCreate, AIRequestRead, AIWorkspaceInfo
 from app.services.ai_agent_context import get_agent_context
+from app.services.ai_review import enabled_for_patient
 from app.services.ai_workspace import create_request, get_request, list_requests
 
 router = APIRouter(tags=["ai-workspace"])
@@ -45,7 +46,7 @@ def _authorize(db: Session, actor: User, patient_id: str) -> None:
 def workspace_info(patient_id: str, db: DB, actor: Actor, response: Response) -> AIWorkspaceInfo:
     _authorize(db, actor, patient_id)
     response.headers["Cache-Control"] = "private, no-store"
-    return AIWorkspaceInfo()
+    return AIWorkspaceInfo(synthetic_review_enabled=enabled_for_patient(db, patient_id))
 
 
 @router.get("/patients/{patient_id}/ai-requests", response_model=list[AIRequestRead])

@@ -6,6 +6,7 @@ import os
 from uuid import UUID, uuid5
 
 from app.clinical.demo_test_catalog import definition
+from app.core.config import settings
 from app.db.base import utc_now
 from app.models.ai_review import AIReviewCase, AIReviewEvent, AIReviewVersion
 from app.models.ai_workspace import AIRequest
@@ -29,7 +30,10 @@ from sqlalchemy.orm import Session
 
 
 def _enabled() -> bool:
-    return os.getenv("AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS", "0") == "1"
+    return (
+        settings.app_env != "production"
+        and os.getenv("AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS", "0") == "1"
+    )
 
 
 def enabled_for_patient(db: Session, patient_id: str) -> bool:

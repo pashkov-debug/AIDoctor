@@ -69,8 +69,8 @@ def test_navigation_and_clinical_sections_match():
 def test_cache_buster_and_role_guard_remain():
     html = HTML.read_text(encoding="utf-8")
     js = JS.read_text(encoding="utf-8")
-    assert "app.js?v=ui4a-nav-1" in html
-    assert "style.css?v=ui4a-nav-1" in html
+    assert "app.js?v=ui6b-interface-1" in html
+    assert "style.css?v=ui6b-interface-1" in html
     assert "node.dataset.role !== user.role" in js
     assert 'name === "ai"' in js
     assert "renderActivePanels(name)" in js

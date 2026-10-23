@@ -59,4 +59,5 @@ class AIWorkspaceInfo(BaseModel):
     llm_connected: Literal[False] = False
     dispatch_enabled: Literal[False] = False
     attachment_content_allowed: Literal[False] = False
+    synthetic_review_enabled: bool = False
     reason: str = "LLM-провайдер и проверенный маршрут передачи вложений не подключены"

@@ -79,7 +79,7 @@ async function api(path, options = {}) {
 const panelNames = {
   clinical: { visits: "Визиты", history: "Клиническая история",
     observations: "Наблюдения", orders: "Назначения",
-    tests: "Психологические тесты", digest: "Context Builder" },
+    tests: "Психологические тесты", digest: "Клиническая сводка" },
   patient: { profile: "Моя карточка", publications: "Записи врача",
     orders: "Мои назначения", tests: "Мои тесты" },
   admin: { users: "Пользователи", patients: "Карточки пациентов",
@@ -101,11 +101,8 @@ function roleLayout(user) {
     node.hidden = node.dataset.role !== user.role;
   });
   if (doctor) {
-    $("stat-role").textContent = roleNames[user.role];
     $("overview-title").textContent = "Кабинет врача";
     $("overview-description").textContent = "Выберите пациента в списке или слева.";
-    $("overview-notice").textContent =
-      "Визиты, назначения, учебные тесты и подготовка AI-запросов доступны. Модель AI не подключена.";
   }
   showView(doctor ? "overview" : user.role === "patient" ? "patient" : "admin");
 }
@@ -166,7 +163,7 @@ function chooseDoctorPatient(id, openClinical = false) {
     state.clinicalPublications = [];
     clearAIWorkspace();
     $("clinical-title").textContent = patient?.alias || "Карточка пациента";
-    $("clinical-identity").textContent = patient ? `ID: ${patient.id}` : "Пациент не выбран.";
+    $("clinical-identity").textContent = patient ? `${patient.alias || "Пациент"} · история наблюдения` : "Пациент не выбран.";
   }
   if (openClinical) {
     const wasClinical = state.view === "clinical";
@@ -261,9 +258,7 @@ function patientItem(patient) {
   row.className = "patient-entry";
   const title = document.createElement("span");
   title.textContent = patient.alias || "Без псевдонима";
-  const id = document.createElement("small");
-  id.textContent = `ID: ${patient.id}`;
-  row.append(title, id);
+  row.append(title);
   if (state.user?.role === "doctor") {
     const open = document.createElement("button");
     open.type = "button";
@@ -344,9 +339,44 @@ function renderClinicalVisits(items) {
     clinicalLine(
       `${formatDate(item.occurred_at)} · ${clinicalReasons[item.reason] || item.reason}`,
       (item.complaints || []).join("; ") || "Жалобы не внесены",
-      `Статус: ${item.status}; ограничения: ${clinicalImpactLabels[item.functional_impact] || "не указаны"}` +
+      `Статус: ${item.status === "draft" ? "Черновик" : item.status === "confirmed" ? "Подтверждён" : "Запись визита"}; ограничения: ${clinicalImpactLabels[item.functional_impact] || "не указаны"}` +
       (item.clinician_question ? `; вопрос врача: ${item.clinician_question}` : ""),
-    ), "Визитов пока нет. Для постоянного заполнения истории выполните seed UI-2B.");
+    ), "Визитов пока нет.");
+}
+
+const clinicalFactLabels = {
+  text: "Описание", symptoms: "Симптомы", complaints: "Жалобы",
+  duration: "Продолжительность", status: "Состояние", medication: "Препарат",
+  active_ingredient: "Действующее вещество", dose: "Доза",
+  dosage: "Дозировка", source: "Источник сведений", notes: "Примечания",
+  description: "Описание", reported_at: "Дата сообщения",
+  sleep: "Сон", mood: "Настроение", anxiety: "Тревога",
+};
+const hiddenClinicalFactKeys = new Set(["synthetic", "seed_key", "source_ref"]);
+
+function renderClinicalFact(fact) {
+  const container = document.createElement("dl");
+  container.className = "clinical-fact-fields";
+  for (const [key, value] of Object.entries(fact || {})) {
+    if (hiddenClinicalFactKeys.has(key) || value === null || value === undefined) continue;
+    const field = document.createElement("div");
+    const term = document.createElement("dt");
+    term.textContent = clinicalFactLabels[key] || key.replaceAll("_", " ");
+    const definition = document.createElement("dd");
+    definition.textContent = Array.isArray(value)
+      ? value.map((part) => typeof part === "object" ? Object.values(part).join(", ") : String(part)).join("; ")
+      : typeof value === "object"
+        ? Object.entries(value).map(([k, v]) => `${clinicalFactLabels[k] || k.replaceAll("_", " ")}: ${String(v)}`).join("; ")
+        : typeof value === "boolean" ? (value ? "Да" : "Нет") : String(value);
+    field.append(term, definition);
+    container.append(field);
+  }
+  if (!container.children.length) {
+    const noData = document.createElement("p");
+    noData.textContent = "Подробности не указаны.";
+    container.append(noData);
+  }
+  return container;
 }
 
 function renderClinicalHistory(items) {
@@ -356,22 +386,26 @@ function renderClinicalHistory(items) {
   showClinicalRecords("clinical-history", items, (item) => {
     const fact = item.fact || {};
     const description = typeof fact.text === "string"
-      ? fact.text : JSON.stringify(fact).slice(0, 500);
+      ? fact.text : "Сведения из клинической истории";
     const row = clinicalLine(
-      `${formatDate(item.occurred_at)} · ${item.category}`,
-      description, `Источник: ${item.source_ref}; приоритет: ${item.priority}`,
+      `${formatDate(item.occurred_at)} · ${({
+        self_report: "Со слов пациента", clinical: "Клиническая запись",
+        treatment: "Лечение", observation: "Наблюдение",
+      })[item.category] || "Событие истории"}`,
+      description, "",
     );
     const fullFact = document.createElement("details");
     const summary = document.createElement("summary");
-    summary.textContent = "Показать полный исходный факт перед подтверждением";
-    const fullText = document.createElement("pre");
-    fullText.textContent = JSON.stringify(item.fact || {}, null, 2);
-    fullFact.append(summary, fullText);
+    summary.textContent = "Дополнительные сведения";
+    fullFact.append(summary, renderClinicalFact(item.fact));
     row.append(fullFact);
     const release = records.get(item.id);
     const status = document.createElement("small");
     status.textContent = superseded.has(item.id) ? "Историческая версия исправлена"
-      : release ? `Решение врача: ${release.status}; версия ${release.version}`
+      : release ? `Решение врача: ${({
+          confirmed: "Подтверждено", published: "Опубликовано пациенту",
+          revoked: "Публикация отозвана",
+        })[release.status] || "Запись рассмотрена"}`
         : "Запись ещё не подтверждена врачом";
     row.append(status);
     if (superseded.has(item.id)) return row;
@@ -497,7 +531,7 @@ function renderClinicalObservations(context) {
     return clinicalLine(
       `${formatDate(item.at)} · ${observationNames[item.payload?.code] || item.payload?.code || "Наблюдение"}`,
       `${score}. ${values.description || "Описание отсутствует"}`,
-      `Источник: ${item.source_ref}; только для врача`,
+      "Оценка самочувствия; не является диагностическим тестом",
     );
   }, "Наблюдений пока нет.");
 }
@@ -506,15 +540,17 @@ function renderClinicalDigest(digest) {
   const counts = Object.entries(digest.counts_by_kind || {})
     .map(([kind, n]) => `${clinicalKinds[kind] || kind}: ${n}`).join(" · ");
   $("clinical-context").replaceChildren(
-    clinicalLine(`Фактов в контексте: ${digest.total_facts}`, counts,
-      `Версия ${digest.schema_version}; SHA-256: ${digest.context_sha256}`),
-    clinicalLine("Временной диапазон",
+    clinicalLine(`Сведений в сводке: ${digest.total_facts}`, counts),
+    clinicalLine("Период наблюдения",
       digest.earliest_fact_at
         ? `${formatDate(digest.earliest_fact_at)} — ${formatDate(digest.latest_fact_at)}`
-        : "Фактов пока нет"),
-    clinicalLine("Контроль границ", digest.complete
-      ? "Контекст не усечён" : `Усечены источники: ${digest.truncated_sources.join(", ")}`,
-    `Непроверенных вложений исключено: ${digest.excluded_attachments_count}`),
+        : "Сведения пока не добавлены"),
+    clinicalLine("Полнота сводки", digest.complete
+      ? "Учтены доступные клинические сведения"
+      : "Часть исторических сведений не вошла в краткую сводку",
+      digest.excluded_attachments_count
+        ? "Непроверенные документы не включены"
+        : ""),
   );
 }
 
@@ -522,7 +558,7 @@ async function loadClinical() {
   const patient = state.clinicalPatient;
   if (!patient || state.user?.role !== "doctor") return;
   $("clinical-title").textContent = patient.alias;
-  $("clinical-identity").textContent = `ID: ${patient.id} · Внутренняя клиническая карточка врача`;
+  $("clinical-identity").textContent = `${patient.alias || "Пациент"} · история наблюдения`;
   $("clinical-publication-form").hidden = true;
   showMessage("clinical-card-status", "Загрузка…");
   ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
@@ -588,7 +624,7 @@ $("clinical-encounter-form").addEventListener("submit", async (event) => {
       }),
     });
     form.reset();
-    showMessage("clinical-save-status", "Черновик визита сохранён в PostgreSQL", true);
+    showMessage("clinical-save-status", "Визит сохранён", true);
     await loadClinical();
   } catch (error) {
     showMessage("clinical-save-status", `Не сохранено: ${error.message}`);
@@ -661,7 +697,7 @@ async function saveSettings(section, form) {
       body: JSON.stringify({ ...values, expected_version: state.settings.version }),
     });
     setSettings(data);
-    showMessage(statusId, "Сохранено в PostgreSQL", true);
+    showMessage(statusId, "Изменения сохранены", true);
   } catch (error) {
     const text = error.status === 409
       ? "Конфликт версии. Перезагрузите настройки перед повторным сохранением."
@@ -857,7 +893,7 @@ async function sendAdmin(form, endpoint, values, statusId) {
       body: JSON.stringify(values),
     });
     form.reset();
-    showMessage(statusId, "Сохранено в PostgreSQL", true);
+    showMessage(statusId, "Изменения сохранены", true);
     await loadAdmin();
   } catch (error) {
     showMessage(statusId, `Ошибка: ${error.message}`);
@@ -1486,8 +1522,11 @@ $("patient-test-form").addEventListener("submit", async (event) => {
 // UI-4A. Данные рабочей области очищаются при смене пациента и выходе.
 let aiPendingKey = null;
 let aiLoadEpoch = 0;
+let syntheticReviewEnabled = false;
 
 function clearAIWorkspace() {
+  syntheticReviewEnabled = false;
+  $("ai-review-workspace").hidden = true;
   clearAIReview();
   aiLoadEpoch += 1;
   aiPendingKey = null;
@@ -1554,11 +1593,17 @@ async function loadAIForPatient() {
       showMessage("ai-workspace-status", "Режим интеграции изменился — обновите страницу.");
       return;
     }
+    syntheticReviewEnabled = info.synthetic_review_enabled === true;
+    $("ai-review-workspace").hidden = !syntheticReviewEnabled;
     renderAIFiles(files);
     renderAIRequests(requests);
-    showMessage("ai-workspace-status", "Локальный режим: запросы сохраняются без отправки модели.", true);
+    showMessage("ai-workspace-status", "Вопросы можно подготовить и сохранить. AI-анализ пока недоступен.", true);
   } catch (error) {
-    if (epoch === aiLoadEpoch) showMessage("ai-workspace-status", error.message);
+    if (epoch === aiLoadEpoch) {
+      syntheticReviewEnabled = false;
+      $("ai-review-workspace").hidden = true;
+      showMessage("ai-workspace-status", error.message);
+    }
   }
 }
 
@@ -1582,8 +1627,7 @@ function renderAIFiles(files) {
     title.textContent = file.filename;
     label.append(checkbox, title);
     const status = document.createElement("small");
-    status.textContent =
-      `Статус: ${file.extraction_status || "не проверен"} · содержимое исключено из запроса и AI`;
+    status.textContent = "Документ не передан AI. Проверка содержимого для анализа не подключена.";
     row.append(label, status);
     target.append(row);
   }
@@ -1605,15 +1649,19 @@ function renderAIRequests(requests) {
     const question = document.createElement("p");
     question.textContent = item.question;
     const meta = document.createElement("small");
-    meta.textContent =
-      `Контекст: ${item.context_sha256.slice(0, 12)}… · Снимок ${item.context_snapshot_id} · Настройки врача v${item.doctor_context.profile_version} · Вложений (только ссылки): ${item.attachment_manifest.length}`;
+    const attachmentCount = item.attachment_manifest?.length || 0;
+    meta.textContent = attachmentCount
+      ? `Прикреплено документов: ${attachmentCount} · содержимое не передавалось AI`
+      : "Ожидает AI-анализа";
     detail.append(title, question, meta);
-    const open = document.createElement("button");
-    open.type = "button";
-    open.className = "button subtle";
-    open.textContent = "Открыть согласование";
-    open.addEventListener("click", () => openAIReview(item.id));
-    row.append(open);
+    if (syntheticReviewEnabled) {
+      const open = document.createElement("button");
+      open.type = "button";
+      open.className = "button subtle";
+      open.textContent = "Открыть тренировочное согласование";
+      open.addEventListener("click", () => openAIReview(item.id));
+      row.append(open);
+    }
     row.append(detail);
     target.append(row);
   }
@@ -1645,7 +1693,7 @@ $("ai-upload-button").addEventListener("click", async () => {
     if (state.user?.role === "doctor" && $("ai-patient-select").value === patientId) {
       $("ai-upload").value = "";
       await loadAIForPatient();
-      showMessage("ai-workspace-status", "Файл загружен в карантин. Для AI он недоступен.", true);
+      showMessage("ai-workspace-status", "Документ загружен. Его содержимое пока недоступно для AI-анализа.", true);
     }
   } catch (error) {
     showMessage("ai-workspace-status", `Ошибка вложения: ${error.message}`);
@@ -1728,7 +1776,7 @@ function makeDemoProposals() {
     order: {
       request_key: key, kind, name, indication: "Учебная демонстрация — не лечение",
       rationale: "Вымышленный учебный пример, без медицинской доказательности",
-      source_reference: "Синтетический сценарий UI-4B; не клинический источник",
+      source_reference: "Тренировочный сценарий, не клинический источник",
       ...(kind === "medication" ? {
         active_ingredient: "Условное вещество", dosage_form: "Учебная форма",
         strength: "Условная", dose_value: "1", dose_unit: "условная единица",
@@ -1800,10 +1848,14 @@ function renderReviewDraft() {
   invalidateAIReviewPreview();
   const target = $("ai-proposal-cards");
   target.replaceChildren();
-  $("ai-review-request-label").textContent =
-    `Запрос ${reviewRequestId} · версия ${reviewDraft?.version || "—"} · ` +
-    `статус ${reviewDraft?.status || "без черновика"}`;
-  $("ai-demo-create").disabled = !reviewRequestId || Boolean(reviewDraft);
+  const reviewStatuses = {
+    open: "На рассмотрении", approved: "Утверждено",
+    rejected: "Отклонено", historical: "Предыдущая версия",
+  };
+  $("ai-review-request-label").textContent = reviewDraft
+    ? `Версия предложения: ${reviewDraft.version} · ${reviewStatuses[reviewDraft.status] || "Не рассмотрено"}`
+    : "Для выбранного запроса пока нет предложений.";
+  $("ai-demo-create").disabled = !syntheticReviewEnabled || !reviewRequestId || Boolean(reviewDraft);
   const editing = reviewDraft?.status === "open";
   for (const id of ["ai-draft-revise", "ai-review-reject", "ai-review-preview"]) $(id).disabled = !editing;
   if (!reviewDraft) return;
@@ -1893,7 +1945,7 @@ function renderReviewDraft() {
       card.append(details);
     } else {
       const note = document.createElement("small");
-      note.textContent = "Только DEMO-тест из встроенного каталога.";
+      note.textContent = "Учебный опросник из встроенного каталога.";
       card.append(note);
     }
     card.addEventListener("input", invalidateAIReviewPreview);
@@ -1917,13 +1969,13 @@ async function openAIReview(requestId) {
   } catch (error) {
     if (epoch !== reviewEpoch) return;
     if (error.status !== 404) showMessage("ai-review-status", error.message);
-    else showMessage("ai-review-status", "Черновика нет. Можно создать учебный пример.");
+    else showMessage("ai-review-status", "Предложений нет. В тренировочном режиме можно создать пример.");
   }
   if (epoch === reviewEpoch) renderReviewDraft();
 }
 
 $("ai-demo-create").addEventListener("click", async () => {
-  if (!reviewRequestId) return;
+  if (!syntheticReviewEnabled || !reviewRequestId) return;
   try {
     const data = await api(reviewPath(), {
       method: "POST", headers: {"Content-Type": "application/json"},
@@ -1931,7 +1983,7 @@ $("ai-demo-create").addEventListener("click", async () => {
     });
     reviewDraft = data;
     renderReviewDraft();
-    showMessage("ai-review-status", "СИНТЕТИЧЕСКИЙ черновик сохранён. AI не вызывался.", true);
+    showMessage("ai-review-status", "Тренировочный черновик создан. AI-анализ не выполнялся.", true);
   } catch (error) {showMessage("ai-review-status", error.message);}
 });
 
