@@ -16,7 +16,7 @@
         <span>AIDoctor <small>Clinical Compass Agent</small></span>
       </div>
       <div class="login-heading">
-        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-3A</span>
+        <span class="eyebrow">ЛОКАЛЬНАЯ РАЗРАБОТКА · UI-3B</span>
         <h1>Ваше клиническое пространство</h1>
         <p>Доступны кабинеты врача, пациента и администратора.</p>
       </div>
@@ -47,7 +47,7 @@
         <button type="button" class="nav-link" data-view="settings" id="settings-nav" hidden><span>⚙</span> Настройки врача</button>
         <button type="button" class="nav-link" data-view="admin" id="admin-nav" hidden><span>▣</span> Администрирование</button>
       </nav>
-      <div class="sidebar-bottom"><span class="small-light">Режим UI-3A</span><p>AI отключён; назначения создаются и утверждаются врачом вручную.</p></div>
+      <div class="sidebar-bottom"><span class="small-light">Режим UI-3B</span><p>AI отключён; назначения создаются и утверждаются врачом вручную.</p></div>
     </aside>
     <div class="main-column">
       <header class="topbar">
@@ -75,7 +75,7 @@
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
           <div class="notice"><strong>Границы текущего этапа</strong>
-            <p id="overview-notice">Клиническая карточка доступна врачу. Ручные назначения доступны врачу. Тесты и AI-анализ пока не подключены.</p></div>
+            <p id="overview-notice">Клиническая карточка доступна врачу. Ручные назначения доступны врачу. Учебные психологические тесты доступны. AI-анализ пока не подключён.</p></div>
         </section>
 
 
@@ -95,6 +95,7 @@
             <button class="button subtle" type="button" data-clinical-target="clinical-history-section">История</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-orders-section">Назначения</button>
+            <button class="button subtle" type="button" data-clinical-target="clinical-tests-section">Психологические тесты</button>
             <button class="button subtle" type="button" data-clinical-target="clinical-digest-section">Context Builder</button>
           </nav>
           <div class="clinical-grid">
@@ -206,6 +207,21 @@
               </div>
             </form>
           </section>
+          <section class="panel clinical-digest" id="clinical-tests-section">
+            <div class="panel-heading"><div>
+              <h2>Учебные психологические тесты <span id="clinical-tests-count" class="count-marker">—</span></h2>
+              <p>Невалидированные синтетические опросники. Результат — сумма баллов, а не диагноз.</p>
+            </div></div>
+            <div id="clinical-tests-list" class="clinical-list">Загрузка…</div>
+            <form id="clinical-test-form" class="admin-form">
+              <h3>Назначить тест пациенту</h3>
+              <label for="clinical-test-select">Учебный опросник</label>
+              <select id="clinical-test-select" required></select>
+              <button type="submit" class="button primary">Назначить тест</button>
+              <p id="clinical-test-status" class="message" role="status" aria-live="polite"></p>
+            </form>
+            <p class="muted">Повторное назначение создаёт новую попытку для динамики. Критический учебный ответ создаёт отдельный Safety Alert.</p>
+          </section>
           <dialog id="order-approval-dialog" class="order-dialog">
             <h2>Проверка перед утверждением</h2>
             <p>В БД будет изменён статус только этого назначения на «утверждено».
@@ -224,7 +240,7 @@
               Пациент: собственную карточку, опубликованный врачом текст и активные утверждённые назначения.
               Врачебные черновики, внутренние события и AI-ответы пациенту не показываются.</p>
           </div>
-          <div class="notice"><strong>Граница UI-3A</strong>
+          <div class="notice"><strong>Граница UI-3B</strong>
             <p>Визиты сохраняются как черновики. Назначения создаются отдельно, публикуются пациенту только после явного ручного утверждения врачом.</p>
           </div>
         </section>
@@ -254,13 +270,29 @@
               <p>Препараты и обследования, отдельно утверждённые врачом. Черновики недоступны.</p></div></div>
             <div id="patient-orders" class="clinical-list">Загрузка…</div>
           </section>
+          <section class="panel clinical-digest" id="patient-tests-section">
+            <div class="panel-heading"><div><h2>Назначенные психологические тесты</h2>
+              <p>Только назначенные вам учебные опросники. Ответы сохраняются в PostgreSQL.</p></div></div>
+            <div id="patient-tests-list" class="clinical-list">Загрузка…</div>
+            <form id="patient-test-form" class="admin-form" hidden>
+              <h3 id="patient-test-title">Учебный тест</h3>
+              <p class="muted">Не является диагнозом и не заменяет обращение к врачу.</p>
+              <div id="patient-test-questions"></div>
+              <div class="form-actions">
+                <button type="submit" class="button primary" id="patient-test-submit">Завершить и сохранить ответы</button>
+                <button type="button" class="button subtle" id="patient-test-cancel">Закрыть</button>
+              </div>
+              <p id="patient-test-status" role="status" class="message"></p>
+            </form>
+            <p class="muted">Если есть непосредственная опасность для жизни или здоровья — обращайтесь за экстренной помощью, не ожидая ответа в приложении.</p>
+          </section>
           <section class="panel clinical-digest">
             <div class="panel-heading"><div><h2>Что мне доступно сейчас</h2>
               <p>Разделение прав на уровне FastAPI, а не только интерфейса.</p></div></div>
             <div class="access-rows">
               <div><strong>Видно:</strong> моя карточка, опубликованные тексты и утверждённые действующие назначения.</div>
-              <div><strong>Ещё не опубликовано:</strong> исходные визиты и внутренние записи, Digest, результаты тестов и документы.</div>
-              <div><strong>Позже:</strong> психологические тесты и дополнительная разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
+              <div><strong>Ещё не опубликовано:</strong> исходные визиты и внутренние записи, Digest, внутренние результаты чужих тестов и документы.</div>
+              <div><strong>Позже:</strong> дополнительная разрешённая пациенту история. До появления backend-правил публикации эти разделы не отображают медицинские факты.</div>
             </div>
           </section>
         </section>

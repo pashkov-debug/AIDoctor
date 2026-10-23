@@ -29,6 +29,16 @@ function endSession(message = "") {
   $("patient-details").hidden = true;
   $("patient-publications").replaceChildren();
   $("patient-orders").replaceChildren();
+  $("patient-tests-list").replaceChildren();
+  $("patient-test-form").hidden = true;
+  activePatientTest = null;
+  ["clinical-encounters", "clinical-history", "clinical-observations",
+   "clinical-context", "clinical-orders-list", "clinical-tests-list",
+   "patient-test-questions"].forEach((id) => $(id).replaceChildren());
+  $("clinical-test-select").replaceChildren();
+  ["patient-alias", "patient-id", "patient-created"].forEach((id) => {
+    $(id).textContent = "—";
+  });
   showMessage("patient-status", "");
   clearAdminData();
   $("workspace").hidden = true;
@@ -80,7 +90,7 @@ function roleLayout(user) {
     $("overview-description").textContent =
       "Доступные вам пациенты и настройки для будущего клинического контекста.";
     $("overview-notice").textContent =
-      "Выберите пациента для просмотра истории и визитов. Ручные назначения доступны врачу. Тесты и AI-область пока не подключены.";
+      "Визиты, назначения и учебные тесты доступны; AI пока не подключён.";
   }
   showView(doctor ? "overview" : patient ? "patient" : "admin");
 }
@@ -130,6 +140,7 @@ async function loadPatientPortal() {
     showMessage("patient-status", "");
     await loadPatientPublications(accountId);
     await loadPatientOrders(accountId);
+    await loadPatientTests(accountId);
   } catch (error) {
     if (state.user?.id !== accountId || state.view !== "patient") return;
     const message = error.status === 404
@@ -448,6 +459,7 @@ async function loadClinical() {
     renderClinicalObservations(context);
     renderClinicalDigest(digest);
     await loadClinicalOrders(patient.id);
+    await loadClinicalTests(patient.id);
     showMessage("clinical-card-status", "Данные обновлены", true);
   } catch (error) {
     if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
@@ -1094,3 +1106,250 @@ async function loadPatientOrders(accountId) {
     }
   }
 }
+
+
+/* UI-3B. Только учебные опросники; нет автоматической диагностики. */
+let demoTestCatalog = [];
+let activePatientTest = null;
+
+function testCatalogItem(id, version) {
+  return demoTestCatalog.find((item) => item.test_id === id && item.version === version);
+}
+
+async function fetchTestCatalog() {
+  demoTestCatalog = await api("/questionnaire-catalog");
+  return demoTestCatalog;
+}
+
+function testStatusName(status) {
+  return { assigned: "Ожидает ответа", completed: "Завершён", cancelled: "Отменён" }[status] || status;
+}
+
+function testDescription(item) {
+  return `${item.title} · ${testStatusName(item.status)} · ${formatDate(item.created_at)}`;
+}
+
+async function loadClinicalTests(patientId) {
+  const target = $("clinical-tests-list");
+  target.textContent = "Загрузка тестов…";
+  try {
+    const [catalog, items] = await Promise.all([
+      fetchTestCatalog(), api(`/patients/${encodeURIComponent(patientId)}/questionnaire-assignments`),
+    ]);
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId) return;
+    const select = $("clinical-test-select");
+    select.replaceChildren();
+    catalog.forEach((item) => {
+      const option = document.createElement("option");
+      option.value = item.test_id;
+      option.textContent = `${item.title} · ${item.version}`;
+      select.append(option);
+    });
+    $("clinical-tests-count").textContent = String(items.length);
+    target.replaceChildren();
+    if (!items.length) target.textContent = "Психологических тестов ещё не назначено.";
+    const grouped = new Map();
+    items.forEach((item) => {
+      if (item.result) {
+        const previous = grouped.get(item.test_id) || [];
+        previous.push(item.result.total_score);
+        grouped.set(item.test_id, previous);
+      }
+      const line = clinicalLine(
+        testDescription(item),
+        item.result
+          ? `Баллы: ${item.result.total_score}; ответы: ${item.result.answers.join(", ")}`
+          : "Ответов нет.",
+        item.result?.critical_flag
+          ? "ВНИМАНИЕ: критический ответ; требуется проверка врачом и Safety Alert."
+          : `Версия: ${item.test_version}, статус: ${item.status}`,
+      );
+      if (item.status === "assigned") {
+        const button = document.createElement("button");
+        button.className = "button subtle";
+        button.type = "button";
+        button.textContent = "Отменить";
+        button.addEventListener("click", async () => {
+          const reason = window.prompt("Причина отмены (не менее 3 символов):");
+          if (reason === null || reason.trim().length < 3) return;
+          button.disabled = true;
+          try {
+            await api(`/patients/${encodeURIComponent(patientId)}/questionnaire-assignments/${encodeURIComponent(item.id)}/cancel`, {
+              method: "POST", headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ expected_revision: item.revision, reason: reason.trim() }),
+            });
+            await loadClinicalTests(patientId);
+          } catch (error) {
+            showMessage("clinical-test-status", error.message);
+            button.disabled = false;
+          }
+        });
+        line.append(button);
+      }
+      target.append(line);
+    });
+    [...grouped.entries()].forEach(([testId, values]) => {
+      const timeline = values.reverse();
+      if (timeline.length < 2) return;
+      const result = clinicalLine(
+        `Динамика · ${testCatalogItem(testId, "demo-1")?.title || testId}`,
+        `Баллы по попыткам от ранней к поздней: ${timeline.join(" → ")}`,
+        "Учебная сумма баллов, без клинической интерпретации",
+      );
+      const graph = document.createElement("div");
+      graph.className = "test-trend";
+      graph.setAttribute("role", "img");
+      graph.setAttribute("aria-label", `Динамика баллов: ${timeline.join(", ")}`);
+      const maxScore = testId === "DEMO_DEP_9" ? 27 : 21;
+      timeline.forEach((value, index) => {
+        const col = document.createElement("div");
+        col.className = "test-trend-column";
+        const bar = document.createElement("span");
+        bar.className = "test-trend-bar";
+        bar.style.height = `${Math.max(4, Math.round(value / maxScore * 100))}%`;
+        bar.title = `Попытка ${index + 1}: ${value} из ${maxScore}`;
+        const label = document.createElement("small");
+        label.textContent = String(value);
+        col.append(bar, label);
+        graph.append(col);
+      });
+      result.append(graph);
+      target.append(result);
+    });
+  } catch (error) {
+    target.textContent = `Не удалось загрузить тесты: ${error.message}`;
+  }
+}
+
+$("clinical-test-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patient = state.clinicalPatient;
+  if (!patient || state.user?.role !== "doctor") return;
+  const button = event.currentTarget.querySelector("button[type=submit]");
+  button.disabled = true;
+  try {
+    const result = await api(`/patients/${encodeURIComponent(patient.id)}/questionnaire-assignments`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        test_id: $("clinical-test-select").value, request_key: crypto.randomUUID(),
+      }),
+    });
+    showMessage("clinical-test-status", `Назначено: ${result.title}`, true);
+    await loadClinicalTests(patient.id);
+  } catch (error) {
+    showMessage("clinical-test-status", `Не назначено: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});
+
+async function loadPatientTests(accountId) {
+  const target = $("patient-tests-list");
+  target.textContent = "Загрузка тестов…";
+  $("patient-test-form").hidden = true;
+  activePatientTest = null;
+  try {
+    const [catalog, items] = await Promise.all([
+      fetchTestCatalog(), api("/patients/me/questionnaire-assignments"),
+    ]);
+    if (state.user?.id !== accountId || state.view !== "patient") return;
+    target.replaceChildren();
+    if (!items.length) target.textContent = "Врач пока не назначал вам тесты.";
+    items.forEach((item) => {
+      const line = clinicalLine(
+        testDescription(item),
+        item.result
+          ? `Результат: ${item.result.total_score} баллов из ${item.test_id === "DEMO_DEP_9" ? 27 : 21}.`
+          : "Вы можете заполнить опросник один раз.",
+        item.result?.critical_flag
+          ? "Отмечен ответ, требующий внимания врача. Если есть непосредственная опасность, обратитесь за экстренной помощью."
+          : "Учебный результат, не диагноз",
+      );
+      if (item.status === "assigned") {
+        const button = document.createElement("button");
+        button.type = "button";
+        button.className = "button primary";
+        button.textContent = "Пройти тест";
+        button.addEventListener("click", () => startPatientTest(item, catalog));
+        line.append(button);
+      }
+      target.append(line);
+    });
+  } catch (error) {
+    target.textContent = `Не удалось получить тесты: ${error.message}`;
+  }
+}
+
+function startPatientTest(assignment, catalog) {
+  const entry = catalog.find((item) =>
+    item.test_id === assignment.test_id && item.version === assignment.test_version
+  );
+  if (!entry) {
+    $("patient-tests-list").textContent = "Версия теста не поддерживается.";
+    return;
+  }
+  activePatientTest = assignment;
+  $("patient-test-title").textContent = entry.title;
+  const target = $("patient-test-questions");
+  target.replaceChildren();
+  entry.questions.forEach((question, index) => {
+    const field = document.createElement("label");
+    field.className = "test-question";
+    const heading = document.createElement("span");
+    heading.textContent = `${index + 1}. ${question}`;
+    const select = document.createElement("select");
+    select.required = true;
+    select.dataset.testQuestion = String(index);
+    const placeholder = document.createElement("option");
+    placeholder.value = "";
+    placeholder.textContent = "Выберите ответ";
+    select.append(placeholder);
+    entry.answer_labels.forEach((text, score) => {
+      const option = document.createElement("option");
+      option.value = String(score);
+      option.textContent = text;
+      select.append(option);
+    });
+    field.append(heading, select);
+    target.append(field);
+  });
+  showMessage("patient-test-status", "");
+  $("patient-test-form").hidden = false;
+  $("patient-test-form").scrollIntoView({ behavior: "smooth", block: "start" });
+}
+
+$("patient-test-cancel").addEventListener("click", () => {
+  activePatientTest = null;
+  $("patient-test-form").hidden = true;
+});
+
+$("patient-test-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const assignment = activePatientTest;
+  if (!assignment || state.user?.role !== "patient") return;
+  const answers = [...$("patient-test-questions").querySelectorAll("select")].map(
+    (select) => select.value === "" ? null : Number(select.value)
+  );
+  if (answers.some((value) => value === null)) {
+    showMessage("patient-test-status", "Ответьте на все вопросы.");
+    return;
+  }
+  const button = $("patient-test-submit");
+  button.disabled = true;
+  try {
+    const result = await api(`/patients/me/questionnaire-assignments/${encodeURIComponent(assignment.id)}/submit`, {
+      method: "POST", headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ expected_revision: assignment.revision, answers }),
+    });
+    activePatientTest = null;
+    $("patient-test-form").hidden = true;
+    if (result.result?.critical_flag) {
+      window.alert("Ваш ответ отмечен для срочной врачебной проверки. Приложение не является экстренной службой. При непосредственной опасности обратитесь за экстренной помощью.");
+    }
+    await loadPatientTests(state.user.id);
+  } catch (error) {
+    showMessage("patient-test-status", `Ошибка сохранения: ${error.message}`);
+  } finally {
+    button.disabled = false;
+  }
+});

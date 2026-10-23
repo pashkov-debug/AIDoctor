@@ -1,6 +1,6 @@
 # AIDoctor — универсальная медицинская платформа
 
-**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент), UI-1C (администратор) UI-2A, UI-2B, UI-2C (публикация) и UI-3A (ручные назначения) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
+**Статус:** активная разработка. UI-1A (врач), UI-1B (пациент), UI-1C (администратор) UI-2A, UI-2B, UI-2C (публикация) UI-3A (ручные назначения) и UI-3B (учебные тесты) добавлены; испытания на PostgreSQL выполняются отдельно. **Не использовать с реальными данными пациентов до отдельного аудита безопасности, эксплуатации и законодательства.**
 
 - Backend: Python 3.12, FastAPI, SQLAlchemy 2, Alembic, PostgreSQL 16+, Docker.
 - Рабочая среда: Windows 11, PyCharm, PowerShell.
@@ -9,7 +9,67 @@
 - Пользователи: врач, пациент, администратор с разными правами.
 
 
-## Текущий инкремент UI-3A — структурированные назначения врача
+## Текущий инкремент UI-3B — назначаемые учебные опросники
+
+В кабинете врача «Визиты и история» → **«Психологические тесты»**:
+назначить тест, просмотреть дату и результат, увидеть динамику нескольких попыток,
+отменить ещё не завершённое назначение. В кабинете пациента:
+**«Моя карточка» → «Назначенные психологические тесты»** — пройти тест
+непосредственно на странице и посмотреть результат.
+
+**Важная граница:** включены `DEMO_ANX_7` и `DEMO_DEP_9` — *синтетические
+демонстрационные* опросники с невалидированными вопросами, не GAD-7 и не
+PHQ-9. Метод подсчёта — простая сумма ответов 0–3. Порогов постановки
+диагноза, лечебных рекомендаций и нормативной интерпретации нет.
+Их нельзя применять к реальным пациентам. Официальные методики,
+локализации, лицензии и научную интерпретацию проверим перед выпуском.
+
+Таблицы `questionnaire_assignments`, `questionnaire_submissions` и
+`questionnaire_assignment_audit` создаёт миграция `ui3b_20261023`.
+Версия формы закреплена за назначением; сданные ответы неизменяемы;
+повторное назначение создаёт новую попытку. Положительный ответ на
+вопрос о вреде себе в **учебной** `DEMO_DEP_9` создаёт `SafetyAlert`
+приоритетом `urgent` и Outbox в одной транзакции с ответами.
+Это сигнал врачу, **не** гарантия доставки/экстренной помощи.
+Система не выносит диагнозы автоматически, AI не подключён.
+
+Одобренное изменение для будущего UI-4B: отдельные кнопки
+«Одобрить выбранное» / «Одобрить с изменениями» с экраном
+«Предложение AI → правки врача → что попадёт в БД».
+Не реализовано и не имитируется в текущем UI-3B.
+
+**PowerShell (из корня проекта, активирована `.venv`):**
+
+```powershell
+docker compose up -d postgres
+python -m alembic -c alembic.ini upgrade head
+python -m alembic -c alembic.ini check
+
+python -m ruff check backend --fix
+python -m ruff format backend
+python -m ruff check backend
+python -m ruff format --check backend
+node --check backend/app/web/assets/app.js
+
+$env:PYTHONPATH = "backend"
+python -m pytest backend/tests/test_ui3b_unit.py -v
+
+$env:TEST_DATABASE_URL = "postgresql+psycopg://aidoctor:aidoctor_dev@127.0.0.1:5432/aidoctor_test"
+python -m pytest backend/tests/test_ui3b_pg.py -v -rs
+python -m pytest backend/tests -q -rs
+Remove-Item Env:TEST_DATABASE_URL -ErrorAction SilentlyContinue
+
+python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload
+```
+
+⚠️ PostgreSQL-тесты очищают таблицы выбранной тестовой БД; запрещено
+направлять их в локальную `aidoctor` или будущую production.
+Синтетические пациенты C-001 и C-002 сохраняются. Новых seed-скриптов
+для них не требуется: врач назначает им тесты через UI.
+
+Документация этапа: [docs/ui3b_demo_questionnaires.md](docs/ui3b_demo_questionnaires.md).
+
+## Предыдущий инкремент UI-3A — структурированные назначения врача
 
 Врач создаёт **отдельный черновик препарата или обследования**, при необходимости исправляет
 его как автор, просматривает перед утверждением и поштучно нажимает
@@ -857,6 +917,8 @@ Windows/Python 3.12/PostgreSQL. Миграция `aiextract_v1_20261018` —
 
 ```powershell
 .\.venv\Scripts\Activate.ps1
+docker compose ps
+docker compose exec postgres pg_isready -U aidoctor -d aidoctor
 docker compose up -d postgres
 python -m alembic -c alembic.ini current -v
 python -m alembic -c alembic.ini heads

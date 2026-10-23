@@ -15,6 +15,11 @@ from app.models.encounter import Encounter
 from app.models.history_event import HistoryEvent
 from app.models.medical_record import MedicalAttachment, MedicalObservation
 from app.models.patient import Patient
+from app.models.questionnaire_assignment import (
+    QuestionnaireAssignment,
+    QuestionnaireAssignmentAudit,
+    QuestionnaireSubmission,
+)
 from app.models.questionnaire_response import QuestionnaireResponse
 from app.models.safety_alert import SafetyAlert, SafetyAlertEvent
 from app.models.safety_alert_request import SafetyAlertRequest
@@ -49,6 +54,9 @@ __all__ = [
     "MedicalObservation",
     "Patient",
     "QuestionnaireResponse",
+    "QuestionnaireAssignment",
+    "QuestionnaireAssignmentAudit",
+    "QuestionnaireSubmission",
     "SafetyAlert",
     "SafetyAlertEvent",
     "SafetyAlertRequest",

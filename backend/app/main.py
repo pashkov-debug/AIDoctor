@@ -19,6 +19,7 @@ from app.api.routes.health import router as health_router
 from app.api.routes.history_events import router as history_events_router
 from app.api.routes.patient_portal import router as patient_portal_router
 from app.api.routes.patients import router as patients_router
+from app.api.routes.questionnaire_assignments import router as questionnaire_assignments_router
 from app.api.routes.questionnaires import router as questionnaires_router
 from app.api.routes.safety_alerts import router as safety_router
 from app.api.routes.safety_followups import router as safety_followups_router
@@ -47,6 +48,7 @@ def create_app() -> FastAPI:
         patients_router,
         encounters_router,
         questionnaires_router,
+        questionnaire_assignments_router,
         history_events_router,
         context_router,
         attachments_router,
