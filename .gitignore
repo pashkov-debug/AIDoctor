@@ -42,3 +42,6 @@ data/attachments/
 build/
 dist/
 *.egg-info/
+
+# Локальные отчёты нагрузочного тестирования
+reports/
