@@ -1018,6 +1018,61 @@ function orderDescription(item) {
   ].filter(Boolean).join(" · ");
 }
 
+// Врач видит клинические сведения, а не внутреннюю структуру хранения.
+const clinicalPreviewLabels = {
+  name: "Название",
+  active_ingredient: "Действующее вещество",
+  dosage_form: "Форма выпуска",
+  strength: "Содержание / концентрация",
+  dose_value: "Разовая доза",
+  dose_unit: "Единица дозы",
+  route: "Способ приёма или введения",
+  frequency_per_day: "Приёмов в сутки",
+  times_local: "Время приёма",
+  timezone: "Часовой пояс",
+  start_date: "Начало",
+  duration_days: "Продолжительность (дней)",
+  administration_notes: "Условия приёма",
+  examination_details: "Описание обследования",
+  indication: "Показание",
+  contraindications: "Противопоказания и взаимодействия",
+  rationale: "Обоснование",
+  source_reference: "Источник",
+  test_id: "Психологический тест",
+  test_version: "Версия методики",
+};
+const demoTestNames = {
+  DEMO_ANX_7: "Учебный опросник о тревожных симптомах",
+  DEMO_DEP_9: "Учебный опросник о снижении настроения",
+};
+
+function clinicalPreviewValue(key, value) {
+  if (value === null || value === undefined || value === "") return "Не указано";
+  if (key === "test_id") return demoTestNames[value] || "Учебный тест";
+  if (Array.isArray(value)) return value.length ? value.join(", ") : "Не указано";
+  return String(value);
+}
+
+function renderClinicalPreviewFields(data, original = null) {
+  const list = document.createElement("dl");
+  list.className = "clinical-preview-fields";
+  for (const [key, caption] of Object.entries(clinicalPreviewLabels)) {
+    if (!Object.hasOwn(data, key) && !Object.hasOwn(original || {}, key)) continue;
+    const row = document.createElement("div");
+    row.className = "clinical-preview-field";
+    if (original && JSON.stringify(data[key] ?? null) !== JSON.stringify(original[key] ?? null)) {
+      row.classList.add("clinical-preview-changed");
+    }
+    const term = document.createElement("dt");
+    term.textContent = caption;
+    const description = document.createElement("dd");
+    description.textContent = clinicalPreviewValue(key, data[key]);
+    row.append(term, description);
+    list.append(row);
+  }
+  return list;
+}
+
 function orderRecord(item) {
   const statusName = { draft: "Черновик", approved: "Утверждено", cancelled: "Отменено" };
   const row = clinicalLine(
@@ -1028,9 +1083,7 @@ function orderRecord(item) {
   const details = document.createElement("details");
   const summary = document.createElement("summary");
   summary.textContent = "Полные поля назначения";
-  const pre = document.createElement("pre");
-  pre.textContent = JSON.stringify(item, null, 2);
-  details.append(summary, pre);
+  details.append(summary, renderClinicalPreviewFields(item));
   row.append(details);
   if (item.status === "draft") {
     if (item.author_id === state.user?.id) {
@@ -1044,22 +1097,10 @@ function orderRecord(item) {
     const approve = document.createElement("button");
     approve.type = "button";
     approve.className = "button primary";
-    approve.textContent = "Просмотр изменений → Одобрить";
+    approve.textContent = "Проверить и утвердить";
     approve.addEventListener("click", () => {
       orderApproval = item;
-      $("order-approval-preview").textContent = JSON.stringify({
-        действие: "Утвердить и показать пациенту",
-        пациент: item.patient_id,
-        назначение: item.id,
-        версия: item.version,
-        вид: item.kind,
-        название: item.name,
-        подробности: orderDescription(item),
-        показание: item.indication,
-        обоснование_врача: item.rationale,
-        взаимодействия_и_противопоказания: item.contraindications,
-        источник: item.source_reference,
-      }, null, 2);
+      $("order-approval-preview").replaceChildren(renderClinicalPreviewFields(item));
       showMessage("order-approval-status", "");
       $("order-approval-dialog").showModal();
     });
@@ -1447,6 +1488,7 @@ let aiPendingKey = null;
 let aiLoadEpoch = 0;
 
 function clearAIWorkspace() {
+  clearAIReview();
   aiLoadEpoch += 1;
   aiPendingKey = null;
   for (const id of ["ai-files", "ai-requests"]) $(id).replaceChildren();
@@ -1487,6 +1529,7 @@ async function loadAIWorkspace() {
 }
 
 async function loadAIForPatient() {
+  clearAIReview();
   const patientId = $("ai-patient-select").value;
   const epoch = ++aiLoadEpoch;
   aiPendingKey = null;
@@ -1565,6 +1608,12 @@ function renderAIRequests(requests) {
     meta.textContent =
       `Контекст: ${item.context_sha256.slice(0, 12)}… · Снимок ${item.context_snapshot_id} · Настройки врача v${item.doctor_context.profile_version} · Вложений (только ссылки): ${item.attachment_manifest.length}`;
     detail.append(title, question, meta);
+    const open = document.createElement("button");
+    open.type = "button";
+    open.className = "button subtle";
+    open.textContent = "Открыть согласование";
+    open.addEventListener("click", () => openAIReview(item.id));
+    row.append(open);
     row.append(detail);
     target.append(row);
   }
@@ -1640,4 +1689,356 @@ $("ai-request-form").addEventListener("submit", async (event) => {
   } finally {
     button.disabled = false;
   }
+});
+
+
+// UI-4B — локальное согласование строго учебных структурированных предложений.
+let reviewRequestId = null;
+let reviewDraft = null;
+let reviewPreview = null;
+let reviewSelections = null;
+let reviewEpoch = 0;
+
+function clearAIReview() {
+  reviewEpoch++;
+  reviewRequestId = null;
+  reviewDraft = null;
+  reviewPreview = null;
+  reviewSelections = null;
+  $("ai-proposal-cards").replaceChildren();
+  $("ai-review-preview-result").replaceChildren();
+  $("ai-review-request-label").textContent = "Выберите подготовленный запрос в истории ниже.";
+  $("ai-edit-reason").value = "";
+  for (const id of ["ai-demo-create", "ai-draft-revise", "ai-review-reject",
+                    "ai-review-preview", "ai-review-approve"]) $(id).disabled = true;
+  showMessage("ai-review-status", "");
+}
+
+function reviewPath(suffix = "") {
+  return `/patients/${encodeURIComponent($("ai-patient-select").value)}` +
+    `/ai-requests/${encodeURIComponent(reviewRequestId)}/review${suffix}`;
+}
+
+function makeDemoProposals() {
+  const sample = (name, kind, key) => ({
+    id: crypto.randomUUID(),
+    kind,
+    alternative_group: kind === "medication" ? "учебные_альтернативы_1" : null,
+    evidence_status: "unverified_demo",
+    order: {
+      request_key: key, kind, name, indication: "Учебная демонстрация — не лечение",
+      rationale: "Вымышленный учебный пример, без медицинской доказательности",
+      source_reference: "Синтетический сценарий UI-4B; не клинический источник",
+      ...(kind === "medication" ? {
+        active_ingredient: "Условное вещество", dosage_form: "Учебная форма",
+        strength: "Условная", dose_value: "1", dose_unit: "условная единица",
+        route: "Учебный способ", frequency_per_day: 1,
+        times_local: ["09:00"], timezone: "Europe/Moscow",
+        start_date: new Date().toISOString().slice(0,10), duration_days: 1,
+      } : {examination_details: "Условное учебное обследование"}),
+    },
+  });
+  const a = sample("Учебный препарат А (вымышленный)", "medication", crypto.randomUUID());
+  const b = sample("Учебный препарат Б (альтернатива А)", "medication", crypto.randomUUID());
+  const c = sample("Учебное обследование", "examination", crypto.randomUUID());
+  return [
+    a, b, c,
+    {id: crypto.randomUUID(), kind: "demo_test", test_id: "DEMO_ANX_7",
+     evidence_status: "unverified_demo", alternative_group: null},
+  ];
+}
+
+const reviewFieldLabels = {
+  name: "Название", active_ingredient: "Действующее вещество",
+  dosage_form: "Форма", strength: "Содержание / концентрация",
+  dose_value: "Разовая доза", dose_unit: "Единица дозы",
+  route: "Способ приёма", frequency_per_day: "Приёмов в сутки",
+  times_local: "Время приёма (ЧЧ:ММ, через запятую)",
+  timezone: "Часовой пояс IANA", start_date: "Дата начала",
+  duration_days: "Длительность (дней)", administration_notes: "Условия приёма",
+  examination_details: "Описание обследования", indication: "Показание",
+  contraindications: "Ограничения / противопоказания",
+  rationale: "Обоснование", source_reference: "Источник",
+};
+
+function readEditedOrder(card, original) {
+  const data = structuredClone(original);
+  for (const input of card.querySelectorAll("[data-order-field]")) {
+    const name = input.dataset.orderField;
+    const text = input.value.trim();
+    if (name === "times_local") data[name] = text ? text.split(",").map(x => x.trim()) : null;
+    else if (["dose_value", "frequency_per_day", "duration_days"].includes(name))
+      data[name] = text ? text : null;
+    else data[name] = text || null;
+  }
+  return data;
+}
+
+function collectAISelections() {
+  const selected = [];
+  for (const item of reviewDraft.proposals) {
+    const card = [...$("ai-proposal-cards").querySelectorAll("[data-proposal-id]")]
+      .find(x => x.dataset.proposalId === item.id);
+    if (!card?.querySelector(".ai-select-proposal").checked) continue;
+    const entry = {proposal_id: item.id};
+    if (item.order) entry.order = readEditedOrder(card, item.order);
+    selected.push(entry);
+  }
+  if (!selected.length) throw new Error("Выберите хотя бы одно предложение.");
+  return {expected_version: reviewDraft.version, selections: selected,
+          edit_reason: $("ai-edit-reason").value.trim() || null};
+}
+
+function invalidateAIReviewPreview() {
+  reviewPreview = null;
+  reviewSelections = null;
+  $("ai-review-approve").disabled = true;
+  $("ai-review-preview-result").replaceChildren();
+}
+
+function renderReviewDraft() {
+  invalidateAIReviewPreview();
+  const target = $("ai-proposal-cards");
+  target.replaceChildren();
+  $("ai-review-request-label").textContent =
+    `Запрос ${reviewRequestId} · версия ${reviewDraft?.version || "—"} · ` +
+    `статус ${reviewDraft?.status || "без черновика"}`;
+  $("ai-demo-create").disabled = !reviewRequestId || Boolean(reviewDraft);
+  const editing = reviewDraft?.status === "open";
+  for (const id of ["ai-draft-revise", "ai-review-reject", "ai-review-preview"]) $(id).disabled = !editing;
+  if (!reviewDraft) return;
+  const history = document.createElement("div");
+  history.className = "actions";
+  for (const version of reviewDraft.versions_available) {
+    if (version === reviewDraft.version && reviewDraft.status !== "historical") continue;
+    const button = document.createElement("button");
+    button.type = "button";
+    button.className = "button subtle";
+    button.textContent = `Просмотреть версию ${version}`;
+    button.addEventListener("click", async () => {
+      const selectedRequest = reviewRequestId;
+      const epoch = ++reviewEpoch;
+      try {
+        const record = await api(reviewPath(`/versions/${version}`));
+        if (epoch !== reviewEpoch || selectedRequest !== reviewRequestId) return;
+        reviewDraft = record;
+        renderReviewDraft();
+        showMessage("ai-review-status", "Историческая версия: только чтение.", true);
+      } catch(error) {
+        showMessage("ai-review-status", error.message);
+      }
+    });
+    history.append(button);
+  }
+  if (reviewDraft.status === "historical") {
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "button subtle";
+    back.textContent = "Вернуться к актуальной версии";
+    back.addEventListener("click", () => openAIReview(reviewRequestId));
+    history.append(back);
+  }
+  target.append(history);
+  if (reviewDraft.approved_result) {
+    const summary = document.createElement("p");
+    summary.textContent = `Подтверждено: ${reviewDraft.approved_result.records.length} записей. ` +
+      "Каждая запись доступна в соответствующем разделе. Учебный пример, не ответ AI.";
+    target.append(summary);
+  }
+  for (const proposal of reviewDraft.proposals) {
+    const card = document.createElement("div");
+    card.className = "ai-proposal-entry";
+    card.dataset.proposalId = proposal.id;
+    const label = document.createElement("label");
+    const choice = document.createElement("input");
+    choice.type = "checkbox";
+    choice.className = "ai-select-proposal";
+    choice.disabled = !editing;
+    label.append(choice, document.createTextNode(
+      ` ${proposal.order?.name || proposal.test_id} · ${proposal.kind === "demo_test" ?
+        "Учебный тест" : proposal.kind === "medication" ? "Препарат" : "Обследование"}`
+    ));
+    card.append(label);
+    if (proposal.alternative_group) {
+      const small = document.createElement("p");
+      small.className = "clinical-hint";
+      small.textContent = `Альтернатива (группа ${proposal.alternative_group}) — совместный выбор запрещён.`;
+      card.append(small);
+    }
+    if (proposal.order) {
+      const details = document.createElement("details");
+      details.open = false;
+      const summary = document.createElement("summary");
+      summary.textContent = "Просмотр и изменение всех полей";
+      details.append(summary);
+      const fields = document.createElement("div");
+      fields.className = "ai-proposal-fields";
+      for (const [name, caption] of Object.entries(reviewFieldLabels)) {
+        if (proposal.kind === "examination" &&
+            ["active_ingredient","dosage_form","strength","dose_value","dose_unit","route",
+             "frequency_per_day","times_local","timezone","duration_days",
+             "administration_notes","contraindications"].includes(name)) continue;
+        if (proposal.kind === "medication" && name === "examination_details") continue;
+        const field = document.createElement("label");
+        field.textContent = caption;
+        const input = document.createElement("input");
+        input.dataset.orderField = name;
+        input.value = Array.isArray(proposal.order[name])
+          ? proposal.order[name].join(", ") : (proposal.order[name] ?? "");
+        input.disabled = !editing;
+        field.append(input);
+        fields.append(field);
+      }
+      details.append(fields);
+      card.append(details);
+    } else {
+      const note = document.createElement("small");
+      note.textContent = "Только DEMO-тест из встроенного каталога.";
+      card.append(note);
+    }
+    card.addEventListener("input", invalidateAIReviewPreview);
+    card.addEventListener("change", invalidateAIReviewPreview);
+    target.append(card);
+  }
+}
+
+async function openAIReview(requestId) {
+  reviewRequestId = requestId;
+  reviewDraft = null;
+  reviewPreview = null;
+  reviewSelections = null;
+  const epoch = ++reviewEpoch;
+  showMessage("ai-review-status", "Загрузка учебного черновика…");
+  try {
+    const data = await api(reviewPath());
+    if (epoch !== reviewEpoch) return;
+    reviewDraft = data;
+    showMessage("ai-review-status", "Загружен учебный черновик. Это не ответ модели.", true);
+  } catch (error) {
+    if (epoch !== reviewEpoch) return;
+    if (error.status !== 404) showMessage("ai-review-status", error.message);
+    else showMessage("ai-review-status", "Черновика нет. Можно создать учебный пример.");
+  }
+  if (epoch === reviewEpoch) renderReviewDraft();
+}
+
+$("ai-demo-create").addEventListener("click", async () => {
+  if (!reviewRequestId) return;
+  try {
+    const data = await api(reviewPath(), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({origin: "synthetic_manual_test", proposals: makeDemoProposals()}),
+    });
+    reviewDraft = data;
+    renderReviewDraft();
+    showMessage("ai-review-status", "СИНТЕТИЧЕСКИЙ черновик сохранён. AI не вызывался.", true);
+  } catch (error) {showMessage("ai-review-status", error.message);}
+});
+
+$("ai-draft-revise").addEventListener("click", async () => {
+  if (reviewDraft?.status !== "open") return;
+  try {
+    const proposals = reviewDraft.proposals.map(item => {
+      if (!item.order) return item;
+      const card = [...$("ai-proposal-cards").querySelectorAll("[data-proposal-id]")]
+        .find(x => x.dataset.proposalId === item.id);
+      return {...item, order: readEditedOrder(card, item.order)};
+    });
+    const data = await api(reviewPath(), {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify({
+        origin:"synthetic_manual_test", expected_version:reviewDraft.version, proposals,
+      }),
+    });
+    reviewDraft = data;
+    renderReviewDraft();
+    showMessage("ai-review-status", `Создана неизменяемая версия ${data.version}.`, true);
+  } catch (error) {showMessage("ai-review-status", error.message);}
+});
+
+$("ai-review-preview").addEventListener("click", async () => {
+  try {
+    const selection = collectAISelections();
+    const data = await api(reviewPath("/preview"), {
+      method: "POST", headers: {"Content-Type":"application/json"},
+      body: JSON.stringify(selection),
+    });
+    reviewSelections = selection;
+    reviewPreview = data;
+    const output = $("ai-review-preview-result");
+    output.replaceChildren();
+    const title = document.createElement("h3");
+    title.textContent = `Проверьте выбранные назначения (${data.changes.length})`;
+    output.append(title);
+    const explanation = document.createElement("p");
+    explanation.className = "clinical-hint";
+    explanation.textContent =
+      "После вашего подтверждения выбранные назначения появятся у пациента. " +
+      "Неотмеченные предложения останутся только в истории рассмотрения.";
+    output.append(explanation);
+    for (const change of data.changes) {
+      const section = document.createElement("section");
+      section.className = "ai-preview-item";
+      const heading = document.createElement("h4");
+      heading.textContent = `${change.table === "questionnaire_assignments" ?
+        "Психологический тест" : change.final?.kind === "medication" ? "Препарат" : "Обследование"}: ` +
+        `${change.final?.name || clinicalPreviewValue("test_id", change.final?.test_id)}`;
+      section.append(heading);
+      const status = document.createElement("p");
+      status.className = "clinical-hint";
+      status.textContent = change.edited
+        ? "Врач внёс изменения. Изменённые поля отмечены."
+        : "Без изменений по сравнению с учебным предложением.";
+      section.append(status);
+
+      const proposed = document.createElement("details");
+      const proposedTitle = document.createElement("summary");
+      proposedTitle.textContent = "Что было предложено";
+      proposed.append(proposedTitle, renderClinicalPreviewFields(change.original));
+      section.append(proposed);
+
+      const finalTitle = document.createElement("h5");
+      finalTitle.textContent = "Итоговое назначение";
+      section.append(finalTitle, renderClinicalPreviewFields(change.final, change.original));
+      output.append(section);
+    }
+    $("ai-review-approve").disabled = false;
+    showMessage("ai-review-status", "Проверьте дозы, ограничения и расписание каждого выбранного назначения.", true);
+  } catch (error) {
+    invalidateAIReviewPreview();
+    showMessage("ai-review-status", error.message);
+  }
+});
+
+$("ai-review-approve").addEventListener("click", async () => {
+  if (!reviewPreview || !reviewSelections) return;
+  if (!window.confirm("Утвердить выбранные учебные записи и показать назначения пациенту?")) return;
+  $("ai-review-approve").disabled = true;
+  try {
+    const result = await api(reviewPath("/approve"), {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body: JSON.stringify({
+        ...reviewSelections, preview_sha256: reviewPreview.preview_sha256,
+        confirm_patient_visibility:true, confirm_clinical_review:true,
+      }),
+    });
+    showMessage("ai-review-status",
+      `Утверждено назначений и тестов: ${result.records.length}. Они доступны пациенту.`, true);
+    await openAIReview(reviewRequestId);
+  } catch (error) {showMessage("ai-review-status", error.message);}
+});
+
+$("ai-review-reject").addEventListener("click", async () => {
+  if (reviewDraft?.status !== "open") return;
+  const reason = window.prompt("Причина отклонения учебного черновика:");
+  if (reason === null) return;
+  try {
+    const data = await api(reviewPath("/reject"), {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({expected_version:reviewDraft.version, reason}),
+    });
+    reviewDraft = data;
+    renderReviewDraft();
+    showMessage("ai-review-status", "Черновик отклонён. В назначения ничего не добавлено.", true);
+  } catch (error) {showMessage("ai-review-status", error.message);}
 });

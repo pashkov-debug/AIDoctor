@@ -5,6 +5,9 @@ from app.models import (
     AdminAuditEvent,
     AIRequest,
     AIRequestAudit,
+    AIReviewCase,
+    AIReviewEvent,
+    AIReviewVersion,
     AttachmentAVScan,
     AttachmentEvidenceDraft,
     AttachmentEvidenceReadAudit,
@@ -42,6 +45,9 @@ from app.models import (
 )
 
 REGISTERED_MODELS = (
+    AIReviewCase,
+    AIReviewVersion,
+    AIReviewEvent,
     AIRequest,
     AIRequestAudit,
     AdminAuditEvent,

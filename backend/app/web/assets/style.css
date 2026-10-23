@@ -281,3 +281,35 @@ code { background: #e9f1f3; padding: 2px 5px; border-radius: 4px; }
   .nav-link.active { border-left: 0; border-bottom: 3px solid #57d2ba; padding-left: 13px; }
   .main-content { padding-top: 20px; }
 }
+
+/* UI-4B: структурированные предложения и предпросмотр */
+.ai-review-workspace { margin-top: 1rem; border-top: 1px solid var(--line, #d8e1e8); padding-top: 1rem; }
+.ai-proposal-entry, .ai-preview-item { border: 1px solid #d8e1e8; border-radius: .7rem; padding: .85rem; margin: .65rem 0; background: #fafcfe; }
+.ai-proposal-entry > label { font-weight: 650; display: flex; align-items: center; gap: .5rem; }
+.ai-proposal-entry details { margin-top: .6rem; }
+.ai-proposal-entry summary { cursor: pointer; }
+.ai-proposal-fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(185px,1fr)); gap: .7rem; margin-top: .8rem; }
+.ai-proposal-fields label { display: flex; flex-direction: column; gap: .3rem; font-size: .85rem; }
+.ai-proposal-fields input { width: 100%; min-width: 0; }
+.ai-preview-item pre { max-height: 260px; overflow: auto; white-space: pre-wrap; word-break: break-word; font-size: .75rem; }
+.ai-review-workspace .actions { display: flex; gap: .5rem; flex-wrap: wrap; margin: .7rem 0; }
+
+/* UI-4B: понятная врачу проверка назначений без технических JSON/SQL. */
+.clinical-preview-fields { margin: .65rem 0; display: grid; gap: .15rem; }
+.clinical-preview-field {
+  display: grid; grid-template-columns: minmax(115px, 37%) minmax(0, 1fr);
+  gap: .7rem; padding: .55rem .65rem;
+  border-bottom: 1px solid #e4ebef; overflow-wrap: anywhere;
+}
+.clinical-preview-field dt { color: #536778; font-size: .84rem; font-weight: 600; }
+.clinical-preview-field dd { margin: 0; font-size: .91rem; }
+.clinical-preview-field.clinical-preview-changed {
+  border-left: 3px solid #257d68; background: #e9f5f0;
+}
+.ai-preview-item h4, .ai-preview-item h5 { margin: .3rem 0 .55rem; }
+.ai-preview-item details { margin: .7rem 0; }
+.ai-preview-item summary { cursor: pointer; font-weight: 600; }
+.order-dialog .clinical-preview-summary { max-height: 48vh; overflow: auto; }
+@media (max-width: 540px) {
+  .clinical-preview-field { grid-template-columns: minmax(0, 1fr); gap: .15rem; }
+}
