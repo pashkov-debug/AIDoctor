@@ -17,6 +17,11 @@ COPY backend/alembic ./backend/alembic
 COPY backend/scripts ./backend/scripts
 COPY alembic.ini ./
 
+# Git checkout под umask 077 может создать исходные файлы с правами 0600,
+# а каталоги — с 0700. Контейнер работает от UID 10001 и должен читать код.
+# Оставляем код во владении root и разрешаем только чтение/обход.
+RUN chmod -R a+rX /opt/aidoctor/backend /opt/aidoctor/alembic.ini
+
 USER 10001:10001
 EXPOSE 8000
 

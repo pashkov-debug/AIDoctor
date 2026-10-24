@@ -1,3 +1,62 @@
+# AIDoctor — HOTFIX: права чтения исходного кода в Docker (2026-10-24)
+
+## Причина и исправление
+
+Лог GitHub Actions для `d7e1b26` подтверждает ошибку
+`[Errno 13] Permission denied` при запуске
+`/opt/aidoctor/backend/scripts/run_vds_migrations.py`.
+Автодеплой использует `umask 077`, а приложение работает внутри контейнера
+под непривилегированным UID `10001`. Исходные файлы после Git checkout могут
+оказаться недоступны этому пользователю.
+
+В `deploy/Dockerfile.test` после копирования исходников добавлена команда
+`RUN chmod -R a+rX /opt/aidoctor/backend /opt/aidoctor/alembic.ini`.
+Файлы остаются во владении `root`, а контейнер по-прежнему запускается
+без root-прав с файловой системой только для чтения.
+
+## Содержимое текущего ZIP
+
+- `deploy/Dockerfile.test` — полный Dockerfile, заменяет существующий.
+- `backend/tests/test_vds_image_permissions_unit.py` — новый регрессионный тест.
+- `README.md` — полный файл документации с настоящим дополнением.
+
+## Установка и проверки (Windows / PyCharm)
+
+1. Распаковать архив поверх корневого каталога AIDoctor.
+2. В терминале PyCharm:
+
+```powershell
+python -m ruff check backend --fix
+python -m ruff format backend
+python -m ruff check backend
+python -m ruff format --check backend
+python -m pytest backend/tests/test_vds_image_permissions_unit.py -q
+```
+
+3. Проверить изменения и выполнить Commit / Push в `master` через PyCharm.
+4. Проверить GitHub Actions: сборку, миграции, обновление контейнера и smoke-test.
+5. После успешного выполнения проверить на Ubuntu без изменения данных:
+
+```bash
+cat /opt/aidoctor/last_deployed_sha
+docker ps --format 'table {{.Names}}\\t{{.Status}}'
+curl -s -o /dev/null -w 'HTTP %{http_code}\\n' http://127.0.0.1:18080/app
+```
+
+Не требуется заново запускать bootstrap, пересоздавать SSH-ключи или удалять
+PostgreSQL/Docker-тома. Изменён только Dockerfile и добавлен тест.
+Не используйте `docker compose down -v`.
+
+## Проверки и границы
+
+Проведены статические проверки конфигурации и новый регрессионный тест.
+Docker-сборка на реальном FirstVDS ещё не выполнена.
+Проверка не заменяет полноценные PostgreSQL-тесты и проверку восстановления
+резервных копий. Существующие публичные разрешения UFW требуют отдельного
+аудита до открытия сайта в интернет.
+
+---
+
 # Исправление DEPLOY-3 — миграции Alembic в GitHub Actions (2026-10-24)
 
 Коммит `8da21f7` успешно прошёл SSH, резервное копирование и Docker build, но
@@ -1901,3 +1960,26 @@ API синтетических данных ↔ MCP/ChatGPT. Без отдель
 LLM Gateway и врачебное согласование относятся к следующим этапам.
 
 Команды и проверка: [docs/ui4a_navigation_fix.md](docs/ui4a_navigation_fix.md).
+
+
+## CI-HOTFIX — форматирование Ruff (2026-10-24)
+
+Исправлено падение шага `python -m ruff format --check backend` в GitHub
+Actions для `backend/tests/test_ci_autodeploy_unit.py` и
+`backend/tests/test_vds_migrations_unit.py`. Изменены только записи трёх
+строковых литералов. Содержимое строк, тестовая логика, API и миграции
+не изменены (AST идентичен исходному).
+
+Проверено: 17 изолированных тестов, компиляция Python и отсутствие
+строк длиннее 100 символов. Ruff в среде подготовки недоступен:
+финальную проверку выполнить локально в PyCharm командами:
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+python -m pytest backend/tests/test_ci_autodeploy_unit.py backend/tests/test_vds_migrations_unit.py -q
+```
+
+Если проверки прошли, выполнить Commit и Push в `master` через PyCharm.
+Изменения в серверных скриптах и настройках GitHub Secrets не требуются.
+Текущая ошибка CI остановила запуск до обновления VDS.
