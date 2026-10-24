@@ -1,0 +1,9 @@
+# Минимальный контекст сборки: секреты, тестовые БД и вложения не попадут в Docker build.
+**
+!requirements.txt
+!alembic.ini
+!backend/
+!backend/app/
+!backend/app/**
+!backend/alembic/
+!backend/alembic/**

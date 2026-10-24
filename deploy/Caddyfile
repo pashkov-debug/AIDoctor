@@ -1,0 +1,17 @@
+# Для локальной стадии: AIDOCTOR_DOMAIN=localhost; самоподписанный сертификат Caddy.
+# Для публичного HTTPS требуются DNS, открытые 80/443 и проверенные меры защиты.
+{$AIDOCTOR_DOMAIN} {
+    encode zstd gzip
+
+    @debug path /docs /redoc /openapi.json
+    respond @debug 404
+
+    header {
+        X-Content-Type-Options "nosniff"
+        X-Frame-Options "DENY"
+        Referrer-Policy "no-referrer"
+        -Server
+    }
+
+    reverse_proxy app:8000
+}

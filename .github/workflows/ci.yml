@@ -15,7 +15,7 @@ concurrency:
 jobs:
   quality:
     name: Код, миграции и тесты
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 25
     services:
       postgres:
@@ -36,10 +36,10 @@ jobs:
       AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS: "0"
     steps:
       - name: Получить код
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Python 3.12
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@v6
         with:
           python-version: "3.12"
           cache: pip
@@ -59,12 +59,20 @@ jobs:
               connection.execute("CREATE DATABASE aidoctor_test")
           PY
 
-      - name: Статические проверки
-        run: |
-          python -m ruff check backend
-          python -m ruff format --check backend
-          node --check backend/app/web/assets/app.js
-          python -m compileall -q backend/app
+      - name: Ruff — проверка ошибок
+        run: python -m ruff check backend
+
+      - name: Ruff — проверка форматирования
+        run: python -m ruff format --check backend
+
+      - name: JavaScript — проверка синтаксиса
+        run: node --check backend/app/web/assets/app.js
+
+      - name: Python — проверка компиляции
+        run: python -m compileall -q backend/app
+
+      - name: Контракт серверной конфигурации
+        run: python -m pytest backend/tests/test_deploy1_configuration_unit.py -q
 
       - name: Проверка миграций на отдельной БД
         run: |
