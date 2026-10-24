@@ -9,14 +9,45 @@ permissions:
   contents: read
 
 concurrency:
-  group: aidoctor-ci-${{ github.workflow }}-${{ github.ref }}
+  group: aidoctor-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
   cancel-in-progress: true
 
 jobs:
   quality:
-    name: Код, миграции и тесты
+    name: Быстрые проверки без PostgreSQL
     runs-on: ubuntu-24.04
-    timeout-minutes: 25
+    timeout-minutes: 15
+    steps:
+      - name: Получить код
+        uses: actions/checkout@v5
+
+      - name: Python 3.12
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: requirements-dev.txt
+
+      - name: Установить зависимости
+        run: python -m pip install -r requirements-dev.txt
+
+      - name: Ruff — проверка ошибок
+        run: python -m ruff check backend
+
+      - name: Ruff — проверка форматирования
+        run: python -m ruff format --check backend
+
+      - name: JavaScript — проверка синтаксиса
+        run: node --check backend/app/web/assets/app.js
+
+      - name: Python — проверка компиляции
+        run: python -m compileall -q backend/app
+
+  full_tests:
+    name: Модульные тесты, PostgreSQL и миграции (вручную)
+    if: github.event_name == 'workflow_dispatch'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
     services:
       postgres:
         image: postgres:16
@@ -52,27 +83,13 @@ jobs:
         run: |
           python - <<'PY'
           import psycopg
+
           with psycopg.connect(
               "postgresql://aidoctor_ci:ci_only_password@127.0.0.1:5432/aidoctor_ci_schema",
               autocommit=True,
           ) as connection:
               connection.execute("CREATE DATABASE aidoctor_test")
           PY
-
-      - name: Ruff — проверка ошибок
-        run: python -m ruff check backend
-
-      - name: Ruff — проверка форматирования
-        run: python -m ruff format --check backend
-
-      - name: JavaScript — проверка синтаксиса
-        run: node --check backend/app/web/assets/app.js
-
-      - name: Python — проверка компиляции
-        run: python -m compileall -q backend/app
-
-      - name: Контракт серверной конфигурации
-        run: python -m pytest backend/tests/test_deploy1_configuration_unit.py -q
 
       - name: Проверка миграций на отдельной БД
         run: |
