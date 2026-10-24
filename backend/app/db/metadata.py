@@ -41,6 +41,8 @@ from app.models import (
     SafetyOutbox,
     SafetyOutboxEvent,
     SafetyReadAudit,
+    SiteDoctorAccessAudit,
+    SiteDoctorCredential,
     User,
 )
 
@@ -50,6 +52,8 @@ REGISTERED_MODELS = (
     AIReviewEvent,
     AIRequest,
     AIRequestAudit,
+    SiteDoctorCredential,
+    SiteDoctorAccessAudit,
     AdminAuditEvent,
     AttachmentAVScan,
     AttachmentEvidenceDraft,

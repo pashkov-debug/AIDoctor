@@ -1,0 +1,243 @@
+{
+  "name": "submit_demo_analysis",
+  "description": "Создать черновик анализа синтетического пациента; никогда не утверждает лечение. Требует ранее подтверждённого разового врачебного доступа к сохранённому AI-запросу.",
+  "inputSchema": {
+    "$defs": {
+      "EvidenceSource": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "maxLength": 200,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "url": {
+            "format": "uri",
+            "minLength": 1,
+            "title": "Url",
+            "type": "string",
+            "maxLength": 2048,
+            "pattern": "^https?://"
+          },
+          "relevance": {
+            "maxLength": 500,
+            "minLength": 3,
+            "title": "Relevance",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "url",
+          "relevance"
+        ],
+        "title": "EvidenceSource",
+        "type": "object"
+      },
+      "ExaminationSuggestion": {
+        "additionalProperties": false,
+        "properties": {
+          "name": {
+            "maxLength": 180,
+            "minLength": 3,
+            "title": "Name",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 1200,
+            "minLength": 5,
+            "title": "Rationale",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "rationale"
+        ],
+        "title": "ExaminationSuggestion",
+        "type": "object"
+      },
+      "Hypothesis": {
+        "additionalProperties": false,
+        "properties": {
+          "title": {
+            "maxLength": 180,
+            "minLength": 3,
+            "title": "Title",
+            "type": "string"
+          },
+          "rationale": {
+            "maxLength": 1200,
+            "minLength": 5,
+            "title": "Rationale",
+            "type": "string"
+          },
+          "confidence": {
+            "default": "uncertain",
+            "enum": [
+              "low",
+              "medium",
+              "high",
+              "uncertain"
+            ],
+            "title": "Confidence",
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "rationale",
+          "confidence"
+        ],
+        "title": "Hypothesis",
+        "type": "object"
+      },
+      "MedicationRisk": {
+        "additionalProperties": false,
+        "properties": {
+          "medication": {
+            "maxLength": 180,
+            "minLength": 2,
+            "title": "Medication",
+            "type": "string"
+          },
+          "risk": {
+            "maxLength": 1200,
+            "minLength": 5,
+            "title": "Risk",
+            "type": "string"
+          },
+          "severity": {
+            "default": "unknown",
+            "enum": [
+              "low",
+              "moderate",
+              "high",
+              "critical",
+              "unknown"
+            ],
+            "title": "Severity",
+            "type": "string"
+          }
+        },
+        "required": [
+          "medication",
+          "risk",
+          "severity"
+        ],
+        "title": "MedicationRisk",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "description": "JSON для submit_demo_analysis; не является медицинским назначением.",
+    "properties": {
+      "schema_version": {
+        "const": "aidoctor_demo_analysis.v1",
+        "title": "Schema Version",
+        "type": "string"
+      },
+      "request_id": {
+        "format": "uuid",
+        "title": "Request Id",
+        "type": "string"
+      },
+      "patient_id": {
+        "format": "uuid",
+        "title": "Patient Id",
+        "type": "string"
+      },
+      "context_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Context Sha256",
+        "type": "string"
+      },
+      "orders_sha256": {
+        "pattern": "^[0-9a-f]{64}$",
+        "title": "Orders Sha256",
+        "type": "string"
+      },
+      "status": {
+        "const": "draft_requires_review",
+        "title": "Status",
+        "type": "string"
+      },
+      "summary": {
+        "maxLength": 4000,
+        "minLength": 20,
+        "title": "Summary",
+        "type": "string"
+      },
+      "hypotheses": {
+        "items": {
+          "$ref": "#/$defs/Hypothesis"
+        },
+        "maxItems": 10,
+        "title": "Hypotheses",
+        "type": "array"
+      },
+      "medication_risks": {
+        "items": {
+          "$ref": "#/$defs/MedicationRisk"
+        },
+        "maxItems": 12,
+        "title": "Medication Risks",
+        "type": "array"
+      },
+      "missing_information": {
+        "items": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 500
+        },
+        "maxItems": 12,
+        "title": "Missing Information",
+        "type": "array"
+      },
+      "suggested_examinations": {
+        "items": {
+          "$ref": "#/$defs/ExaminationSuggestion"
+        },
+        "maxItems": 12,
+        "title": "Suggested Examinations",
+        "type": "array"
+      },
+      "sources": {
+        "items": {
+          "$ref": "#/$defs/EvidenceSource"
+        },
+        "maxItems": 15,
+        "title": "Sources",
+        "type": "array"
+      },
+      "limitations": {
+        "items": {
+          "type": "string",
+          "minLength": 3,
+          "maxLength": 500
+        },
+        "maxItems": 10,
+        "title": "Limitations",
+        "type": "array"
+      }
+    },
+    "required": [
+      "schema_version",
+      "request_id",
+      "patient_id",
+      "context_sha256",
+      "orders_sha256",
+      "status",
+      "summary"
+    ],
+    "title": "DemoAnalysisSubmit",
+    "type": "object"
+  },
+  "annotations": {
+    "readOnlyHint": false,
+    "destructiveHint": false,
+    "idempotentHint": false,
+    "openWorldHint": true
+  }
+}

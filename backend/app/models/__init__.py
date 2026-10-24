@@ -34,6 +34,7 @@ from app.models.safety_notification_route import (
 )
 from app.models.safety_outbox import SafetyOutbox, SafetyOutboxEvent
 from app.models.safety_read_audit import SafetyReadAudit
+from app.models.site_doctor_credential import SiteDoctorAccessAudit, SiteDoctorCredential
 
 __all__ = [
     "AIDemoAnalysis",
@@ -77,4 +78,6 @@ __all__ = [
     "SafetyOutboxEvent",
     "SafetyReadAudit",
     "User",
+    "SiteDoctorCredential",
+    "SiteDoctorAccessAudit",
 ]

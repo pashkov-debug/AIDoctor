@@ -28,6 +28,7 @@ from app.api.routes.safety_alerts import router as safety_router
 from app.api.routes.safety_followups import router as safety_followups_router
 from app.api.routes.safety_in_app_notifications import router as safety_inbox_router
 from app.api.routes.safety_notification_routes import router as safety_routes_router
+from app.api.routes.site_doctor_bridge import router as site_doctor_bridge_router
 from app.core.config import settings
 
 
@@ -57,6 +58,7 @@ def create_app() -> FastAPI:
         ai_workspace_router,
         ai_review_router,
         ai_demo_bridge_router,
+        site_doctor_bridge_router,
         attachments_router,
         attachment_security_router,
         attachment_evidence_router,

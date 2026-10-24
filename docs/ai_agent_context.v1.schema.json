@@ -1,0 +1,461 @@
+{
+  "$defs": {
+    "ClinicalContext": {
+      "properties": {
+        "schema_version": {
+          "const": "1.0",
+          "default": "1.0",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "patient_id": {
+          "title": "Patient Id",
+          "type": "string"
+        },
+        "generated_at": {
+          "format": "date-time",
+          "title": "Generated At",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/ContextFact"
+          },
+          "title": "Items",
+          "type": "array"
+        },
+        "truncated_sources": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Truncated Sources",
+          "type": "array"
+        },
+        "excluded_attachments_count": {
+          "title": "Excluded Attachments Count",
+          "type": "integer"
+        },
+        "content_sha256": {
+          "title": "Content Sha256",
+          "type": "string"
+        }
+      },
+      "required": [
+        "patient_id",
+        "generated_at",
+        "items",
+        "excluded_attachments_count",
+        "content_sha256"
+      ],
+      "title": "ClinicalContext",
+      "type": "object"
+    },
+    "ContextFact": {
+      "properties": {
+        "kind": {
+          "enum": [
+            "encounter",
+            "history_event",
+            "observation",
+            "questionnaire"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "record_id": {
+          "title": "Record Id",
+          "type": "string"
+        },
+        "at": {
+          "format": "date-time",
+          "title": "At",
+          "type": "string"
+        },
+        "source_ref": {
+          "title": "Source Ref",
+          "type": "string"
+        },
+        "payload": {
+          "additionalProperties": true,
+          "title": "Payload",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "record_id",
+        "at",
+        "source_ref",
+        "payload"
+      ],
+      "title": "ContextFact",
+      "type": "object"
+    },
+    "OrderReviewItem": {
+      "additionalProperties": false,
+      "properties": {
+        "id": {
+          "title": "Id",
+          "type": "string"
+        },
+        "version": {
+          "minimum": 1,
+          "title": "Version",
+          "type": "integer"
+        },
+        "status": {
+          "enum": [
+            "draft",
+            "approved"
+          ],
+          "title": "Status",
+          "type": "string"
+        },
+        "kind": {
+          "enum": [
+            "medication",
+            "examination"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "name": {
+          "title": "Name",
+          "type": "string"
+        },
+        "active_ingredient": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Active Ingredient"
+        },
+        "dosage_form": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dosage Form"
+        },
+        "strength": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Strength"
+        },
+        "dose_value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dose Value"
+        },
+        "dose_unit": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Dose Unit"
+        },
+        "route": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Route"
+        },
+        "frequency_per_day": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Frequency Per Day"
+        },
+        "times_local": {
+          "anyOf": [
+            {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Times Local"
+        },
+        "timezone": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Timezone"
+        },
+        "start_date": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Start Date"
+        },
+        "duration_days": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Duration Days"
+        },
+        "administration_notes": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Administration Notes"
+        },
+        "examination_details": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Examination Details"
+        },
+        "indication": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Indication"
+        },
+        "contraindications": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Contraindications"
+        },
+        "rationale": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Rationale"
+        },
+        "source_reference": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "title": "Source Reference"
+        }
+      },
+      "required": [
+        "id",
+        "version",
+        "status",
+        "kind",
+        "name",
+        "active_ingredient",
+        "dosage_form",
+        "strength",
+        "dose_value",
+        "dose_unit",
+        "route",
+        "frequency_per_day",
+        "times_local",
+        "timezone",
+        "start_date",
+        "duration_days",
+        "administration_notes",
+        "examination_details",
+        "indication",
+        "contraindications",
+        "rationale",
+        "source_reference"
+      ],
+      "title": "OrderReviewItem",
+      "type": "object"
+    },
+    "OrdersReviewSnapshot": {
+      "additionalProperties": false,
+      "properties": {
+        "schema_version": {
+          "const": "orders_for_ai_review.v1",
+          "default": "orders_for_ai_review.v1",
+          "title": "Schema Version",
+          "type": "string"
+        },
+        "approved_orders": {
+          "items": {
+            "$ref": "#/$defs/OrderReviewItem"
+          },
+          "title": "Approved Orders",
+          "type": "array"
+        },
+        "proposed_orders_for_review": {
+          "items": {
+            "$ref": "#/$defs/OrderReviewItem"
+          },
+          "title": "Proposed Orders For Review",
+          "type": "array"
+        },
+        "draft_orders_are_not_treatment": {
+          "const": true,
+          "default": true,
+          "title": "Draft Orders Are Not Treatment",
+          "type": "boolean"
+        },
+        "clinical_safety_validated": {
+          "const": false,
+          "default": false,
+          "title": "Clinical Safety Validated",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "approved_orders",
+        "proposed_orders_for_review"
+      ],
+      "title": "OrdersReviewSnapshot",
+      "type": "object"
+    }
+  },
+  "description": "Пакет для ручной инспекции, не автоматической отправки провайдеру.",
+  "properties": {
+    "schema_version": {
+      "const": "ai_agent_context.v1",
+      "default": "ai_agent_context.v1",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "request_id": {
+      "title": "Request Id",
+      "type": "string"
+    },
+    "patient_id": {
+      "title": "Patient Id",
+      "type": "string"
+    },
+    "doctor_id": {
+      "title": "Doctor Id",
+      "type": "string"
+    },
+    "question": {
+      "title": "Question",
+      "type": "string"
+    },
+    "created_at": {
+      "format": "date-time",
+      "title": "Created At",
+      "type": "string"
+    },
+    "patient_context": {
+      "$ref": "#/$defs/ClinicalContext"
+    },
+    "doctor_context": {
+      "additionalProperties": true,
+      "title": "Doctor Context",
+      "type": "object"
+    },
+    "orders_review": {
+      "$ref": "#/$defs/OrdersReviewSnapshot"
+    },
+    "orders_sha256": {
+      "title": "Orders Sha256",
+      "type": "string"
+    },
+    "excluded_attachments": {
+      "items": {
+        "additionalProperties": true,
+        "type": "object"
+      },
+      "title": "Excluded Attachments",
+      "type": "array"
+    },
+    "llm_dispatch_enabled": {
+      "const": false,
+      "default": false,
+      "title": "Llm Dispatch Enabled",
+      "type": "boolean"
+    }
+  },
+  "required": [
+    "request_id",
+    "patient_id",
+    "doctor_id",
+    "question",
+    "created_at",
+    "patient_context",
+    "doctor_context",
+    "orders_review",
+    "orders_sha256",
+    "excluded_attachments"
+  ],
+  "title": "AIAgentContextRead",
+  "type": "object"
+}
