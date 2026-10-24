@@ -1,0 +1,89 @@
+# Тестовая среда; доступ из интернета запрещён по умолчанию.
+name: aidoctor-vds-test
+
+x-app-common: &app-common
+  image: aidoctor:vds-test
+  build:
+    context: ..
+    dockerfile: deploy/Dockerfile.test
+  environment: &app-env
+    APP_ENV: test
+    DATABASE_URL: postgresql+psycopg://aidoctor:${DB_PASSWORD:?DB_PASSWORD is required}@postgres:5432/aidoctor_synthetic
+    ATTACHMENTS_DIR: /opt/aidoctor/data/attachments
+    AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS: "0"
+    SAFETY_IN_APP_DELIVERY_ENABLED: "false"
+    SAFETY_FOLLOWUP_SCAN_ENABLED: "false"
+    ATTACHMENT_CLAMD_ENABLED: "false"
+  volumes:
+    - attachments_test:/opt/aidoctor/data
+  read_only: true
+  tmpfs:
+    - /tmp:rw,noexec,nosuid,size=64m
+  cap_drop:
+    - ALL
+  security_opt:
+    - no-new-privileges:true
+  networks:
+    - testnet
+
+services:
+  postgres:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: aidoctor_synthetic
+      POSTGRES_USER: aidoctor
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?DB_PASSWORD is required}
+    volumes:
+      - pg_synthetic:/var/lib/postgresql/data
+      - ./postgres/test_init.sql:/docker-entrypoint-initdb.d/01-test.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U aidoctor -d aidoctor_synthetic"]
+      interval: 5s
+      timeout: 3s
+      retries: 25
+    security_opt:
+      - no-new-privileges:true
+    networks:
+      - testnet
+
+  app:
+    <<: *app-common
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:18080:8000"
+    healthcheck:
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health', timeout=4).close()"
+      interval: 15s
+      timeout: 5s
+      retries: 8
+      start_period: 30s
+
+  seed:
+    <<: *app-common
+    profiles: ["setup"]
+    restart: "no"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      <<: *app-env
+      DEMO_DOCTOR_PASSWORD: ${DEMO_DOCTOR_PASSWORD:?Missing DEMO_DOCTOR_PASSWORD}
+      DEMO_PATIENT_PASSWORD: ${DEMO_PATIENT_PASSWORD:?Missing DEMO_PATIENT_PASSWORD}
+      DEMO_ADMIN_PASSWORD: ${DEMO_ADMIN_PASSWORD:?Missing DEMO_ADMIN_PASSWORD}
+    command: ["python", "-m", "backend.scripts.seed_vds_synthetic", "--apply"]
+
+volumes:
+  pg_synthetic:
+  attachments_test:
+
+networks:
+  testnet:
+    driver: bridge

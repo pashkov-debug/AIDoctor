@@ -10,7 +10,7 @@ permissions:
 
 concurrency:
   group: aidoctor-ci-${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
-  cancel-in-progress: true
+  cancel-in-progress: false
 
 jobs:
   quality:
@@ -98,3 +98,48 @@ jobs:
 
       - name: Модульные и PostgreSQL-тесты
         run: python -m pytest backend/tests -q -rs
+
+
+  autodeploy:
+    name: Автоматическое обновление закрытого VDS
+    needs: quality
+    if: github.event_name == 'push' && github.ref == 'refs/heads/master' && vars.VDS_AUTODEPLOY_ENABLED == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 40
+    concurrency:
+      group: aidoctor-vds-test-deploy
+      cancel-in-progress: false
+    permissions:
+      contents: read
+    env:
+      VDS_SSH_PRIVATE_KEY: ${{ secrets.VDS_SSH_PRIVATE_KEY }}
+      VDS_SSH_KNOWN_HOSTS: ${{ secrets.VDS_SSH_KNOWN_HOSTS }}
+    steps:
+      - name: Проверка заполнения Secrets
+        shell: bash
+        run: |
+          test -n "$VDS_SSH_PRIVATE_KEY" || { echo "Нет VDS_SSH_PRIVATE_KEY"; exit 1; }
+          test -n "$VDS_SSH_KNOWN_HOSTS" || { echo "Нет VDS_SSH_KNOWN_HOSTS"; exit 1; }
+
+      - name: Подготовить строгую SSH-проверку сервера
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          umask 077
+          mkdir -p "$HOME/.ssh"
+          printf '%s\n' "$VDS_SSH_PRIVATE_KEY" > "$HOME/.ssh/aidoctor_actions_deploy"
+          printf '%s\n' "$VDS_SSH_KNOWN_HOSTS" > "$HOME/.ssh/known_hosts"
+          chmod 600 "$HOME/.ssh/aidoctor_actions_deploy" "$HOME/.ssh/known_hosts"
+          ssh-keygen -F 185.200.179.238 -f "$HOME/.ssh/known_hosts" >/dev/null ||
+            { echo "В known_hosts нет ключа сервера"; exit 1; }
+
+      - name: Обновить AIDoctor на VDS по SHA коммита
+        shell: bash
+        run: |
+          ssh -p 22 \
+            -o BatchMode=yes \
+            -o ConnectTimeout=20 \
+            -o IdentitiesOnly=yes \
+            -o StrictHostKeyChecking=yes \
+            -i "$HOME/.ssh/aidoctor_actions_deploy" \
+            aidoctor-deploy@185.200.179.238 "deploy ${GITHUB_SHA}"
