@@ -32,8 +32,7 @@ def valid_compose() -> dict:
                 "environment": {
                     "APP_ENV": "test",
                     "DATABASE_URL": (
-                        "postgresql+psycopg://aidoctor:secret"
-                        "@postgres:5432/aidoctor_synthetic"
+                        "postgresql+psycopg://aidoctor:secret@postgres:5432/aidoctor_synthetic"
                     ),
                     "AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS": "0",
                 },

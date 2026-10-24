@@ -14,6 +14,10 @@ from app.models.access import DoctorPatient, User
 from app.models.patient import Patient
 from app.schemas.safety_alert import SafetyAlertCreate
 from app.services.safety_alerts import create_alert
+from sqlalchemy import select, text
+from sqlalchemy.engine import make_url
+from sqlalchemy.orm import Session
+
 from backend.scripts.seed_ui2a_synthetic import seed_patient_timeline
 from backend.scripts.seed_ui2b_synthetic import (
     FIRST_EVENTS,
@@ -29,9 +33,6 @@ from backend.scripts.seed_ui5_clinical_scenarios import (
     CRITICAL_ALERT_KEY,
     seed_all,
 )
-from sqlalchemy import select, text
-from sqlalchemy.engine import make_url
-from sqlalchemy.orm import Session
 
 DATABASE_NAME = "aidoctor_synthetic"
 FIRST_ALIAS = "Синтетическая С-001 — тревога и сон"
@@ -108,9 +109,10 @@ def _first_patient(session: Session, doctor: User, account: User) -> Patient:
         )
         session.add(patient)
         session.flush()
-    elif patient.deleted_at is not None or (
-        patient.demographics_json or {}
-    ).get("synthetic") is not True:
+    elif (
+        patient.deleted_at is not None
+        or (patient.demographics_json or {}).get("synthetic") is not True
+    ):
         raise ValueError("Карточка patient_ui1 не является действующей синтетической")
     linked = session.scalar(
         select(DoctorPatient.id).where(
@@ -139,13 +141,23 @@ def populate(session: Session) -> None:
     anchor = datetime.now(UTC)
     seed_patient_timeline(session, first, anchor)
     seed_extra_records(
-        session, first, anchor, "anxiety",
-        FIRST_VISITS, FIRST_EVENTS, FIRST_OBSERVATIONS,
+        session,
+        first,
+        anchor,
+        "anxiety",
+        FIRST_VISITS,
+        FIRST_EVENTS,
+        FIRST_OBSERVATIONS,
     )
     second = get_or_create_second_patient(session, doctor)
     seed_extra_records(
-        session, second, anchor, "mood",
-        SECOND_VISITS, SECOND_EVENTS, SECOND_OBSERVATIONS,
+        session,
+        second,
+        anchor,
+        "mood",
+        SECOND_VISITS,
+        SECOND_EVENTS,
+        SECOND_OBSERVATIONS,
     )
     third, totals = seed_all(session, doctor, first, second, anchor)
     session.commit()

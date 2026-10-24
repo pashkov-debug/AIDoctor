@@ -4,6 +4,7 @@ import ast
 from pathlib import Path
 
 import pytest
+
 from backend.scripts.seed_vds_synthetic import require_safe_target
 
 ROOT = Path(__file__).resolve().parents[2]
