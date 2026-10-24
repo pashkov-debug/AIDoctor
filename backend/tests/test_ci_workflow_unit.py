@@ -3,18 +3,16 @@
 import re
 from pathlib import Path
 
-CI = (
-    Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml"
-).read_text(encoding="utf-8")
+CI = (Path(__file__).resolve().parents[2] / ".github" / "workflows" / "ci.yml").read_text(
+    encoding="utf-8"
+)
 
 
 def _job(name: str) -> str:
     """Возвращает секцию задания по двум пробелам корневого уровня jobs."""
     marker = f"  {name}:\n"
     assert CI.count(marker) == 1
-    return re.split(
-        r"\n(?=  [a-z][a-z0-9_]*:\n)", CI.split(marker, 1)[1], maxsplit=1
-    )[0]
+    return re.split(r"\n(?=  [a-z][a-z0-9_]*:\n)", CI.split(marker, 1)[1], maxsplit=1)[0]
 
 
 def test_push_checks_do_not_touch_postgresql_or_run_pytest():

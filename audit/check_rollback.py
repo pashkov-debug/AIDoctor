@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 """Сверка ручного отката AIDoctor с этапом 6.6 FINAL. Ничего не изменяет."""
+
 from __future__ import annotations
 
 import argparse
 import hashlib
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 
 def file_sha256(path: Path) -> str:
@@ -73,8 +74,9 @@ def main() -> int:
         "project_root", nargs="?", default=".", help="Каталог AIDoctor (по умолчанию текущий)."
     )
     parser.add_argument(
-        "--report", metavar="PATH",
-        help="Необязательно: сохранить JSON-отчёт. В нём только пути и итоги, без секретов."
+        "--report",
+        metavar="PATH",
+        help="Необязательно: сохранить JSON-отчёт. В нём только пути и итоги, без секретов.",
     )
     args = parser.parse_args()
     root = Path(args.project_root).resolve()
