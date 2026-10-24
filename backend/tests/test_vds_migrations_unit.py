@@ -44,8 +44,7 @@ def test_migrations_refuse_non_synthetic_database(overrides: dict[str, str]) -> 
     env = {
         "APP_ENV": "test",
         "DATABASE_URL": (
-            "postgresql+psycopg://aidoctor:synthetic@postgres:5432/"
-            "aidoctor_synthetic"
+            "postgresql+psycopg://aidoctor:synthetic@postgres:5432/aidoctor_synthetic"
         ),
     }
     env.update(overrides)
@@ -58,8 +57,7 @@ def test_synthetic_database_is_accepted() -> None:
         {
             "APP_ENV": "test",
             "DATABASE_URL": (
-                "postgresql+psycopg://aidoctor:synthetic@postgres:5432/"
-                "aidoctor_synthetic"
+                "postgresql+psycopg://aidoctor:synthetic@postgres:5432/aidoctor_synthetic"
             ),
         }
     )
