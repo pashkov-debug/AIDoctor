@@ -1,0 +1,37 @@
+# DEPLOY-3: дополнительный HTTPS-прокси существующего тестового проекта.
+# Без этого файла прежний Docker Compose остаётся закрытым.
+# Запускать только совместно с deploy/compose.test.yaml и --profile https.
+services:
+  proxy:
+    profiles: ["https"]
+    image: caddy:2.11.7-alpine
+    restart: unless-stopped
+    depends_on:
+      app:
+        condition: service_healthy
+    environment:
+      AIDOCTOR_PUBLIC_DOMAIN: ${AIDOCTOR_PUBLIC_DOMAIN:?Укажите публичный домен}
+    ports:
+      - "0.0.0.0:80:80/tcp"
+      - "0.0.0.0:443:443/tcp"
+    volumes:
+      - ./https/Caddyfile:/etc/caddy/Caddyfile:ro
+      - https_caddy_data:/data
+      - https_caddy_config:/config
+    read_only: true
+    tmpfs:
+      - /tmp:rw,noexec,nosuid,size=16m
+    cap_drop:
+      - ALL
+    cap_add:
+      - NET_BIND_SERVICE
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 128
+    mem_limit: 256m
+    networks:
+      - testnet
+
+volumes:
+  https_caddy_data:
+  https_caddy_config:

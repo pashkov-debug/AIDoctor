@@ -1,3 +1,22 @@
+# DEPLOY-3 — публичная демонстрация AIDoctor по HTTPS
+
+Добавлен независимый HTTPS-прокси Caddy для **существующей синтетической
+тестовой среды**. PostgreSQL, медицинские API, миграции и автодеплой FastAPI
+не изменяются. Для первого включения требуется управляемый публичный
+домен с A-записью на `185.200.179.238`.
+
+Полная пошаговая инструкция: [docs/deploy3_public_https.md](docs/deploy3_public_https.md).
+
+Новые файлы: `deploy/compose.https.yaml`, `deploy/https/Caddyfile`,
+`deploy/https/00_firewall.sh`, `deploy/https/01_enable_https.sh`,
+`deploy/https/02_check_https.sh`, `deploy/https/03_stop_https.sh`,
+`deploy/https/.env.example`, `backend/tests/test_deploy3_https_unit.py`.
+
+**Область применения:** исключительно синтетические пациенты.
+Не переносить реальные медицинские данные и не считать стенд production.
+
+---
+
 # AIDoctor — HOTFIX: права чтения исходного кода в Docker (2026-10-24)
 
 ## Причина и исправление
