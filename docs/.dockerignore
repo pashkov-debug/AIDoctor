@@ -1,0 +1,11 @@
+# В образ попадает только исходный код, схема миграций и зависимости.
+**
+!requirements.txt
+!alembic.ini
+!backend/
+!backend/app/
+!backend/app/**
+!backend/alembic/
+!backend/alembic/**
+!backend/scripts/
+!backend/scripts/**
