@@ -49,6 +49,11 @@ services:
 
   app:
     <<: *app-common
+    environment:
+      <<: *app-env
+      # Выключено по умолчанию; секрет хранится ТОЛЬКО в .env.test на VDS.
+      AIDOCTOR_DEMO_CALLBACK_ENABLED: ${AIDOCTOR_DEMO_CALLBACK_ENABLED:-0}
+      AIDOCTOR_SITE_BRIDGE_TOKEN: ${AIDOCTOR_SITE_BRIDGE_TOKEN:-}
     restart: unless-stopped
     depends_on:
       postgres:

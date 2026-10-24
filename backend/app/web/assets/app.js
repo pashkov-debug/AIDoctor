@@ -1597,7 +1597,11 @@ async function loadAIForPatient() {
     $("ai-review-workspace").hidden = !syntheticReviewEnabled;
     renderAIFiles(files);
     renderAIRequests(requests);
-    showMessage("ai-workspace-status", "Вопросы можно подготовить и сохранить. AI-анализ пока недоступен.", true);
+    showMessage(
+      "ai-workspace-status",
+      "Автоматический вызов AI из кабинета не подключён. Внешний черновик можно просмотреть в истории запросов.",
+      true
+    );
   } catch (error) {
     if (epoch === aiLoadEpoch) {
       syntheticReviewEnabled = false;
@@ -1654,6 +1658,54 @@ function renderAIRequests(requests) {
       ? `Прикреплено документов: ${attachmentCount} · содержимое не передавалось AI`
       : "Ожидает AI-анализа";
     detail.append(title, question, meta);
+    const analysisButton = document.createElement("button");
+    analysisButton.type = "button";
+    analysisButton.className = "button subtle";
+    analysisButton.textContent = "Посмотреть черновик AI-анализа";
+    const analysisOutput = document.createElement("div");
+    analysisOutput.className = "ai-analysis-result";
+    analysisButton.addEventListener("click", async () => {
+      if (state.user?.role !== "doctor") return;
+      analysisButton.disabled = true;
+      analysisOutput.replaceChildren();
+      try {
+        const result = await api(
+          `/patients/${encodeURIComponent(item.patient_id)}` +
+          `/ai-requests/${encodeURIComponent(item.id)}/demo-analysis`
+        );
+        const analysis = result.analysis;
+        const heading = document.createElement("strong");
+        heading.textContent = "Черновик AI — требуется врачебная проверка. Не назначение.";
+        analysisOutput.append(heading);
+        const summary = document.createElement("p");
+        summary.textContent = analysis.summary;
+        analysisOutput.append(summary);
+        const section = (label, entries) => {
+          if (!Array.isArray(entries) || !entries.length) return;
+          const head = document.createElement("strong");
+          head.textContent = label;
+          const list = document.createElement("ul");
+          for (const entry of entries) {
+            const li = document.createElement("li");
+            li.textContent = typeof entry === "string"
+              ? entry : Object.values(entry).filter(Boolean).join(" — ");
+            list.append(li);
+          }
+          analysisOutput.append(head, list);
+        };
+        section("Диагностические гипотезы", analysis.hypotheses);
+        section("Лекарственные риски", analysis.medication_risks);
+        section("Недостающие сведения", analysis.missing_information);
+        section("Предлагаемые обследования", analysis.suggested_examinations);
+        section("Источники (проверить самостоятельно)", analysis.sources);
+        section("Ограничения анализа", analysis.limitations);
+      } catch (error) {
+        analysisOutput.textContent = `Черновик недоступен: ${error.message}`;
+      } finally {
+        analysisButton.disabled = false;
+      }
+    });
+    detail.append(analysisButton, analysisOutput);
     if (syntheticReviewEnabled) {
       const open = document.createElement("button");
       open.type = "button";

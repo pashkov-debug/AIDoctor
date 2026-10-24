@@ -1,3 +1,29 @@
+# AI-1 — обратная передача демонстрационного анализа из Site Builder
+
+Добавлен защищённый **только тестовый** endpoint приёма структурированного
+анализа от существующего Site Builder MCP-инструмента. Полная спецификация
+в [`docs/site_builder_demo_callback.md`](docs/site_builder_demo_callback.md).
+
+- Результат сохраняется в новой таблице `ai_demo_analyses` как
+  `draft_requires_review`, не становится назначением.
+- Получатель выключен по умолчанию. Для тестовой VDS необходимо явно
+  задать `AIDOCTOR_DEMO_CALLBACK_ENABLED=1` и длинный случайный
+  `AIDOCTOR_SITE_BRIDGE_TOKEN` только в серверной `.env.test`.
+- Отдельный Site обработчик и MCP-инструмент `submit_demo_analysis`
+  **должны быть созданы в Site Builder**. Этот ZIP их не содержит и
+  не запускает ChatGPT автономно из FastAPI.
+- Существующие медзаписи, врачебное утверждение, AI-review контракт,
+  GitHub Actions, Caddy и Docker-тома не изменяются.
+- Проверка после наложения файлов в PyCharm:
+  `python -m pytest backend/tests/test_site_builder_demo_bridge_unit.py -q`;
+  `python -m ruff check backend`;
+  `python -m ruff format --check backend`;
+  `node --check backend/app/web/assets/app.js`.
+- Новая Alembic-миграция расширяет БД только новой таблицей. Не
+  использовать автоматический `downgrade` на сервере с данными.
+
+---
+
 # DEPLOY-3 — публичная демонстрация AIDoctor по HTTPS
 
 Добавлен независимый HTTPS-прокси Caddy для **существующей синтетической
