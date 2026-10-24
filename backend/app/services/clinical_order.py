@@ -134,7 +134,10 @@ def _check_ready(record: ClinicalOrder) -> None:
     if (record.source_reference or "").startswith("synthetic:ui5:v1:candidate:"):
         raise HTTPException(
             422,
-            detail="Учебный проект назначения UI-5 запрещено утверждать. Создайте отдельное проверенное назначение.",
+            detail=(
+                "Учебный проект назначения UI-5 запрещено утверждать. "
+                "Создайте отдельное проверенное назначение."
+            ),
         )
     missing = _required_text(record, ("name", "indication", "rationale"))
     if record.kind == "medication":

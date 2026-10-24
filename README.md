@@ -1,3 +1,23 @@
+# HOTFIX CI-E501 — устранение ошибок Ruff (24 октября 2026)
+
+Устранены четыре предупреждения `E501` при длине строки более 100 символов:
+три в `backend/scripts/seed_ui5_clinical_scenarios.py` и одно в
+`backend/app/services/clinical_order.py`. Длинные строковые литералы разбиты
+без изменения их значений. Архитектура, API, миграции и работа с БД не менялись.
+
+Проверка (PowerShell, из корня проекта):
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+python -m pytest backend/tests/test_ci_e501_regression_unit.py -q
+```
+
+Этот hotfix накладывается поверх DEPLOY-1. PostgreSQL и реальные медицинские
+данные не затрагиваются.
+
+---
+
 # DEPLOY-1 — закрытый серверный пилот (24 октября 2026)
 
 Для тестовой Linux-ВМ добавлен отдельный конфигурационный комплект в
