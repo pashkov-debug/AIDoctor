@@ -32,7 +32,8 @@ def valid_compose() -> dict:
                 "environment": {
                     "APP_ENV": "test",
                     "DATABASE_URL": (
-                        "postgresql+psycopg://aidoctor:secret@postgres:5432/aidoctor_synthetic"
+                        "postgresql+psycopg://aidoctor:secret"
+                        "@postgres:5432/aidoctor_synthetic"
                     ),
                     "AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS": "0",
                 },
@@ -98,7 +99,8 @@ def test_autodeploy_requires_server_guard() -> None:
 def test_server_script_never_resets_database() -> None:
     script = (ROOT / "deploy/ci/server_autodeploy.sh").read_text(encoding="utf-8")
     assert "pg_dump" in script
-    assert "upgrade head" in script
+    assert "run_vds_migrations.py" in script
+    assert "python -m alembic -c alembic.ini upgrade head" not in script
     assert "down -v" not in script
     assert "seed_vds_synthetic" not in script
     assert "checkout --force --detach" in script

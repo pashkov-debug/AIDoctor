@@ -63,7 +63,8 @@ dc=(docker compose --env-file .env.test -f deploy/compose.test.yaml)
 "${dc[@]}" config --quiet
 "${dc[@]}" build app
 "${dc[@]}" up -d --wait postgres
-"${dc[@]}" run --rm --no-deps app python -m alembic -c alembic.ini upgrade head
+"${dc[@]}" run --rm --no-deps --workdir /opt/aidoctor app \
+  python /opt/aidoctor/backend/scripts/run_vds_migrations.py
 "${dc[@]}" run --rm seed
 "${dc[@]}" up -d --wait app
 

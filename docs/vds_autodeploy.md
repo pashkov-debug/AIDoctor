@@ -1,3 +1,37 @@
+# HOTFIX Alembic — октябрь 2026
+
+В логе Actions SSH и Docker build прошли успешно, но `python -m alembic`
+не нашёл параметр `script_location` при выполнении `upgrade head`.
+Для тестового VDS создан `backend/scripts/run_vds_migrations.py`, который
+проверяет целевую БД и назначает абсолютные пути Alembic программно.
+
+## Применение (один раз)
+
+1. Распаковать ZIP в корень AIDoctor **с сохранением путей**. Проверить
+   Ruff и новые unit-тесты в PyCharm.
+2. **Перед Push** отправить на VDS новую копию root-owned runner (PowerShell):
+
+```powershell
+$repo = "C:\Users\pashk\OneDrive\Desktop\Новая папка\Новая папка\AIDoctor"
+scp "$repo\deploy\ci\server_autodeploy.sh" root@185.200.179.238:/root/server_autodeploy.sh
+ssh root@185.200.179.238 "bash -n /root/server_autodeploy.sh && install -m 755 -o root -g root /root/server_autodeploy.sh /usr/local/sbin/aidoctor-autodeploy"
+```
+
+3. Commit → Push в `master` через PyCharm. GitHub Actions автоматически
+   соберёт образ с новым `run_vds_migrations.py` и запустит миграции.
+4. После зелёного задания проверить на VDS:
+
+```bash
+cat /opt/aidoctor/last_deployed_sha
+docker ps --format 'table {{.Names}}\t{{.Status}}'
+curl -fsS http://127.0.0.1:18080/api/v1/health
+```
+
+Если ошибка повторится, НЕ удалять тома БД и НЕ запускать seed; прислать
+новый лог Actions. Успех зависит от корректного окружения конкретного VDS;
+сборка в Docker здесь не проверена.
+
+---
 # AIDoctor — автоматическая выкладка на FirstVDS (только синтетическая БД)
 
 **Сервер:** `185.200.179.238`, Ubuntu 24.04, Docker/Compose уже установлены.  

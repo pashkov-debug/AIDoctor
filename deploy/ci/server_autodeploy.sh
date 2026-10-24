@@ -106,7 +106,8 @@ cd "$repo"
 
 # Никакого повторного seed: аккаунты, карточки и проекты лекарств сохраняются.
 "${dc[@]}" build app
-"${dc[@]}" run --rm --no-deps app python -m alembic -c alembic.ini upgrade head
+"${dc[@]}" run --rm --no-deps --workdir /opt/aidoctor app \
+  python /opt/aidoctor/backend/scripts/run_vds_migrations.py
 "${dc[@]}" up -d --no-deps --wait --wait-timeout 120 app
 
 curl --fail --silent --show-error --max-time 12 \

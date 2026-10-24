@@ -1,3 +1,29 @@
+# Исправление DEPLOY-3 — миграции Alembic в GitHub Actions (2026-10-24)
+
+Коммит `8da21f7` успешно прошёл SSH, резервное копирование и Docker build, но
+Alembic завершился ошибкой `No 'script_location' key found in configuration`.
+Деплой вернул предыдущий Docker-образ и коммит. Это **не ошибка SSH-ключей**.
+
+Инкремент заменяет CLI-вызов миграций в тестовом VDS на изолированный
+Python-адаптер с абсолютными путями к `backend/alembic`, проверкой
+`APP_ENV=test`, адреса `postgres:5432` и имени БД `aidoctor_synthetic`.
+Клинические API, схемы, тома, миграции и пользовательские данные не меняются.
+
+**Важно:** установленный на VDS root-owned скрипт
+`/usr/local/sbin/aidoctor-autodeploy` сам из Git не обновляется.
+До следующего push его необходимо один раз заменить полным файлом
+`deploy/ci/server_autodeploy.sh` из этого комплекта. См.
+[`docs/vds_autodeploy.md`](docs/vds_autodeploy.md), раздел «HOTFIX Alembic».
+
+Проверка в терминале PyCharm (из корня проекта):
+
+```powershell
+python -m ruff check backend
+python -m ruff format --check backend
+python -m pytest backend/tests/test_vds_migrations_unit.py backend/tests/test_ci_autodeploy_unit.py -q
+```
+
+---
 # AIDoctor — CI/CD: автоматический деплой тестового VDS из GitHub (2026-10-24)
 
 **После настройки:** каждый `git push origin master` автоматически
