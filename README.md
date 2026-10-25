@@ -2574,8 +2574,3 @@ python -m pytest backend/tests/test_ci_autodeploy_unit.py backend/tests/test_vds
 Если проверки прошли, выполнить Commit и Push в `master` через PyCharm.
 Изменения в серверных скриптах и настройках GitHub Secrets не требуются.
 Текущая ошибка CI остановила запуск до обновления VDS.
-
-
-## Additive demo: Clinical Response v1 (proposal only)
-
-See [`docs/clinical_response_v1/README.md`](docs/clinical_response_v1/README.md) for 24 synthetic fixtures, JSON Schema, mappings to existing AIReview, suggested commit messages and explicit rollback instructions. **No actual Git commit SHAs are available in this ZIP (no `.git` history).** This package does **not** implement a new API endpoint or an autonomous clinical action. Read the existing release NO-GO audit before deployment.
