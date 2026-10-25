@@ -1,4 +1,4 @@
-"""UI-4B: защищённое согласование синтетических тестовых предложений."""
+"""Защищённое врачебное согласование предложений AI и учебных черновиков."""
 
 from typing import Annotated
 
@@ -9,7 +9,14 @@ from app.api.auth import current_user
 from app.api.routes.ai_workspace import _authorize
 from app.db.session import get_db
 from app.models.access import User
-from app.schemas.ai_review import DraftImport, DraftRead, RejectDraft, ReviewAction, ReviewCommit
+from app.schemas.ai_review import (
+    ClinicianOrderSupplement,
+    DraftImport,
+    DraftRead,
+    RejectDraft,
+    ReviewAction,
+    ReviewCommit,
+)
 from app.services import ai_review as svc
 
 router = APIRouter(tags=["ai-review-demo"])
@@ -49,6 +56,35 @@ def import_test_draft(
 ):
     _guard(db, actor, patient_id, response)
     return svc.import_draft(db, patient_id, actor.id, request_id, payload)
+
+
+@router.post(
+    "/patients/{patient_id}/ai-requests/{request_id}/review/from-analysis",
+    response_model=DraftRead,
+    status_code=201,
+)
+def import_saved_analysis(
+    patient_id: str, request_id: str, db: DB, actor: Actor, response: Response
+):
+    _guard(db, actor, patient_id, response)
+    return svc.import_from_analysis(db, patient_id, actor.id, request_id)
+
+
+@router.post(
+    "/patients/{patient_id}/ai-requests/{request_id}/review/clinician-medication",
+    response_model=DraftRead,
+    status_code=201,
+)
+def add_medication_for_review(
+    patient_id: str,
+    request_id: str,
+    payload: ClinicianOrderSupplement,
+    db: DB,
+    actor: Actor,
+    response: Response,
+):
+    _guard(db, actor, patient_id, response)
+    return svc.add_clinician_order(db, patient_id, actor.id, request_id, payload)
 
 
 @router.post("/patients/{patient_id}/ai-requests/{request_id}/review/preview")

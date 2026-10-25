@@ -6,8 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
   <title>AIDoctor — медицинский кабинет</title>
-  <link rel="stylesheet" href="/app/assets/style.css?v=ui6b-interface-1">
-  <script defer src="/app/assets/app.js?v=ui6b-interface-1"></script>
+  <link rel="stylesheet" href="/app/assets/style.css?v=workspace-s5-1">
+  <script defer src="/app/assets/app.js?v=workspace-s5-1"></script>
 </head>
 <body>
   <section id="login-screen" class="login-screen">
@@ -49,14 +49,8 @@
       <nav class="nav" id="navigation" aria-label="Разделы кабинета">
         <div class="nav-group-label" data-role="doctor" hidden>Работа врача</div>
         <button type="button" data-role="doctor" id="overview-nav" class="nav-link active" data-view="overview" hidden>▦ Пациенты</button>
-        <button type="button" data-role="doctor" id="clinical-nav" class="nav-link" data-view="clinical" data-panel="visits" hidden>▤ Визиты</button>
-        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="history" hidden>◫ Клиническая история</button>
-        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="observations" hidden>◷ Наблюдения</button>
-        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="orders" hidden>▣ Назначения</button>
-        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="tests" hidden>✓ Психологические тесты</button>
-        <button type="button" data-role="doctor" class="nav-link" data-view="clinical" data-panel="digest" hidden>≡ Клиническая сводка</button>
-        <div class="nav-group-label" data-role="doctor" hidden>Анализ и профиль</div>
-        <button type="button" data-role="doctor" class="nav-link nav-link-ai" data-view="ai" id="ai-nav" hidden>✧ Рабочая область AI</button>
+        <button type="button" data-role="doctor" id="clinical-nav" class="nav-link" data-view="clinical" hidden>▤ Рабочее место</button>
+        <div class="nav-group-label" data-role="doctor" hidden>Настройки</div>
         <button type="button" data-role="doctor" class="nav-link" data-view="settings" id="settings-nav" hidden>⚙ Настройки врача</button>
         <div class="nav-group-label" data-role="patient" hidden>Кабинет пациента</div>
         <button type="button" data-role="patient" class="nav-link" data-view="patient" data-panel="profile" id="patient-nav" hidden>♙ Моя карточка</button>
@@ -92,7 +86,7 @@
           </div>
           <div class="panel">
             <div class="panel-heading"><div><h2>Пациенты</h2><p>Выберите пациента, чтобы открыть его медицинскую карту.</p></div></div>
-            <p class="clinical-hint">Визиты, история, назначения и наблюдения доступны в меню слева после выбора пациента.</p>
+            <p class="clinical-hint">После выбора пациента откроется единая карта: визиты, история, наблюдения, назначения, тесты и AI-анализ.</p>
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
         </section>
@@ -108,14 +102,27 @@
             <button type="button" id="clinical-refresh" class="button subtle">Обновить карточку</button>
             <span id="clinical-card-status" role="status" aria-live="polite" class="message"></span>
           </div>
-          <div class="clinical-actions">
-            <button type="button" id="clinical-open-ai" class="button subtle">✧ Перейти к AI для этого пациента</button>
-          </div>
+          <nav class="case-shortcuts" aria-label="Разделы рабочего места">
+            <button type="button" data-clinical-target="clinical-visits-section">Визиты</button>
+            <button type="button" data-clinical-target="clinical-history-section">История</button>
+            <button type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
+            <button type="button" data-clinical-target="clinical-orders-section">Назначения</button>
+            <button type="button" data-clinical-target="clinical-tests-section">Тесты</button>
+            <button type="button" data-clinical-target="clinical-digest-section">Сводка</button>
+            <button type="button" id="clinical-open-ai" class="case-shortcut-ai">✧ AI-анализ</button>
+          </nav>
+          <section id="clinical-timeline" class="case-timeline panel" aria-label="Хронология визитов">
+            <div class="case-timeline-title"><strong>Хронология пациента</strong>
+              <span id="clinical-timeline-caption">Контрольные точки наблюдения</span></div>
+            <div id="clinical-timeline-items" class="case-timeline-items"></div>
+          </section>
           <div id="clinical-no-patient" class="panel clinical-empty" hidden>
             <h2>Выберите пациента</h2>
             <p>Используйте переключатель «Текущий пациент» слева или список в разделе «Пациенты».</p>
             <button type="button" class="button subtle" id="clinical-select-from-overview">К списку пациентов</button>
           </div>
+          <div id="patient-workspace-grid" class="patient-workspace-grid">
+          <div class="patient-main-column">
           <div class="clinical-grid">
             <section class="panel" id="clinical-visits-section" data-panel-group="clinical" data-panel="visits">
               <div class="panel-heading"><div><h2>Визиты <span id="clinical-visits-count" class="count-marker">—</span></h2><p>Записи визитов доступны врачу.</p></div></div>
@@ -147,6 +154,25 @@
             <section class="panel" id="clinical-history-section" data-panel-group="clinical" data-panel="history">
               <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Внутренние записи. Подтверждение и публикация пациенту — отдельные врачебные действия.</p></div></div>
               <div id="clinical-history" class="clinical-list"></div>
+              <details class="case-entry-details" id="clinical-history-entry">
+                <summary>Добавить клиническую запись</summary>
+                <form id="clinical-history-form" class="admin-form">
+                  <label for="clinical-history-category">Категория записи</label>
+                  <select id="clinical-history-category" required>
+                    <option value="clinical">Клиническая запись</option>
+                    <option value="self_report">Со слов пациента</option>
+                    <option value="treatment">Лечение</option>
+                    <option value="observation">Наблюдение</option>
+                  </select>
+                  <label for="clinical-history-text">Сведения для медицинской истории</label>
+                  <textarea id="clinical-history-text" required maxlength="5000" rows="4"
+                    placeholder="Жалобы, анамнез, выводы врача или план наблюдения"></textarea>
+                  <label for="clinical-history-date">Дата события (необязательно)</label>
+                  <input id="clinical-history-date" type="datetime-local">
+                  <button type="submit" class="button primary">Добавить в историю</button>
+                  <p id="clinical-history-entry-status" class="message" role="status" aria-live="polite"></p>
+                </form>
+              </details>
               <form id="clinical-publication-form" class="admin-form" hidden>
                 <h3>Публикация конкретной записи пациенту</h3>
                 <p id="clinical-publication-source" class="muted"></p>
@@ -168,6 +194,27 @@
             <div class="panel-heading"><div><h2>Наблюдения <span id="clinical-observations-count" class="count-marker">—</span></h2>
               <p>Динамика жалоб и самочувствия. Субъективные оценки не заменяют диагностические шкалы.</p></div></div>
             <div id="clinical-observations" class="clinical-list"></div>
+            <details class="case-entry-details" id="clinical-observation-entry">
+              <summary>Добавить наблюдение или показатель</summary>
+              <form id="clinical-observation-form" class="admin-form">
+                <label for="clinical-observation-code">Показатель / код</label>
+                <input id="clinical-observation-code" required maxlength="120"
+                  placeholder="Например, GAD-7 или АД систолическое">
+                <div class="case-entry-grid">
+                  <label for="clinical-observation-score">Значение (число, если применимо)
+                    <input id="clinical-observation-score" type="number" step="any"></label>
+                  <label for="clinical-observation-max">Максимум шкалы (если применимо)
+                    <input id="clinical-observation-max" type="number" min="0" step="any"></label>
+                </div>
+                <label for="clinical-observation-description">Единицы, методика и комментарий</label>
+                <textarea id="clinical-observation-description" rows="3" maxlength="1500"
+                  placeholder="Например, баллы GAD-7; врачебная оценка"></textarea>
+                <label for="clinical-observation-date">Дата наблюдения (необязательно)</label>
+                <input id="clinical-observation-date" type="datetime-local">
+                <button type="submit" class="button primary">Сохранить наблюдение</button>
+                <p id="clinical-observation-entry-status" class="message" role="status" aria-live="polite"></p>
+              </form>
+            </details>
           </section>
           <section class="panel clinical-digest" id="clinical-digest-section" data-panel-group="clinical" data-panel="digest">
             <div class="panel-heading"><div><h2>Клиническая сводка</h2>
@@ -252,21 +299,27 @@
             </div>
             <p id="order-approval-status" role="status" class="message"></p>
           </dialog>
+          </div>
+          <aside id="doctor-ai-column" class="patient-ai-column" aria-label="AI-анализ текущего пациента"></aside>
+          </div>
         </section>
 
 
         <section id="ai-view" class="page" hidden>
-          <div class="page-intro">
-            <span class="eyebrow">ВРАЧЕБНЫЙ АНАЛИЗ</span>
-            <h1>Рабочая область AI</h1>
-            <p>Подготовьте вопрос по выбранному пациенту. AI-анализ станет доступен после подключения сервиса.</p>
+          <div class="page-intro case-ai-heading">
+            <span class="eyebrow">КЛИНИЧЕСКИЙ ПОМОЩНИК</span>
+            <h2>AI-анализ пациента</h2>
+            <p>Контекст вопроса связан с текущей картой. Ответ агента сохраняется отдельно до проверки врачом.</p>
           </div>
-          <label for="ai-patient-select">Выберите пациента</label>
-          <select id="ai-patient-select"><option value="">Загрузка пациентов…</option></select>
+          <div class="visually-hidden">
+            <label for="ai-patient-select">Пациент AI-запроса — выбран в карте</label>
+            <select id="ai-patient-select" disabled aria-describedby="ai-patient-selection-help"><option value="">Выберите пациента в карте</option></select>
+            <small id="ai-patient-selection-help" class="clinical-hint">AI использует только текущую карту. Изменить пациента можно в левой панели.</small>
+          </div>
           <p id="ai-workspace-status" class="message" role="status" aria-live="polite"></p>
           <div class="ai-three-panels">
             <section class="panel">
-              <h2>1. Запрос врача</h2>
+              <h3>Вопрос для AI</h3>
               <form id="ai-request-form">
                 <label for="ai-question">Вопрос или клиническая задача</label>
                 <textarea id="ai-question" rows="9" minlength="10" maxlength="5000"
@@ -277,8 +330,8 @@
               </form>
             </section>
             <section class="panel">
-              <h2>2. Вложения</h2>
-              <p class="clinical-hint">Документы проходят проверку безопасности. Пока проверка и передача файлов в AI не включены, содержимое не используется для анализа.</p>
+              <h3>Документы пациента</h3>
+              <p class="clinical-hint">Файлы сохраняются в защищённом хранилище. Содержимое не включается в AI-контекст без отдельной проверки.</p>
               <label for="ai-upload">Добавить медицинский документ</label>
               <input id="ai-upload" type="file" accept=".pdf,.doc,.docx,.png,.jpg,.jpeg">
               <button id="ai-upload-button" class="button subtle" type="button">Загрузить документ</button>
@@ -286,36 +339,60 @@
               <div id="ai-files" class="clinical-list" aria-live="polite"></div>
             </section>
             <section class="panel">
-              <h2>3. Ответ AI</h2>
-              <p class="clinical-hint">AI-анализ пока недоступен. Сохранённые запросы не являются медицинскими рекомендациями.</p>
+              <h3>Анализ и врачебные решения</h3>
+              <p class="clinical-hint">Здесь отображаются сохранённые ответы связанного агента. AI не меняет медицинскую карту самостоятельно.</p>
               <div id="ai-response" class="clinical-list">
                 Ответ AI отсутствует. Никаких рекомендаций или назначений автоматически не создаётся.
               </div>
               <div id="ai-review-workspace" class="ai-review-workspace" hidden>
-                <p class="clinical-hint">Тренировочный режим: предложения созданы вручную для учебного случая. Это не ответ AI и не медицинская рекомендация.</p>
+                <p class="clinical-hint">Предложения получены из сохранённого AI-анализа. Выберите, проверьте и при необходимости отредактируйте их. Непринятые пункты сохраняются в журнале решений.</p>
                 <p id="ai-review-status" class="message" role="status" aria-live="polite"></p>
                 <p id="ai-review-request-label">Выберите подготовленный запрос в истории ниже.</p>
                 <div class="actions">
-                  <button type="button" id="ai-demo-create" class="button subtle" disabled>Создать тренировочный пример</button>
+                  <button type="button" id="ai-demo-create" class="button subtle" disabled>Сформировать предложения из AI-анализа</button>
                   <button type="button" id="ai-draft-revise" class="button subtle" disabled>Уточнить (новая версия)</button>
                   <button type="button" id="ai-review-reject" class="button subtle" disabled>Отклонить черновик</button>
                 </div>
+                <details id="ai-clinician-order-details" hidden>
+                  <summary>Добавить лекарственное предложение врача (не из AI)</summary>
+                  <p class="clinical-hint">Заполните только проверенные сведения, укажите первоисточник и убедитесь, что такое назначение уже не существует у пациента. Это врачебный ввод, а не рекомендация агента.</p>
+                  <form id="ai-clinician-order-form" class="ai-proposal-fields">
+                    <label>Препарат <input name="name" required maxlength="200"></label>
+                    <label>Действующее вещество <input name="active_ingredient" required maxlength="200"></label>
+                    <label>Лекарственная форма <input name="dosage_form" required maxlength="120"></label>
+                    <label>Содержание / концентрация <input name="strength" required maxlength="120"></label>
+                    <label>Разовая доза <input name="dose_value" type="number" min="0.0001" step="any" required></label>
+                    <label>Единица дозы <input name="dose_unit" required maxlength="60"></label>
+                    <label>Способ введения <input name="route" required maxlength="120"></label>
+                    <label>Приёмов в сутки <input name="frequency_per_day" type="number" min="1" max="12" required></label>
+                    <label>Время приёма через запятую (ЧЧ:ММ) <input name="times_local" required placeholder="08:00, 20:00"></label>
+                    <label>Часовой пояс IANA <input name="timezone" required placeholder="Europe/Moscow"></label>
+                    <label>Дата начала <input name="start_date" type="date" required></label>
+                    <label>Длительность рецепта, дней <input name="duration_days" type="number" min="1" max="3650" required></label>
+                    <label>Условия приёма <textarea name="administration_notes" maxlength="500"></textarea></label>
+                    <label>Показание <textarea name="indication" maxlength="1000" required></textarea></label>
+                    <label>Предупреждения и противопоказания <textarea name="contraindications" maxlength="1000"></textarea></label>
+                    <label>Обоснование решения врача <textarea name="rationale" maxlength="1500" required></textarea></label>
+                    <label>Источник (документ / инструкция) <input name="source_reference" required maxlength="500"></label>
+                    <button type="submit" class="button subtle">Добавить для проверки</button>
+                  </form>
+                </details>
                 <div id="ai-proposal-cards" class="clinical-list"></div>
                 <label for="ai-edit-reason">Причина редактирования предложений (если изменены поля)</label>
                 <input type="text" id="ai-edit-reason" maxlength="500" placeholder="Например: врач скорректировал расписание">
                 <div class="actions">
-                  <button type="button" id="ai-review-preview" class="button subtle" disabled>Проверить выбранные назначения</button>
+                  <button type="button" id="ai-review-preview" class="button subtle" disabled>Предпросмотр выбранных изменений</button>
                 </div>
                 <div id="ai-review-preview-result" class="clinical-list" aria-live="polite"></div>
                 <div class="actions">
-                  <button type="button" id="ai-review-approve" class="button primary" disabled>Утвердить выбранное</button>
+                  <button type="button" id="ai-review-approve" class="button primary" disabled>Подтвердить и применить</button>
                 </div>
               </div>
             </section>
           </div>
           <section class="panel">
             <div class="panel-heading"><div><h2>История подготовленных запросов</h2>
-              <p>Запросы доступны только врачу-автору и сохраняются между входами в приложение.</p></div></div>
+              <p>Вопросы, время создания и сохранённые ответы текущего пациента.</p></div></div>
             <div id="ai-requests" class="clinical-list"></div>
           </section>
         </section>

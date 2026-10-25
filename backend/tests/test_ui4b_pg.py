@@ -141,6 +141,7 @@ def test_synthetic_review_approval(monkeypatch, pg_engine):
                 == 201
             )
             real_req = client.get(f"/api/v1/patients/{realid}/ai-requests").json()[0]["id"]
+            # Ручное согласование больше не зависит от synthetic=true.
             assert (
                 client.post(
                     f"/api/v1/patients/{realid}/ai-requests/{real_req}/review",
@@ -149,7 +150,7 @@ def test_synthetic_review_approval(monkeypatch, pg_engine):
                         "proposals": proposals,
                     },
                 ).status_code
-                == 403
+                == 201
             )
             imported = client.post(
                 url, json={"origin": "synthetic_manual_test", "proposals": proposals}
@@ -262,8 +263,8 @@ def test_synthetic_review_approval(monkeypatch, pg_engine):
             assert db.scalar(select(func.count(ClinicalOrder.id))) == 2
             assert db.scalar(select(func.count(ClinicalOrderAudit.id))) == 2
             assert db.scalar(select(func.count(QuestionnaireAssignment.id))) == 1
-            assert db.scalar(select(func.count(AIReviewCase.id))) == 1
-            assert db.scalar(select(func.count(AIReviewVersion.id))) == 2
-            assert db.scalar(select(func.count(AIReviewEvent.id))) == 3
+            assert db.scalar(select(func.count(AIReviewCase.id))) == 2
+            assert db.scalar(select(func.count(AIReviewVersion.id))) == 3
+            assert db.scalar(select(func.count(AIReviewEvent.id))) == 4
     finally:
         app.dependency_overrides.clear()

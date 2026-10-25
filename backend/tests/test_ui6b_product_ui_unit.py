@@ -22,7 +22,7 @@ def test_clean_labels_and_existing_role_menus():
     ids = [attrs["id"] for _, attrs in parser.entries if "id" in attrs]
     assert len(ids) == len(set(ids))
 
-    for role, count in (("doctor", 9), ("patient", 4), ("admin", 5)):
+    for role, count in (("doctor", 3), ("patient", 4), ("admin", 5)):
         buttons = [
             attrs
             for tag, attrs in parser.entries
@@ -45,8 +45,8 @@ def test_clean_labels_and_existing_role_menus():
 
     review = [attrs for _, attrs in parser.entries if attrs.get("id") == "ai-review-workspace"]
     assert len(review) == 1 and "hidden" in review[0]
-    assert "Проверить выбранные назначения" in html
-    assert "Утвердить выбранное" in html
+    assert "Предпросмотр выбранных изменений" in html
+    assert "Подтвердить и применить" in html
     assert "Российские клинические рекомендации" in html
 
 
@@ -66,8 +66,8 @@ def test_client_uses_server_flag_and_excludes_internal_ai_data():
 def test_adaptive_layout_and_cache_updates():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     css = (WEB / "assets" / "style.css").read_text(encoding="utf-8")
-    assert "app.js?v=ui6b-interface-1" in html
-    assert "style.css?v=ui6b-interface-1" in html
+    assert "app.js?v=workspace-s5-1" in html
+    assert "style.css?v=workspace-s5-1" in html
     assert "ai-three-panels > .panel:last-child" in css
     assert ".visually-hidden" in css
     assert "prefers-reduced-motion" in css

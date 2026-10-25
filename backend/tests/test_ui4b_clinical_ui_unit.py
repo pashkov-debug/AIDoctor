@@ -33,8 +33,8 @@ def test_clinical_confirmation_labels_and_unique_ids():
     parser = _ButtonParser()
     parser.feed(html)
     assert len(parser.ids) == len(set(parser.ids))
-    assert "Проверить выбранные назначения" in html
-    assert "Утвердить выбранное" in html
+    assert "Предпросмотр выбранных изменений" in html
+    assert "Подтвердить и применить" in html
     assert "Опубликовать пациенту" in html
     assert "Просмотр изменений БД" not in html
     assert '<div id="order-approval-preview"' in html

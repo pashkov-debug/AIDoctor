@@ -10,6 +10,7 @@ from app.models.attachment_evidence_draft import (
 )
 from app.models.attachment_security import AttachmentSecurityEvent, AttachmentSecurityReview
 from app.models.auth_session import AuthSession
+from app.models.clinical_entry_audit import ClinicalEntryAudit
 from app.models.clinical_order import ClinicalOrder, ClinicalOrderAudit
 from app.models.clinical_publication import ClinicalPublication, ClinicalPublicationAudit
 from app.models.context_snapshot import ContextSnapshot
@@ -53,6 +54,7 @@ __all__ = [
     "ContextSnapshot",
     "ClinicalPublication",
     "ClinicalPublicationAudit",
+    "ClinicalEntryAudit",
     "ClinicalOrder",
     "ClinicalOrderAudit",
     "DoctorPatient",

@@ -20,6 +20,7 @@ from app.api.routes.doctor_settings import router as doctor_settings_router
 from app.api.routes.encounters import router as encounters_router
 from app.api.routes.health import router as health_router
 from app.api.routes.history_events import router as history_events_router
+from app.api.routes.medical_observations import router as medical_observations_router
 from app.api.routes.patient_portal import router as patient_portal_router
 from app.api.routes.patients import router as patients_router
 from app.api.routes.questionnaire_assignments import router as questionnaire_assignments_router
@@ -54,6 +55,7 @@ def create_app() -> FastAPI:
         questionnaires_router,
         questionnaire_assignments_router,
         history_events_router,
+        medical_observations_router,
         context_router,
         ai_workspace_router,
         ai_review_router,

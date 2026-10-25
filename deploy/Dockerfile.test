@@ -15,6 +15,7 @@ RUN python -m pip install --no-cache-dir -r requirements.txt \
 COPY backend/app ./backend/app
 COPY backend/alembic ./backend/alembic
 COPY backend/scripts ./backend/scripts
+COPY backend/demo_cases ./backend/demo_cases
 COPY alembic.ini ./
 
 # Git checkout под umask 077 может создать исходные файлы с правами 0600,

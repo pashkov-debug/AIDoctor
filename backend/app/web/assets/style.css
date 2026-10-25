@@ -367,3 +367,128 @@ button:focus-visible, summary:focus-visible {
 @media (prefers-reduced-motion: reduce) {
   .nav-link, .button, .tab { transition: none; }
 }
+
+/* Рабочее место врача / UI-7: единая область пациента и AI без вторичного выбора. */
+#clinical-view .page-intro { margin-bottom: 18px; }
+#clinical-view .clinical-actions { margin-bottom: 12px; }
+.patient-workspace-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(340px, 1fr);
+  gap: 18px;
+  align-items: start;
+}
+.patient-main-column, .patient-ai-column { min-width: 0; }
+.patient-main-column > .panel,
+.patient-main-column > .clinical-grid > .panel { max-width: none; }
+.patient-main-column .clinical-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
+.patient-main-column .clinical-digest { margin-top: 16px; }
+.patient-ai-column { scroll-margin-top: 14px; }
+.patient-ai-column #ai-view { display: block; }
+.patient-ai-column #ai-view .page-intro { margin: 0 0 14px; }
+.patient-ai-column #ai-view .page-intro h2 { font-size: 1.45rem; margin: 8px 0; }
+.patient-ai-column #ai-view .page-intro p { color: #637c8b; font-size: .85rem; }
+.patient-ai-column #ai-view .ai-three-panels {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 12px;
+  margin: 0 0 14px;
+}
+.patient-ai-column #ai-view .ai-three-panels > .panel:last-child { grid-column: auto; }
+.patient-ai-column #ai-view .panel { padding: 19px; margin: 0; min-width: 0; }
+.patient-ai-column #ai-view h3 { font-size: 1rem; margin: 0 0 13px; }
+.patient-ai-column #ai-view .clinical-hint { font-size: .8rem; margin: 8px 0 12px; padding: 10px 12px; }
+.patient-ai-column #ai-view textarea { min-height: 90px; }
+.patient-ai-column #ai-view #ai-question { min-height: 110px; }
+.patient-ai-column #ai-view .admin-entry { align-items: start; flex-wrap: wrap; }
+.patient-ai-column #ai-view .admin-entry > div { flex: 1 1 100%; min-width: 0; }
+.patient-ai-column #ai-view #ai-response { max-height: 380px; overflow-y: auto; padding: 8px 0; }
+.patient-ai-column #ai-view .ai-analysis-result { padding: 9px 0; overflow-wrap: anywhere; }
+.patient-ai-column #ai-view .ai-analysis-result ul { padding-left: 20px; }
+.patient-ai-column #ai-view .ai-review-workspace { min-width: 0; }
+.patient-ai-column #ai-view #ai-requests { max-height: 360px; overflow-y: auto; }
+.patient-ai-column #ai-view .ai-proposal-fields { grid-template-columns: minmax(0, 1fr); }
+.patient-ai-column #ai-view .button { white-space: normal; text-align: left; }
+.case-shortcuts {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 0 0 14px;
+}
+.case-shortcuts button {
+  width: auto;
+  min-height: 36px;
+  padding: 7px 12px;
+  background: #fff;
+  border: 1px solid #dce6eb;
+  border-radius: 999px;
+  color: #315363;
+  font-size: .81rem;
+  font-weight: 700;
+}
+.case-shortcuts button:hover { border-color: #278b7d; color: #146e61; background: #f0faf8; }
+.case-shortcuts button:focus-visible, .case-timeline-marker:focus-visible {
+  outline: 2px solid #2a9687;
+  outline-offset: 2px;
+}
+.case-shortcuts .case-shortcut-ai { background: #e6f5f1; border-color: #b4dcd4; color: #0b6b5e; }
+.case-timeline { padding: 16px 20px; margin-bottom: 16px; }
+.case-timeline-title { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+.case-timeline-title strong { color: #204355; }
+.case-timeline-title span { font-size: .8rem; color: #718b99; }
+.case-timeline-items {
+  display: flex;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  gap: 9px;
+  padding: 13px 1px 2px;
+  scrollbar-width: thin;
+}
+.case-timeline-marker {
+  flex: 0 0 auto;
+  padding: 8px 12px;
+  background: #f2f6f8;
+  border: 1px solid #dce6eb;
+  border-radius: 9px;
+  color: #345364;
+  font-size: .8rem;
+  font-weight: 650;
+}
+.case-timeline-marker.selected,
+.case-timeline-marker:hover { background: #e2f4ef; border-color: #258d80; color: #0c665d; }
+.case-visit-entry.selected { background: #eef9f6; border-radius: 8px; padding-left: 9px; }
+.case-entry-details { border-top: 1px solid #e1e9ed; margin-top: 16px; padding-top: 14px; }
+.case-entry-details summary { cursor: pointer; font-weight: 750; color: #176f67; }
+.case-entry-details .admin-form { border-top: none; }
+.case-entry-grid { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+.case-entry-grid label { display: grid; gap: 6px; }
+#clinical-visits-section, #clinical-history-section, #clinical-observations-section,
+#clinical-digest-section, #clinical-orders-section, #clinical-tests-section {
+  scroll-margin-top: 16px;
+}
+@media (max-width: 1320px) {
+  .patient-workspace-grid { grid-template-columns: minmax(0,1fr); }
+  .patient-ai-column #ai-view .ai-three-panels { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .patient-ai-column #ai-view .ai-three-panels > .panel:last-child { grid-column: 1 / -1; }
+}
+@media (max-width: 800px) {
+  .patient-ai-column #ai-view .ai-three-panels { grid-template-columns: minmax(0,1fr); }
+  .patient-ai-column #ai-view .ai-three-panels > .panel:last-child { grid-column: auto; }
+}
+@media (max-width: 650px) {
+  .case-timeline { padding: 15px; }
+  .case-shortcuts { flex-wrap: nowrap; overflow-x: auto; padding-bottom: 6px; }
+  .case-shortcuts button { flex: 0 0 auto; }
+  .case-entry-grid { grid-template-columns: minmax(0, 1fr); }
+  .patient-workspace-grid { gap: 16px; }
+}
+
+
+/* Единый пациент: выбор в AI-панели отражает только открытую карту. */
+#ai-patient-select:disabled {
+  opacity: 1;
+  background: #ecf7f5;
+  border-color: #b9dcd4;
+  color: #185c55;
+  font-weight: 700;
+  cursor: default;
+}

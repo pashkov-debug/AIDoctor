@@ -88,15 +88,11 @@ def require_site_request(
     if link is None:
         raise HTTPException(404, "Пациент недоступен")
 
-    # Важный барьер: нельзя отправить реальные записи внешней модели,
-    # просто узнав UUID пациента или подменив роль/идентификатор врача.
+    # Для несинтетических данных согласие остаётся обязательным.
+    # Демо-флаг окружения не подменяет согласие и не даёт дополнительных прав.
     metadata = patient.demographics_json
     synthetic = isinstance(metadata, dict) and metadata.get("synthetic") is True
-    other_allowed = (
-        os.getenv("AIDOCTOR_SITE_ALLOW_NON_SYNTHETIC") == "1"
-        and isinstance(metadata, dict)
-        and metadata.get("external_ai_consent") is True
-    )
+    other_allowed = isinstance(metadata, dict) and metadata.get("external_ai_consent") is True
     if not synthetic and not other_allowed:
         raise HTTPException(
             403,

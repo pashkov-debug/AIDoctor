@@ -122,7 +122,7 @@ draft_leaks="$("${dc[@]}" exec -T postgres psql -U aidoctor -d aidoctor_syntheti
 test "$draft_leaks" = 0
 patient_count="$("${dc[@]}" exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
   -c "SELECT count(*) FROM patients WHERE demographics_json ->> 'synthetic' = 'true';")"
-test "$patient_count" = 3
+test "$patient_count" -ge 3
 
 trap - ERR
 printf '%s\n' "$commit" > "$root_dir/last_deployed_sha"

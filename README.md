@@ -1,3 +1,535 @@
+# AIDoctor — документация проекта и эксплуатационное руководство
+
+> **Актуализировано: 25.10.2026. Статус: код этапов 1–5 находится в локальной сборке; этап 6 (финальная интеграция и production-gate) НЕ завершён.**  
+> **Назначение документа:** разработчик, врач — демонстратор, DevOps/администратор, аудитор интеграций.  
+> **Источники:** сопоставление `AIDoctor-master (12)(1).zip` и `AIDoctor after upgrade.rar`, а также архивов этапов 1–5.  
+> **История проекта:** весь прежний README сохранён ниже в неизменённом виде в разделе «Архив исходной документации». Если устаревшая инструкция противоречит этому разделу, приоритет у этого актуального руководства и реальных файлов конфигурации.
+
+## 0. Краткий паспорт проекта
+
+**AIDoctor** — медицинское веб-приложение на FastAPI, PostgreSQL, SQLAlchemy/Alembic и нативном JavaScript/CSS. Клиническое рабочее место врача, пациентский кабинет, медицинские записи, визиты, назначения, психологические тесты, вложения, аудит, предупреждения и AI-подсказки объединяются в рамках одной карты пациента. Внешняя AI-интеграция Site Builder/MCP привязывается к персональному ключу врача и конкретному AI-запросу.
+
+- Репозиторий, ожидаемый серверным автодеплоем: `https://github.com/pashkov-debug/AIDoctor.git`.
+- Публичный адрес существующего тестового VDS: `https://185-200-179-238.sslip.io/app`. **Публичный URL не означает `APP_ENV=production`: текущий `deploy/compose.test.yaml` принудительно устанавливает `APP_ENV=test`.**
+- Бэкенд API: `/api/v1`; интерактивный API-справочник: `/docs` и `/openapi.json` (перед внешним production необходимо отдельно решить вопрос публичного доступа к справочнику).
+- Web UI: `/app`, статические файлы `/app/assets/`.
+- Python в тестовом Docker-образе: `3.12-slim-bookworm`; PostgreSQL: `16`.
+- Прямой платный LLM API не подключён, второго агента нет; Site Builder работает через существующие интеграционные API.
+- Медицинские решения утверждает только врач. Сохранённый AI-ответ и врачебное назначение — **разные сущности**.
+- Подготовленный учебный кейс: «Авиандр / ГТР / 8 недель» — синтетический, не основание для лечения реальных пациентов.
+- **Режим развёртывания на момент аудита: NO-GO для безусловного push в `master`**, пока не пройдены условия раздела 15.
+
+### Что сейчас подтверждено
+
+| Проверка / компонент | Статус по исходникам и локальным проверкам |
+|---|---|
+| Наличие всех файлов инкрементов 1–5 в новом RAR | Подтверждено, отсутствующих файлов нет |
+| GitHub Actions workflow (`.github/workflows/ci.yml`) | Байт-в-байт не изменён |
+| MCP v2 API (`site_doctor_bridge.py`) | Байт-в-байт не изменён |
+| JS `node --check`, Python `compileall` | Локально пройдены |
+| Alembic `heads` | Одна вершина: `workspace_s1_20261025` |
+| Выбранные unit/UI/MCP-тесты | 53 успешно |
+| `ruff check backend` / `ruff format --check backend` | В независимой среде **не выполнялись**, Ruff не установлен |
+| Полный pytest | Не завершён: в независимой среде отсутствует `psycopg` |
+| `alembic upgrade head` на PostgreSQL | Не выполнялся, нужен отдельный тестовый экземпляр |
+| Живой MCP-вызов Site Builder, HTTPS и VDS после изменений | Не проверялись |
+| Добавление новой пациентки в реальную БД | Не выполнялось; импорт отложен |
+
+## 1. Архитектура: границы и источники истины
+
+```text
+Браузер врача /app (index.html + app.js + style.css)
+    |
+    | cookie / auth, роли, выбранный пациент
+    v
+FastAPI /api/v1
+    |--- patients, encounters, history_events, medical_observations
+    |--- clinical_orders, clinical_publication
+    |--- questionnaires, questionnaire_assignments
+    |--- attachments, attachment_security, attachment_evidence
+    |--- context, doctor_settings, ai_workspace
+    |--- ai_demo_bridge, site_doctor_bridge, ai_review
+    |--- safety_alerts, safety_followups, safety_in_app_notifications
+    |--- admin, auth, access, patient_portal
+    |
+    v
+Services (бизнес-инварианты, аутентификация, версии, клинический аудит)
+    |
+    v
+SQLAlchemy / PostgreSQL 16 (Alembic migrations)
+    |
+    +--- медицинская карта (источник подтверждённых клинических данных)
+    +--- AIRequest / AIDemoAnalysis (запрос, снимки, исходный ответ AI)
+    +--- AIReviewCase / AIReviewVersion / AIReviewEvent (предложения и решения)
+    +--- ClinicalEntryAudit / ClinicalOrderAudit / другое аудитирование
+```
+
+**Владение данными:** подтверждённые наблюдения, история, клинические назначения и результаты тестов принадлежат клинической карте, а не AI. AI-ответ не переписывает эти записи. Изменения проходят через существующие таблицы и транзакции с аудитом. `patient_id`, `doctor_id`, `request_id` и версия контекста задают границы согласования.
+
+**Границы интеграции:** MCP/Site Builder получает контекст по отдельному маршруту и возвращает сохранённый ответ; не имеет права напрямую подтверждать лечение. `AIReview` — серверный механизм интерпретации и выборочного применения предложения после явного решения врача. Клиентские кнопки не заменяют авторизацию на сервере.
+
+**Масштабирование на нескольких врачей:** персональный ключ интеграции сопоставляется с `doctor_id`, подтверждается активная связка `DoctorPatient`, проверяется принадлежность `AIRequest`. Текущий `site_enabled()` дополнительно ограничен `APP_ENV=test`: до перехода на настоящий production это отдельная архитектурная задача и security review.
+
+## 2. Основные каталоги и точки входа
+
+| Путь | Содержание |
+|---|---|
+| `backend/app/main.py` | FastAPI, регистрация маршрутов, раздача `/app`, security headers |
+| `backend/app/api/routes/` | API пациента, визитов, истории, назначений, тестов, AI, MCP и администратора |
+| `backend/app/services/` | Медицинские операции, доступ к AI, аудиты, проверка контекста |
+| `backend/app/models/`, `schemas/` | SQLAlchemy-модели и Pydantic-контракты |
+| `backend/app/web/index.html` | Структура единого рабочего пространства |
+| `backend/app/web/assets/app.js` | Логика отображения, запросов и подтверждений |
+| `backend/app/web/assets/style.css` | Визуальная система и адаптивная компоновка |
+| `backend/alembic/versions/` | Поступательная схема БД |
+| `backend/scripts/` | Миграции VDS, идемпотентный импорт учебного случая |
+| `backend/demo_cases/` | Тестовый источник данных Авиандр / ГТР |
+| `backend/tests/` | Unit, static/UI, PostgreSQL, интеграционные проверки |
+| `.github/workflows/ci.yml` | Быстрый CI, ручной полный CI, push-автодеплой |
+| `deploy/compose.test.yaml` | Тестовая PostgreSQL, app, отдельный seed |
+| `deploy/Dockerfile.test` | Docker-образ тестового приложения |
+| `deploy/ci/server_autodeploy.sh` | Деплой по SHA, backup, миграции, health check, rollback кода |
+| `deploy/https/`, `deploy/compose.https.yaml`, Caddyfile | HTTPS и проксирование |
+| `.env.example`, `deploy/test.env.example`, `deploy/env.production.example` | Шаблоны конфигурации, **не настоящие секреты** |
+| `README.md` | Эта документация + полная историческая часть |
+
+## 3. Выполненные изменения: этапы 1–5
+
+### Этап 1. Бэкенд и ручные клинические записи
+
+Реализованы:
+1. `require_active_doctor_patient` — проверка роли врача, прав на пациента и soft-delete.
+2. `POST /api/v1/patients/{patient_id}/history-events` — внесение врачебной записи с `ClinicalEntryAudit`.
+3. `GET/POST /api/v1/patients/{patient_id}/observations` — чтение/создание медицинских наблюдений с аудитом.
+4. Таблица `clinical_entry_audit`, модель `ClinicalEntryAudit`, миграция `workspace_s1_20261025`.
+5. Устранение искусственного запрета `AIReview` только на synthetic-пациента и флаг `AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS`: вместо них требуются права и существование активного пациента.
+6. Site Builder v2 допускает несинтетического пациента при явном `external_ai_consent=true` в `demographics_json`; идентификация врача и запросов сохранена.
+7. Деплой-инвариант синтетических пациентов изменён с «ровно 3» на «не менее 3» без удаления старых данных.
+
+**Не означает:** право AI на автоматическое назначение или готовность приложения к обработке реальных медицинских данных.
+
+### Этап 2. Единое рабочее место
+
+- Общий контекст выбранного пациента.
+- Клиническая история, визиты, наблюдения, назначения, тесты и AI доступны из одного рабочего места, без независимого выбора пациента в AI-панели.
+- Хронология визитов строится по сохранённым датам.
+- Ручные формы истории и наблюдений используют новые API этапа 1.
+- Возврат из AI к карте не должен изменять `patient_id` или выбранный визит.
+
+### Этап 3. Полный синтетический клинический кейс
+
+Добавлены:
+- `backend/demo_cases/aviandr_gad_8weeks_v1.json`;
+- `backend/scripts/seed_aviandr_case.py`;
+- проверки формата, временных точек, источника и повторного запуска;
+- копирование `backend/demo_cases` в Docker-образ.
+
+Материал: синтетическая пациентка 34 лет, ГТР F41.1, 03.08–28.09.2026, 9 визитов, врачебные дневники, дневник пациента, GAD-7/HAM-A/PHQ-9/ISI, лабораторные показатели, лекарственный **черновик**, 8-недельная хронология. Шкалы записываются как исторические наблюдения; отсутствие исходных ответов на вопросы не позволяет создать задним числом реальные заполнения шкал в каталоге приложения.
+
+Источник намеренно ограничен `APP_ENV=test` и БД `aidoctor_synthetic`. **Это защита операции импорта, не ограничение врачебного интерфейса.** По договорённости импорт в БД ещё не проводился.
+
+### Этап 4. Сохранённый AI-анализ → проверяемые предложения
+
+- `POST .../review/from-analysis`: перевод сохранённого ответа `AIDemoAnalysis` в версионированный AI-review без записи в клиническую карту.
+- Отдельные предложения по обследованиям, диагностическим гипотезам и рискам, из тех полей, которые реально есть в `submit_demo_analysis`.
+- `POST .../review/clinician-medication`: врач добавляет отдельное структурированное лекарственное предложение, с указанием источника. **Доза из врачебного ввода не выдаётся за утверждение AI.**
+- Поэлементный отбор, допустимое редактирование, preview со снимком контекста, approve/reject с проверкой версии и аудитом.
+- При подтверждении создаются записи в уже существующих `ClinicalOrder`, `HistoryEvent`, `MedicalObservation` или `QuestionnaireAssignment` — в соответствии с типом предложения.
+- Контракты MCP v2 не менялись. Полноценные AI-дозировки отсутствуют в текущем `aidoctor_demo_analysis.v1`.
+
+### Этап 5. Стабилизация UI
+
+- Устранён дублирующий выбор пациента для AI.
+- Независимая обработка ошибок загрузки разделов.
+- Защита от запоздалого ответа предыдущего пациента.
+- Очистка устаревших AI-предложений при смене запросов.
+- Блокировка повторных действий review во время запроса.
+- Уточнены статусы сохранённого AI-ответа и подключены static/unit-тесты.
+
+**Этап 6 ещё НЕ завершён.** Он должен включать полный Ruff, full pytest с PostgreSQL, тест миграции и rollback, smoke MCP и UI на тестовой БД, итоговый релизный ZIP.
+
+## 4. Единый сценарий врача (контракт использования)
+
+1. Врач авторизуется и открывает конкретного пациента.
+2. Просматривает историю/визиты/наблюдения/назначения/тесты на одном рабочем пространстве.
+3. Добавляет записи и вложения только через аутентифицированные маршруты.
+4. Создаёт `AIRequest` по текущему пациенту; сервер фиксирует врача и снимок контекста.
+5. Агент Site Builder, если интеграция включена и имеет доступ, читает контекст и сохраняет структурированный ответ.
+6. UI показывает время, источник и статус сохранённого ответа, **не имитируя live-вызов**.
+7. Врач создаёт review из сохранённого анализа, выбирает нужные предложения, редактирует при необходимости.
+8. Для лекарств врач вправе отдельно заполнить препарат, действующее вещество, форму, дозу, единицы, кратность, время приёма, предупреждения и источник.
+9. API формирует предварительный просмотр; если карта изменилась, требуется обновить запрос/preview.
+10. Врач подтверждает только выбранное; остальные отмечаются как невыбранные. Сервер сохраняет записи и аудит.
+
+Применённый AI-текст не становится исходным клиническим фактом автоматически. Подтверждение врачом AI-review и публикация записей пациенту — отдельные операции.
+
+## 5. API: текущая карта возможностей
+
+Все маршруты из этого раздела имеют префикс `/api/v1`. Конкретные типы полей, ответы и авторизацию сверяйте с `/openapi.json` и `backend/app/schemas/`.
+
+| Домен | Основные API |
+|---|---|
+| Авторизация | `POST /auth/login`, `GET /auth/me`, `POST /auth/logout` |
+| Пациенты | `/patients`, `/patients/{id}`, `/access/link`, админ-маршруты |
+| Визиты | `GET/POST /patients/{id}/encounters`, `GET /encounters/{id}` |
+| История | `GET/POST /patients/{id}/history-events` |
+| Наблюдения (новое) | `GET/POST /patients/{id}/observations` |
+| Назначения | `GET/POST /patients/{id}/clinical-orders`, update/approve/cancel |
+| Психологические тесты | `/questionnaire-catalog`, `/questionnaire-assignments`, `/questionnaires` |
+| Клинический контекст | `/patients/{id}/context`, `/context/digest`, `/context/snapshots`, `/context/delta` |
+| AI-запросы | `/patients/{id}/ai-workspace`, `/patients/{id}/ai-requests` |
+| Сохранённый AI-анализ | `POST /integrations/site-builder/demo-analyses`, `GET /patients/{id}/ai-requests/{rid}/demo-analysis` |
+| Site Builder v2 | `GET /integrations/site-builder/v2/agent-context`, `POST /integrations/site-builder/v2/analyses` |
+| AI-review | `GET .../review`, `GET .../review/versions/{n}`, `POST .../review/from-analysis`, `POST .../review/clinician-medication`, `POST .../review/preview`, `POST .../review/approve`, `POST .../review/reject` |
+| Вложения | API загрузки/чтения, security/precheck/evidence |
+| Аудит и уведомления | клинические аудиты, safety-alerts, inbox, followups |
+| Публикация пациенту | `/clinical-publications`, confirm/publish/revoke |
+
+**Стабильность:** старые пути Site Builder и schema v1 не переименовывались. Новые маршруты аддитивны. Нет гарантии полной обратной совместимости на уровне реальной БД, пока не пройдены интеграционные тесты.
+
+## 6. MCP/Site Builder: действующая схема и ограничения
+
+Основные файлы:
+- `backend/app/api/routes/site_doctor_bridge.py` — v2; файл не менялся.
+- `backend/app/services/site_doctor_access.py` — персональные ключи/авторизация; изменены условия доступа несинтетического пациента.
+- `backend/app/api/routes/ai_demo_bridge.py` — старый демо-канал, не менялся.
+- `backend/app/schemas/ai_demo_bridge.py` — контракт сохранённого ответа.
+- `backend/app/services/ai_review.py` — независимая врачебная проверка после сохранения.
+
+Механизм:
+- Ключ интеграции приходит в заголовке `X-AIDoctor-Doctor-Key`; в БД хранится его хеш, а не исходное значение.
+- Проверяются действие ключа/срок, роль врача, `DoctorPatient`, совпадение `doctor_id/patient_id/request_id`, хеши контекста и набора назначений.
+- При успешном POST создаётся одна запись `AIDemoAnalysis`; повторный идентичный ответ идемпотентен.
+- Подмена врача через параметр MCP не должна выдавать чужие данные.
+- **Текущий код `site_enabled()` возвращает `True` только при `APP_ENV=test` и `AIDOCTOR_SITE_MULTI_DOCTOR_ENABLED=1`.** В реальном `APP_ENV=production` этот канал сейчас возвращает 404, даже если HTTPS настроен.
+- Не изменять этот guard простым удалением: требуются отдельно проверенные настройки, ограничение доступа, согласие пациента, журналирование, соответствие требованиям к медицинским данным и тесты.
+- В текущей схеме агент не передаёт структурированные дозировки; для их добавления нужен согласованный совместимый контракт, не выдумывание содержания ответа.
+
+**Для текущего тестового VDS** `deploy/compose.test.yaml` передаёт флаги `AIDOCTOR_SITE_MULTI_DOCTOR_ENABLED`, `AIDOCTOR_DEMO_CALLBACK_ENABLED` и связанные токены через `.env.test` (секреты здесь не показываются). Запуск этого стека НЕ равен переходу на production-конфигурацию.
+
+## 7. PostgreSQL, модели, миграции, аудит
+
+### Главные сущности
+
+- Пользователи и связи: `User`, `DoctorPatient`, учётные данные Site Builder.
+- Клинические данные: `Patient`, `Encounter`, `HistoryEvent`, `MedicalObservation`, `ClinicalOrder`.
+- Тесты: каталог опросников, `QuestionnaireAssignment`, результаты и аудит.
+- AI: `AIRequest`, `AIDemoAnalysis`, `AIReviewCase`, `AIReviewVersion`, `AIReviewEvent`.
+- Аудит: существующие аудиты назначений, тестов и публичных записей; новая `ClinicalEntryAudit`.
+- Вложения: метаданные, AV/CDR/карантин, черновики evidence, хранение данных вне Git.
+
+### Новая миграция
+
+`backend/alembic/versions/workspace_s1_20261025_clinical_entry_audit.py`
+
+- `revision = workspace_s1_20261025`
+- `down_revision = ai_bridge_v2_20261024`
+- создаёт `clinical_entry_audit` и индексы `patient_id`, `actor_id`, `record_id`.
+- локально `alembic heads` показывает одну вершину.
+- Это **не** является подтверждением, что миграция фактически применится к действующему PostgreSQL без ошибок.
+
+### Инварианты
+
+1. До подтверждения врачом AI не создаёт утверждённое назначение.
+2. Ручная история и наблюдение сохраняются в одной транзакции с `ClinicalEntryAudit`.
+3. Чужой пациент/врач/визит не может быть использован простым изменением ID из браузера.
+4. Повторный approve не должен создавать дубли; должен соблюдаться уникальный ключ и версия.
+5. Старые данные не удаляются при импорте учебного пациента или кодовом деплое.
+6. Бэкап БД **до** миграции — обязательное условие выпуска.
+7. Ошибка отката Docker-контейнера не означает откат схемы PostgreSQL.
+
+## 8. Клинический кейс Авиандр / ГТР
+
+Синтетический источник содержит девять еженедельных точек 03.08.2026–28.09.2026, восемь недель наблюдения, записи врача и пациентки, лабораторный контроль, GAD-7/HAM-A/PHQ-9/ISI, учебный лекарственный план и КПТ. Итоги не подтверждают причинную эффективность лекарственного средства.
+
+- `backend/demo_cases/aviandr_gad_8weeks_v1.json` — структурированный источник.
+- `backend/scripts/seed_aviandr_case.py` — идемпотентное добавление с source key.
+- Флаг `--check` не пишет в БД.
+- Флаг `--apply` пишет только при `APP_ENV=test`, `postgresql+psycopg`, базе `aidoctor_synthetic` и существующем враче.
+- `--through-week N`: постепенно создать записи до недели N, от 0 до 8.
+- `--doctor`: выбрать существующего врача; по умолчанию `doctor_ui1`.
+- Импорт создаёт черновик препарата, а **не утверждённое назначение**.
+- Историческая дата события и дата фактического импорта различаются.
+- Повторный запуск не должен создавать дубли и не переписывает подтверждения врача.
+
+### Безопасная локальная проверка Windows / PowerShell
+
+Из корня проекта в активированном `.venv`:
+
+```powershell
+$env:PYTHONPATH = "$PWD;$PWD\backend"
+python -m backend.scripts.seed_aviandr_case --check
+```
+
+### Отложенный реальный импорт на VDS — только после полного релизного gate
+
+```bash
+cd /opt/aidoctor/git-checkout
+dc=(docker compose --env-file .env.test -f deploy/compose.test.yaml)
+"${dc[@]}" run --rm --no-deps app \
+  python -m backend.scripts.seed_aviandr_case --check
+```
+
+**Не запускайте `--apply` до прохождения миграции, проверки врача, восстановления из backup на отдельной БД и подтверждения согласованного сценария.** После разрешения можно использовать ту же команду с `--apply --through-week 8`. Seed не запускается автоматически каждым деплоем.
+
+## 9. Локальное окружение Windows / PyCharm
+
+Порядок безопасной предпроверки без записи в PostgreSQL:
+
+```powershell
+# Открыть PowerShell в корне AIDoctor и активировать .venv, если ещё не активна.
+git status --short
+git branch --show-current
+git diff --check
+
+# Секреты никогда не коммитить:
+git ls-files .env .env.test
+# Должен быть пустой вывод.
+
+python -m pip install -r requirements-dev.txt
+$env:PYTHONPATH = "$PWD;$PWD\backend"
+
+python -m compileall -q backend/app
+node --check backend/app/web/assets/app.js
+python -m alembic -c alembic.ini heads
+python -m ruff check backend
+python -m ruff format --check backend
+
+# Вспомогательный импорт без доступа к БД:
+python -m backend.scripts.seed_aviandr_case --check
+```
+
+**Обязательный независимый тест:** полный `pytest` на выделенной пустой PostgreSQL с правильным `TEST_DATABASE_URL`, не на базе с существующими пациентами. Полный CI предусмотрен отдельной ручной GitHub Actions задачей.
+
+### Ключевые переменные
+
+- `APP_ENV` — `local`, `test`, `production`.
+- `DATABASE_URL` — только `postgresql+psycopg://...`.
+- `ATTACHMENTS_DIR` — отдельное безопасное хранилище вложений.
+- `AIDOCTOR_SITE_MULTI_DOCTOR_ENABLED=1` — включает Site Builder v2 **только в test**.
+- `AIDOCTOR_SITE_BRIDGE_TOKEN`, `AIDOCTOR_SITE_GRANT_SIGNING_KEY` — секреты интеграции.
+- `AIDOCTOR_DEMO_CALLBACK_ENABLED` — старый демонстрационный канал; независим от нового review.
+- `AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS` — остался в некоторых Compose/CI-конфигурациях, но новая функция `enabled_for_patient()` его не использует; удалять как историческую переменную следует после проверки зависимостей.
+- `SAFETY_IN_APP_DELIVERY_ENABLED`, `SAFETY_FOLLOWUP_SCAN_ENABLED`, `ATTACHMENT_CLAMD_ENABLED` — поведение внутренних уведомлений/AV.
+
+Никогда не помещать реальные значения в README, тестовые примеры, ZIP/RAR, issue или Git. Пример `.env` не является готовым безопасным production-набором.
+
+## 10. GitHub Actions / CI/CD — как работает сейчас
+
+Файл `.github/workflows/ci.yml` **не изменён** сравнительно с исходным архивом.
+
+**Обычный `push`/PR**:
+1. `quality`: установка `requirements-dev.txt`, `ruff check backend`, `ruff format --check backend`, `node --check`, `compileall`.
+2. `autodeploy`: только при push в `refs/heads/master`, успешном `quality` и repository variable `VDS_AUTODEPLOY_ENABLED=true`.
+3. По SSH отправляется точный `GITHUB_SHA` для server-side деплой-команды, с host key verification.
+
+**Ручной `workflow_dispatch`**:
+1. `quality`.
+2. `full_tests` на PostgreSQL 16 с двумя изолированными CI-БД.
+3. `alembic upgrade head`, `alembic check`, `pytest backend/tests -q -rs`.
+
+**Важно:** `full_tests` сейчас **не является обязательной зависимостью `autodeploy`**. Поэтому успешный push может развернуть новый код без проверки новой миграции на полноценной PostgreSQL. Этот релизный риск нужно устранить процедурой (ручной workflow до merge/push) или отдельным изменением CI/CD после согласования.
+
+### Серверный автодеплой
+
+`deploy/ci/server_autodeploy.sh`:
+- выполняется root-owned wrapper'ом, принимает точный 40-символьный SHA;
+- блокирует конкурентный запуск;
+- требует чистый server-side Git checkout и ожидаемый remote;
+- проверяет том PostgreSQL и права `.env.test` (0600);
+- создаёт `pg_dump -Fc` в `/opt/aidoctor/backups`;
+- сохраняет тег предыдущего Docker-образа;
+- переключает checkout на SHA, проверяет Compose, собирает образ;
+- запускает `backend/scripts/run_vds_migrations.py`;
+- запускает app, проверяет `/api/v1/health` и `/app`;
+- контролирует отсутствие «утечки» специальных тестовых лекарственных черновиков в утверждённые;
+- проверяет **не менее трёх** синтетических пациентов;
+- в случае ошибки восстанавливает предыдущий Git SHA и Docker image.
+
+**Ограничение отката:** миграции БД не откатываются автоматически. Если ошибка случилась после миграции, прежний Docker-образ может оказаться несовместим с новой схемой. Не допускать несовместимых миграций без заранее проверенного плана восстановления.
+
+### Отдельный VDS / prod
+
+Документированный здесь compose: `deploy/compose.test.yaml`, база `aidoctor_synthetic`, `APP_ENV=test`; служба `app` привязана к `127.0.0.1:18080`, HTTPS обслуживается отдельным reverse proxy. Это публично доступный **тестовый** контур, даже если пользователи называют его «продакшном».
+
+**Настоящая production-конфигурация требует отдельной проверки:** Site Bridge v2 сегодня отключится при `APP_ENV=production` из-за `site_enabled()`. Простая смена env-флага не является безопасной миграцией на реальные данные.
+
+## 11. Подготовка безопасного релиза: PowerShell
+
+> Все команды до явно отмеченного шага `push` — неразрушающие для серверной БД.
+
+```powershell
+# 1. Код и утечки секретов
+git status --short
+git diff --check
+git ls-files .env .env.test
+git diff -- .github/workflows/ci.yml deploy/ci/server_autodeploy.sh `
+  deploy/compose.test.yaml deploy/Dockerfile.test
+git diff -- backend/app/api/routes/site_doctor_bridge.py `
+  backend/app/services/site_doctor_access.py
+
+# 2. Проверки
+python -m pip install -r requirements-dev.txt
+$env:PYTHONPATH = "$PWD;$PWD\backend"
+python -m ruff check backend
+python -m ruff format --check backend
+python -m compileall -q backend/app
+node --check backend/app/web/assets/app.js
+python -m alembic -c alembic.ini heads
+python -m backend.scripts.seed_aviandr_case --check
+
+# 3. Локальный unit-набор (без подмены полного CI)
+python -m pytest --noconftest -q `
+  backend/tests/test_workspace_s1_unit.py `
+  backend/tests/test_workspace_stage2_static.py `
+  backend/tests/test_aviandr_seed_unit.py `
+  backend/tests/test_ai_analysis_review_stage4.py `
+  backend/tests/test_workspace_stage5_static.py `
+  backend/tests/test_site_multi_doctor_unit.py `
+  backend/tests/test_site_builder_demo_bridge_unit.py `
+  backend/tests/test_ui4b_clinical_ui_unit.py `
+  backend/tests/test_ui6b_product_ui_unit.py
+```
+
+Далее запустить **ручной full_tests** через GitHub Actions `workflow_dispatch` на нужной ветке/коммите и дождаться положительного результата. Поскольку обычный push `master` может вызвать автодеплой, **не выполнять push в `master` ради «проверить»**, пока не готов релизный gate.
+
+## 12. VDS: предпроверки, backup, развёртывание, post-check
+
+### ТОЛЬКО чтение состояния до деплоя (Ubuntu)
+
+```bash
+cd /opt/aidoctor/git-checkout
+git status --short
+git rev-parse --short HEAD
+docker compose --env-file .env.test -f deploy/compose.test.yaml ps
+docker volume inspect aidoctor-vds-test_pg_synthetic >/dev/null
+curl -fsS http://127.0.0.1:18080/api/v1/health
+
+docker compose --env-file .env.test -f deploy/compose.test.yaml \
+  exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
+  -c 'SELECT version_num FROM alembic_version;'
+
+docker compose --env-file .env.test -f deploy/compose.test.yaml \
+  exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
+  -c 'SELECT count(*) FROM patients WHERE deleted_at IS NULL;'
+```
+
+Не печатать `.env.test` в терминал, логи CI и переписку.
+
+### Перед merge/push — резервирование и восстановление
+
+Автодеплой создаёт резервную копию перед миграцией, но надёжность требует **проверенного восстановления на отдельной, пустой БД**. Существующие контейнеры/тома не удалять и не выполнять `docker compose down -v`.
+
+Пример дополнительного создания backup (не запускает миграции):
+
+```bash
+cd /opt/aidoctor/git-checkout
+umask 077
+mkdir -p /opt/aidoctor/manual-backups
+docker compose --env-file .env.test -f deploy/compose.test.yaml \
+  exec -T postgres pg_dump -U aidoctor -d aidoctor_synthetic -Fc \
+  > "/opt/aidoctor/manual-backups/aidoctor_pre_upgrade_$(date -u +%Y%m%dT%H%M%SZ).dump"
+```
+
+Прежде чем применять этот шаг, убедиться в наличии свободного места и отдельной копии резервных файлов. `pg_restore` к существующей базе в этом README **не предлагается**, потому что это опасная операция, требующая индивидуального плана восстановления.
+
+### Само обновление
+
+1. Запускать только после всех пунктов release-gate.
+2. Убедиться, что `master` и серверный checkout не содержат незакоммиченных локальных изменений.
+3. Предпочтительный путь в существующей архитектуре — GitHub Actions `autodeploy` через утверждённый commit, а не ручное удаление/копирование контейнеров.
+4. Проверить GitHub Actions `quality` и `autodeploy`.
+5. На сервере сверить `last_deployed_sha` с требуемым SHA, service health, PostgreSQL revision и клинические инварианты.
+
+### После развёртывания (Ubuntu)
+
+```bash
+cd /opt/aidoctor/git-checkout
+git rev-parse HEAD
+sudo cat /opt/aidoctor/last_deployed_sha
+docker compose --env-file .env.test -f deploy/compose.test.yaml ps
+curl -fsS http://127.0.0.1:18080/api/v1/health
+curl -I --max-time 12 http://127.0.0.1:18080/app
+docker compose --env-file .env.test -f deploy/compose.test.yaml \
+  exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
+  -c 'SELECT version_num FROM alembic_version;'
+```
+
+Далее, только с синтетическими данными: войти врачом, открыть старую карту, открыть новую карту после импорта, проверить ручную запись/наблюдение, AIRequest, реальный MCP callback, review/preview/approve/reject, аудит, другие три пациента, повторный вход, статус сети, время ответа. Проверка MCP должна использовать **реально доступного существующего агента**, а не подставной ответ, и не должна публиковать токены.
+
+## 13. Безопасность и эксплуатационные инварианты
+
+- Доступ к пациенту зависит от роли и связи `DoctorPatient`, а не только от отображения UI.
+- `doctor_id` не берётся из пользовательского утверждения при Site Builder v2.
+- Секреты только через защищённый env/secret store; `.env`, `.env.test`, `.git`, `.venv`, дампы и медицинские данные не включать в релизный архив.
+- Публичный HTTPS и CI не означают выполненные требования защиты реальных медицинских данных.
+- Медицинские записи, назначения, история и тесты не удаляются при обновлении интерфейса.
+- Для DOCX/PDF сохранять существующий карантин/AV/CDR-поток; прямой импорт JSON кейса не равен проверке безопасности внешнего документа.
+- Медицинские исходы синтетического случая нельзя представлять как реальную клиническую эффективность.
+- Разделить дату медицинского события (`occurred_at`/`observed_at`) и дату фактической записи (`created_at`).
+- Время получения AI-анализа, врач, пациент, запрос и версия контекста должны отображаться и проверяться.
+
+## 14. Диагностика проблем
+
+| Симптом | Проверка / трактовка |
+|---|---|
+| `pytest: file ... not found` | Проверить распаковку нужного архивного этапа в корень проекта |
+| `ModuleNotFoundError: psycopg` | Установить `requirements-dev.txt`; не считать full suite пройденным |
+| `Ruff check` / `format --check` падает | Код не проходит CI; исправить нарушения до push |
+| `alembic heads` показывает несколько вершин | Остановить релиз, проверить граф миграций |
+| `MCP v2: 404 Интеграция Site выключена` | Проверить `APP_ENV=test` и `AIDOCTOR_SITE_MULTI_DOCTOR_ENABLED=1`; не снимать security guard вслепую |
+| `MCP: 401` | Проверить ротацию/срок/отзыв персонального ключа без раскрытия значения |
+| `MCP: 403` | Проверить связь врача с пациентом и `external_ai_consent` для несинтетического случая |
+| `MCP: 409` | Контекст/назначения изменились, нужен новый AI-запрос |
+| `AIReview: 409` | Конкурирующая версия, устаревший preview или изменённый клинический контекст |
+| Автодеплой не начинается | Проверить variable `VDS_AUTODEPLOY_ENABLED`, SHA и GitHub Actions |
+| Автодеплой остановлен на dirty checkout | На сервере есть локальные изменения; ничего не удалять автоматически |
+| Ошибка после миграции | Откат кода не откатывает БД; выполнять план восстановления из проверенного backup |
+| Пациентка Авиандр не видна | Это ожидаемо до выполнения отложенного `seed_aviandr_case --apply` |
+
+## 15. Production/release-gate — критерии готовности
+
+Все пункты должны быть отмечены **до** первого push в `master`, вызывающего автодеплой:
+
+- [ ] Исправлены и повторно проверены все ошибки Ruff (`check`, `format --check`).
+- [ ] Полный GitHub Actions `full_tests` с PostgreSQL 16 и `alembic upgrade head` успешен на конкретном SHA.
+- [ ] Граф миграций имеет одну вершину, обновление успешно на **копии** реальной схемы.
+- [ ] Проверено восстановление backup на отдельной БД; свободное место и время процедуры достаточны.
+- [ ] Предрелизный smoke на тестовом контуре: роли, пациенты, история, назначения, тесты, AI, MCP, audit.
+- [ ] Реальная персональная MCP-интеграция с действующим агентом проверена без изменения MCP-ключей.
+- [ ] В master не попадут `.env`, `.env.test`, `.git`, `.venv`, `.pytest_cache`, дампы, вложения.
+- [ ] Предыдущие пациенты и утверждённые назначения сохраняются, существующие API остаются совместимыми.
+- [ ] Проверены конфигурации, SSL, Caddy и Docker Compose целевого VDS (не только исходники).
+- [ ] Для обработки реальных клинических данных пройдены отдельные требования безопасности и правового соответствия; до этого используется синтетика.
+
+**Решение на дату аудита: NO-GO до выполнения указанных тестов и проверок.**
+
+## 16. Конфликтный анализ и направления интеграции
+
+**Конфликт владения данными:** ИИ не владелец медицинской карты; `ClinicalOrder`, `HistoryEvent`, `MedicalObservation` — единственные целевые медицинские сущности. Новый `ClinicalEntryAudit` хранит происхождение записи. До применения review сохраняется только предложение.
+
+**Конфликт контрактов:** старые MCP v1/v2 не менялись, но разрешение несинтетических случаев изменило политику доступа. Требуются тесты ключей, согласия, ролей и обратной совместимости. API дополняются, а не заменяются.
+
+**Конфликт эволюции:** много врачей — нельзя доверять клиентскому `doctor_id`; конкурентное утверждение — версия и блокировка; рост числа пациентов — проверка автодеплоя `>=3` вместо `=3`, а не искусственное ограничение.
+
+**Интеграция по направлениям:**
+1. Frontend: общий контекст пациента, честные статусы и защита от просроченных запросов.
+2. Backend: права, транзакционные границы, идемпотентность и аудит.
+3. DevOps: миграции, backup, rollback, healthcheck и отдельный ручной full CI.
+4. Security/MCP: персональные ключи, согласие, допустимость передачи медицинского контекста, отсутствие секретов в архивах.
+
+## 17. Статус разработки и следующий безопасный шаг
+
+Этапы 1–5 находятся в загруженном локальном проекте. Этап 6 не завершён. Финальный release ZIP, Ruff check/format, PostgreSQL-integrated full tests, живой E2E MCP, проверка реального VDS, внесение синтетической пациентки в БД ещё впереди.
+
+**Изменения следует сначала пропустить через release-gate**, затем разворачивать через текущий GitHub Actions. Только после успешной миграции и проверки действующих пациентов выполняется отложенный импорт `seed_aviandr_case --apply` в `aidoctor_synthetic`.
+
+---
+
+# Архив исходной документации (сохранён целиком)
+
+> Ниже — прежний README из обеих присланных версий; его текст сохранён для полной истории разработки. Некоторые упомянутые в нём старые «текущие состояния», флаги, планы и инструкции могут быть устаревшими. Для новой версии приоритет имеют разделы 0–17 выше.
+
 # AI-3 — постоянный доступ для нескольких врачей
 
 AI-2 **не требуется**. Этот инкремент добавляется поверх AI-1 и даёт

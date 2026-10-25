@@ -43,3 +43,18 @@ def require_encounter(session: Session, user: User, encounter_id: str) -> None:
     if patient_id is None:
         raise HTTPException(status_code=404, detail="Encounter not found")
     require_patient(session, user, patient_id)
+
+
+def require_active_doctor_patient(session: Session, user: User, patient_id: str) -> None:
+    """Защита ручных клинических записей, включая soft-deleted пациентов."""
+    if user.role != "doctor":
+        raise HTTPException(status_code=403, detail="Doctor role required")
+    require_patient(session, user, patient_id)
+    active = session.scalar(
+        select(Patient.id).where(
+            Patient.id == patient_id,
+            Patient.deleted_at.is_(None),
+        )
+    )
+    if active is None:
+        raise HTTPException(status_code=404, detail="Patient not found")

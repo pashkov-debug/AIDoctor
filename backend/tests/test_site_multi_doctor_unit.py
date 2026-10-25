@@ -65,7 +65,7 @@ def test_unlinked_patient_blocked(monkeypatch):
     assert err.value.status_code == 404
 
 
-def test_external_case_requires_flag_and_consent(monkeypatch):
+def test_external_case_requires_consent_not_extra_environment_flag(monkeypatch):
     doctor = SimpleNamespace(id="doc1")
     patient = SimpleNamespace(deleted_at=None, demographics_json={"synthetic": False})
     db = FakeSession(SimpleNamespace(id="r1"), patient)
@@ -73,11 +73,13 @@ def test_external_case_requires_flag_and_consent(monkeypatch):
         access.require_site_request(db, doctor, "p1", "r1")
     assert err.value.status_code == 403
 
+    # Даже дополнительный флаг не разрешает передачу без согласия.
     monkeypatch.setenv("AIDOCTOR_SITE_ALLOW_NON_SYNTHETIC", "1")
     db = FakeSession(SimpleNamespace(id="r1"), patient)
     with pytest.raises(HTTPException) as err:
         access.require_site_request(db, doctor, "p1", "r1")
     assert err.value.status_code == 403
+    monkeypatch.delenv("AIDOCTOR_SITE_ALLOW_NON_SYNTHETIC", raising=False)
 
     patient.demographics_json["external_ai_consent"] = True
     db = FakeSession(SimpleNamespace(id="r1"), patient)

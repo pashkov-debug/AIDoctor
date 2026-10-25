@@ -3,6 +3,8 @@
 // Токен только в оперативной памяти вкладки; после перезагрузки нужен новый вход.
 const state = { token: null, user: null, settings: null, view: "overview", clinicalPatient: null, clinicalPublications: [] };
 const $ = (id) => document.getElementById(id);
+// AI располагается непосредственно рядом с картой. ID и обработчики сохраняются.
+$("doctor-ai-column").append($("ai-view"));
 const roleNames = { doctor: "Врач", patient: "Пациент", admin: "Администратор" };
 
 class ApiError extends Error {
@@ -75,7 +77,8 @@ async function api(path, options = {}) {
   return response.status === 204 ? null : response.json();
 }
 
-// Навигация: ровно один подраздел открыт в правой области.
+// Навигация: врач работает со всеми разделами одной карты; пациент и администратор
+// сохраняют прежнее переключение разделов.
 const panelNames = {
   clinical: { visits: "Визиты", history: "Клиническая история",
     observations: "Наблюдения", orders: "Назначения",
@@ -109,17 +112,25 @@ function roleLayout(user) {
 
 function renderActivePanels(name) {
   document.querySelectorAll("[data-panel-group]").forEach((node) => {
-    const isActive = node.dataset.panelGroup === name
-      && node.dataset.panel === activePanels[name];
-    node.hidden = !isActive || (name === "clinical" && !state.clinicalPatient);
+    const selected = node.dataset.panelGroup === name
+      && (name === "clinical" || node.dataset.panel === activePanels[name]);
+    node.hidden = !selected || (name === "clinical" && !state.clinicalPatient);
   });
   $("clinical-no-patient").hidden = name !== "clinical" || Boolean(state.clinicalPatient);
+  $("patient-workspace-grid").hidden = name !== "clinical" || !state.clinicalPatient;
+  $("clinical-timeline").hidden = name !== "clinical" || !state.clinicalPatient;
+  $("ai-view").hidden = name !== "clinical" || !state.clinicalPatient;
   $("clinical-refresh").disabled = !state.clinicalPatient;
   $("clinical-open-ai").disabled = !state.clinicalPatient;
 }
 
 function showView(name, panel = null) {
   if (!state.user) return;
+  if (name === "ai") {
+    showView("clinical");
+    if (state.clinicalPatient) $("doctor-ai-column").scrollIntoView({behavior:"smooth",block:"start"});
+    return;
+  }
   const permitted = state.user.role === "doctor"
     ? ["overview", "settings", "clinical", "ai"]
     : state.user.role === "patient" ? ["patient"] : ["admin"];
@@ -129,7 +140,7 @@ function showView(name, panel = null) {
   }
   const previousView = state.view;
   state.view = name;
-  for (const view of ["overview", "patient", "settings", "clinical", "admin", "ai"]) {
+  for (const view of ["overview", "patient", "settings", "clinical", "admin"]) {
     $(view + "-view").hidden = view !== name;
   }
   renderActivePanels(name);
@@ -140,16 +151,23 @@ function showView(name, panel = null) {
     if (active) node.setAttribute("aria-current", "page");
     else node.removeAttribute("aria-current");
   });
-  const title = panelNames[name]?.[activePanels[name]] || (
-    {overview: "Пациенты", settings: "Настройки врача", ai: "Рабочая область AI"}[name]
-  );
+  const title = name === "clinical" ? "Рабочее место" :
+    panelNames[name]?.[activePanels[name]] || (
+      {overview: "Пациенты", settings: "Настройки врача"}[name]
+    );
   $("role-breadcrumb").textContent = `${roleNames[state.user.role]} / ${title}`;
   window.scrollTo(0, 0);
   if (name === "settings" && previousView !== name) loadSettings();
   if (name === "patient" && previousView !== name) loadPatientPortal();
   if (name === "admin" && previousView !== name) loadAdmin();
-  if (name === "clinical" && state.clinicalPatient && previousView !== name) loadClinical();
-  if (name === "ai" && previousView !== name) loadAIWorkspace();
+  if (name === "clinical" && state.clinicalPatient && previousView !== name) {
+    loadClinical();
+    loadAIWorkspace();
+  }
+  if (name === "clinical" && panel && previousView === name) {
+    const target = $(`clinical-${panel}-section`);
+    if (target) target.scrollIntoView({behavior:"smooth",block:"start"});
+  }
 }
 
 function chooseDoctorPatient(id, openClinical = false) {
@@ -168,12 +186,16 @@ function chooseDoctorPatient(id, openClinical = false) {
   if (openClinical) {
     const wasClinical = state.view === "clinical";
     showView("clinical", "visits");
-    if (changed && wasClinical && patient) loadClinical();
+    if (changed && wasClinical && patient) {
+      loadClinical();
+      loadAIWorkspace();
+    }
   } else if (changed && state.view === "clinical") {
     showView("clinical");
-    if (patient) loadClinical();
-  } else if (changed && state.view === "ai") {
-    loadAIWorkspace();
+    if (patient) {
+      loadClinical();
+      loadAIWorkspace();
+    }
   }
 }
 
@@ -204,6 +226,16 @@ function formatDate(value) {
   const date = new Date(value);
   return Number.isNaN(date.getTime())
     ? "Дата неизвестна" : date.toLocaleDateString("ru-RU");
+}
+function formatDateTime(value) {
+  const date = new Date(value);
+  return Number.isNaN(date.getTime())
+    ? "Время неизвестно"
+    : date.toLocaleString("ru-RU", {dateStyle:"short",timeStyle:"short"});
+}
+function clinicalDateTime(id) {
+  const value = $(id).value;
+  return value ? new Date(value).toISOString() : null;
 }
 
 async function loadPatientPortal() {
@@ -335,15 +367,50 @@ function showClinicalRecords(elementId, records, renderer, empty) {
 
 function renderClinicalVisits(items) {
   $("clinical-visits-count").textContent = String(items.length);
-  showClinicalRecords("clinical-encounters", items, (item) =>
-    clinicalLine(
+  const target = $("clinical-encounters");
+  target.replaceChildren();
+  const timeline = $("clinical-timeline-items");
+  timeline.replaceChildren();
+  const sorted = [...items].sort((a, b) => new Date(a.occurred_at) - new Date(b.occurred_at));
+  $("clinical-timeline-caption").textContent = sorted.length
+    ? `${sorted.length} визитов · ${formatDate(sorted[0].occurred_at)} — ${formatDate(sorted[sorted.length - 1].occurred_at)}`
+    : "Пока нет записанных визитов";
+  if (!items.length) {
+    target.textContent = "Визитов пока нет.";
+    timeline.textContent = "После записи визита здесь появится контрольная точка.";
+    return;
+  }
+  const nodes = new Map();
+  for (const item of items.slice(0,100)) {
+    const row = clinicalLine(
       `${formatDate(item.occurred_at)} · ${clinicalReasons[item.reason] || item.reason}`,
       (item.complaints || []).join("; ") || "Жалобы не внесены",
       `Статус: ${item.status === "draft" ? "Черновик" : item.status === "confirmed" ? "Подтверждён" : "Запись визита"}; ограничения: ${clinicalImpactLabels[item.functional_impact] || "не указаны"}` +
-      (item.clinician_question ? `; вопрос врача: ${item.clinician_question}` : ""),
-    ), "Визитов пока нет.");
+      (item.clinician_question ? `; заметки врача: ${item.clinician_question}` : ""),
+    );
+    row.classList.add("case-visit-entry");
+    nodes.set(item.id, row);
+    target.append(row);
+  }
+  if (items.length > 100) target.append(clinicalLine("Показано 100 визитов", "Остальные доступны в истории клинических событий."));
+  for (const item of sorted.slice(-30)) {
+    const marker = document.createElement("button");
+    marker.type = "button";
+    marker.className = "case-timeline-marker";
+    marker.textContent = formatDate(item.occurred_at);
+    marker.title = `${clinicalReasons[item.reason] || item.reason}. Перейти к записи визита`;
+    marker.addEventListener("click", () => {
+      const row = nodes.get(item.id);
+      if (!row) return;
+      timeline.querySelectorAll("button").forEach(node => node.classList.remove("selected"));
+      marker.classList.add("selected");
+      target.querySelectorAll(".case-visit-entry").forEach(node => node.classList.remove("selected"));
+      row.classList.add("selected");
+      row.scrollIntoView({behavior:"smooth",block:"center"});
+    });
+    timeline.append(marker);
+  }
 }
-
 const clinicalFactLabels = {
   text: "Описание", symptoms: "Симптомы", complaints: "Жалобы",
   duration: "Продолжительность", status: "Состояние", medication: "Препарат",
@@ -520,22 +587,29 @@ const observationNames = {
   subjective_sleep_quality: "Самооценка качества сна",
 };
 
-function renderClinicalObservations(context) {
-  const items = (context.items || []).filter((item) => item.kind === "observation")
-    .sort((a, b) => new Date(b.at) - new Date(a.at));
+function renderClinicalObservations(context, observationRecords = []) {
+  const stored = Array.isArray(observationRecords) ? observationRecords : [];
+  const existing = (context.items || []).filter(item => item.kind === "observation");
+  const items = stored.length ? stored.map(item => ({
+    id: item.id, at: item.observed_at, code: item.code, value: item.value,
+    source: item.code_system || "Запись наблюдения",
+  })) : existing.map(item => ({
+    at: item.at, code: item.payload?.code, value: item.payload?.value || {},
+    source: "Наблюдение в истории пациента",
+  }));
+  items.sort((a,b) => new Date(b.at) - new Date(a.at));
   $("clinical-observations-count").textContent = String(items.length);
   showClinicalRecords("clinical-observations", items, (item) => {
-    const values = item.payload?.value || {};
-    const score = typeof values.score === "number" && Number.isFinite(values.score)
-      ? `${values.score} из ${values.max ?? 10}` : "Значение не указано";
+    const values = item.value || {};
+    const hasScore = typeof values.score === "number" && Number.isFinite(values.score);
+    const score = hasScore ? `${values.score}${Number.isFinite(values.max) ? ` из ${values.max}` : ""}` : "";
+    const details = [score, values.description || values.text || ""].filter(Boolean).join(" · ") || "Описание не указано";
     return clinicalLine(
-      `${formatDate(item.at)} · ${observationNames[item.payload?.code] || item.payload?.code || "Наблюдение"}`,
-      `${score}. ${values.description || "Описание отсутствует"}`,
-      "Оценка самочувствия; не является диагностическим тестом",
+      `${formatDate(item.at)} · ${observationNames[item.code] || item.code || "Наблюдение"}`,
+      details, item.source,
     );
   }, "Наблюдений пока нет.");
 }
-
 function renderClinicalDigest(digest) {
   const counts = Object.entries(digest.counts_by_kind || {})
     .map(([kind, n]) => `${clinicalKinds[kind] || kind}: ${n}`).join(" · ");
@@ -554,40 +628,85 @@ function renderClinicalDigest(digest) {
   );
 }
 
+let clinicalLoadEpoch = 0;
+
 async function loadClinical() {
   const patient = state.clinicalPatient;
   if (!patient || state.user?.role !== "doctor") return;
+  const epoch = ++clinicalLoadEpoch;
   $("clinical-title").textContent = patient.alias;
   $("clinical-identity").textContent = `${patient.alias || "Пациент"} · история наблюдения`;
   $("clinical-publication-form").hidden = true;
-  showMessage("clinical-card-status", "Загрузка…");
-  ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context"].forEach((id) => {
+  showMessage("clinical-card-status", "Загрузка карты пациента…");
+  for (const id of ["clinical-encounters", "clinical-history", "clinical-observations",
+                    "clinical-context", "clinical-orders-list", "clinical-tests-list"]) {
     $(id).textContent = "Загрузка…";
-  });
-  try {
-    const [visits, history, context, digest, publications] = await Promise.all([
-      api(`/patients/${encodeURIComponent(patient.id)}/encounters`),
-      api(`/patients/${encodeURIComponent(patient.id)}/history-events`),
-      api(`/patients/${encodeURIComponent(patient.id)}/context`),
-      api(`/patients/${encodeURIComponent(patient.id)}/context/digest`),
-      api(`/patients/${encodeURIComponent(patient.id)}/clinical-publications`),
-    ]);
-    if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
-    state.clinicalPublications = publications;
-    renderClinicalVisits(visits.items || []);
-    renderClinicalHistory(history.items || []);
-    renderClinicalObservations(context);
-    renderClinicalDigest(digest);
-    await loadClinicalOrders(patient.id);
-    await loadClinicalTests(patient.id);
-    showMessage("clinical-card-status", "Данные обновлены", true);
-  } catch (error) {
-    if (state.view !== "clinical" || state.clinicalPatient?.id !== patient.id) return;
-    showMessage("clinical-card-status", `Ошибка загрузки: ${error.message}`);
-    ["clinical-encounters", "clinical-history", "clinical-observations", "clinical-context", "clinical-orders-list"].forEach((id) => {
-      $(id).textContent = "Данные недоступны.";
-    });
   }
+  $("clinical-timeline-items").replaceChildren();
+  $("clinical-timeline-caption").textContent = "Загрузка хронологии…";
+  $("clinical-test-select").replaceChildren();
+  for (const id of ["clinical-visits-count", "clinical-history-count",
+                    "clinical-observations-count", "clinical-orders-count",
+                    "clinical-tests-count"]) $(id).textContent = "…";
+
+  const paths = [
+    "encounters", "history-events", "context", "context/digest",
+    "clinical-publications", "observations",
+  ];
+  const results = await Promise.allSettled(paths.map(path =>
+    api(`/patients/${encodeURIComponent(patient.id)}/${path}`)
+  ));
+  if (epoch !== clinicalLoadEpoch || state.view !== "clinical" ||
+      state.clinicalPatient?.id !== patient.id) return;
+  const [visits, history, context, digest, publications, observations] = results.map(
+    result => result.status === "fulfilled" ? result.value : null
+  );
+  const failures = [];
+  const failed = (index, label) => {
+    const error = results[index].reason;
+    failures.push(`${label}: ${error?.message || "ошибка получения данных"}`);
+  };
+
+  if (visits) renderClinicalVisits(visits.items || []);
+  else {
+    failed(0, "Визиты");
+    $("clinical-encounters").textContent = "Не удалось загрузить визиты.";
+    $("clinical-timeline-caption").textContent = "Хронология временно недоступна.";
+    $("clinical-visits-count").textContent = "—";
+  }
+  if (history) renderClinicalHistory(history.items || []);
+  else {
+    failed(1, "История");
+    $("clinical-history").textContent = "Не удалось загрузить клиническую историю.";
+    $("clinical-history-count").textContent = "—";
+  }
+  if (context || observations) {
+    renderClinicalObservations(context || {items: []}, observations?.items || []);
+    if (!observations) failed(5, "Наблюдения");
+    if (!context) failed(2, "Контекст наблюдений");
+  } else {
+    failed(2, "Контекст наблюдений");
+    failed(5, "Наблюдения");
+    $("clinical-observations").textContent = "Не удалось загрузить наблюдения.";
+    $("clinical-observations-count").textContent = "—";
+  }
+  if (digest) renderClinicalDigest(digest);
+  else {
+    failed(3, "Сводка");
+    $("clinical-context").textContent = "Не удалось загрузить клиническую сводку.";
+  }
+  state.clinicalPublications = publications || [];
+  if (!publications) failed(4, "Публикации");
+
+  await Promise.all([
+    loadClinicalOrders(patient.id, epoch),
+    loadClinicalTests(patient.id, epoch),
+  ]);
+  if (epoch !== clinicalLoadEpoch || state.view !== "clinical" ||
+      state.clinicalPatient?.id !== patient.id) return;
+  showMessage("clinical-card-status", failures.length
+    ? `Часть разделов недоступна. ${failures.join("; ")}`
+    : "Карта пациента обновлена.", failures.length === 0);
 }
 
 document.querySelectorAll("[data-clinical-target]").forEach((button) => {
@@ -628,6 +747,77 @@ $("clinical-encounter-form").addEventListener("submit", async (event) => {
     await loadClinical();
   } catch (error) {
     showMessage("clinical-save-status", `Не сохранено: ${error.message}`);
+  } finally { button.disabled = false; }
+});
+
+// Запись врача: ручной ввод использует API этапа 1, не редактирует историю напрямую.
+$("clinical-history-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patientId = state.clinicalPatient?.id;
+  if (!patientId || state.user?.role !== "doctor") return;
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const text = $("clinical-history-text").value.trim();
+  if (!text) return;
+  button.disabled = true;
+  showMessage("clinical-history-entry-status", "Сохранение записи…");
+  try {
+    await api(`/patients/${encodeURIComponent(patientId)}/history-events`, {
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        category:$("clinical-history-category").value,
+        fact:{text},
+        occurred_at:clinicalDateTime("clinical-history-date"),
+      }),
+    });
+    if (state.clinicalPatient?.id !== patientId) return;
+    form.reset();
+    await loadClinical();
+    showMessage("clinical-history-entry-status", "Запись сохранена в истории пациента.", true);
+  } catch (error) {
+    showMessage("clinical-history-entry-status", `Запись не сохранена: ${error.message}`);
+  } finally { button.disabled = false; }
+});
+
+$("clinical-observation-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const patientId = state.clinicalPatient?.id;
+  if (!patientId || state.user?.role !== "doctor") return;
+  const form = event.currentTarget;
+  const button = form.querySelector('button[type="submit"]');
+  const rawScore = $("clinical-observation-score").value.trim();
+  const rawMax = $("clinical-observation-max").value.trim();
+  const description = $("clinical-observation-description").value.trim();
+  if (!rawScore && !description) {
+    showMessage("clinical-observation-entry-status", "Укажите числовое значение или описание.");
+    return;
+  }
+  if (rawMax && (!rawScore || Number(rawMax) < Number(rawScore))) {
+    showMessage("clinical-observation-entry-status", "Максимум шкалы должен быть не меньше значения.");
+    return;
+  }
+  const value = {};
+  if (rawScore) value.score = Number(rawScore);
+  if (rawMax) value.max = Number(rawMax);
+  if (description) value.description = description;
+  button.disabled = true;
+  showMessage("clinical-observation-entry-status", "Сохранение наблюдения…");
+  try {
+    await api(`/patients/${encodeURIComponent(patientId)}/observations`, {
+      method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({
+        code:$("clinical-observation-code").value.trim(),
+        code_system:null,
+        observed_at:clinicalDateTime("clinical-observation-date"),
+        value,
+      }),
+    });
+    if (state.clinicalPatient?.id !== patientId) return;
+    form.reset();
+    await loadClinical();
+    showMessage("clinical-observation-entry-status", "Наблюдение сохранено.", true);
+  } catch (error) {
+    showMessage("clinical-observation-entry-status", `Наблюдение не сохранено: ${error.message}`);
   } finally { button.disabled = false; }
 });
 
@@ -1076,6 +1266,16 @@ const clinicalPreviewLabels = {
   source_reference: "Источник",
   test_id: "Психологический тест",
   test_version: "Версия методики",
+  category: "Категория записи",
+  code: "Код наблюдения",
+  code_system: "Система кодирования",
+  title: "Гипотеза",
+  medication: "Препарат",
+  risk: "Описанный риск",
+  severity: "Уровень риска (оценка AI)",
+  confidence: "Уверенность AI (не вероятность диагноза)",
+  classification: "Статус",
+  priority: "Приоритет",
 };
 const demoTestNames = {
   DEMO_ANX_7: "Учебный опросник о тревожных симптомах",
@@ -1086,23 +1286,27 @@ function clinicalPreviewValue(key, value) {
   if (value === null || value === undefined || value === "") return "Не указано";
   if (key === "test_id") return demoTestNames[value] || "Учебный тест";
   if (Array.isArray(value)) return value.length ? value.join(", ") : "Не указано";
+  if (typeof value === "object") return JSON.stringify(value);
   return String(value);
 }
 
 function renderClinicalPreviewFields(data, original = null) {
   const list = document.createElement("dl");
   list.className = "clinical-preview-fields";
+  const visible = data.fact ? {...data, ...data.fact} : data.value ? {...data, ...data.value} : data;
+  const initial = original?.fact ? {...original, ...original.fact} :
+    original?.value ? {...original, ...original.value} : original;
   for (const [key, caption] of Object.entries(clinicalPreviewLabels)) {
-    if (!Object.hasOwn(data, key) && !Object.hasOwn(original || {}, key)) continue;
+    if (!Object.hasOwn(visible, key) && !Object.hasOwn(initial || {}, key)) continue;
     const row = document.createElement("div");
     row.className = "clinical-preview-field";
-    if (original && JSON.stringify(data[key] ?? null) !== JSON.stringify(original[key] ?? null)) {
+    if (initial && JSON.stringify(visible[key] ?? null) !== JSON.stringify(initial[key] ?? null)) {
       row.classList.add("clinical-preview-changed");
     }
     const term = document.createElement("dt");
     term.textContent = caption;
     const description = document.createElement("dd");
-    description.textContent = clinicalPreviewValue(key, data[key]);
+    description.textContent = clinicalPreviewValue(key, visible[key]);
     row.append(term, description);
     list.append(row);
   }
@@ -1153,17 +1357,21 @@ function orderRecord(item) {
   return row;
 }
 
-async function loadClinicalOrders(patientId) {
+async function loadClinicalOrders(patientId, clinicalEpoch = null) {
   $("clinical-orders-list").textContent = "Загрузка назначений…";
   try {
     const items = await api(orderEndpoint(patientId));
-    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId) return;
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
     $("clinical-orders-count").textContent = String(items.length);
     showClinicalRecords(
       "clinical-orders-list", items, orderRecord,
       "Назначений нет. Создайте черновик ниже.",
     );
   } catch (error) {
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
+    $("clinical-orders-count").textContent = "—";
     $("clinical-orders-list").textContent = `Назначения недоступны: ${error.message}`;
   }
 }
@@ -1294,14 +1502,15 @@ function testDescription(item) {
   return `${item.title} · ${testStatusName(item.status)} · ${formatDate(item.created_at)}`;
 }
 
-async function loadClinicalTests(patientId) {
+async function loadClinicalTests(patientId, clinicalEpoch = null) {
   const target = $("clinical-tests-list");
   target.textContent = "Загрузка тестов…";
   try {
     const [catalog, items] = await Promise.all([
       fetchTestCatalog(), api(`/patients/${encodeURIComponent(patientId)}/questionnaire-assignments`),
     ]);
-    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId) return;
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
     const select = $("clinical-test-select");
     select.replaceChildren();
     catalog.forEach((item) => {
@@ -1382,6 +1591,9 @@ async function loadClinicalTests(patientId) {
       target.append(result);
     });
   } catch (error) {
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
+    $("clinical-tests-count").textContent = "—";
     target.textContent = `Не удалось загрузить тесты: ${error.message}`;
   }
 }
@@ -1545,25 +1757,26 @@ async function loadAIWorkspace() {
   showMessage("ai-workspace-status", "Получение доступных пациентов…");
   try {
     const data = await api("/patients");
-    if (epoch !== aiLoadEpoch || state.view !== "ai") return;
+    if (epoch !== aiLoadEpoch || state.view !== "clinical") return;
     const select = $("ai-patient-select");
-    const previous = select.value || state.clinicalPatient?.id;
-    select.replaceChildren();
+    const patientId = state.clinicalPatient?.id;
     const patients = Array.isArray(data.items) ? data.items : [];
-    for (const patient of patients) {
-      const option = document.createElement("option");
-      option.value = patient.id;
-      option.textContent = patient.alias || patient.id;
-      select.append(option);
-    }
-    if (patients.some((patient) => patient.id === previous)) select.value = previous;
-    if (!patients.length) {
-      showMessage("ai-workspace-status", "Нет доступных пациентов.");
+    const patient = patients.find(item => item.id === patientId);
+    select.replaceChildren();
+    if (!patient) {
+      showMessage("ai-workspace-status", "Выбранная карта больше недоступна врачу.");
+      $("ai-review-workspace").hidden = true;
       return;
     }
+    const option = document.createElement("option");
+    option.value = patient.id;
+    option.textContent = patient.alias || patient.id;
+    select.append(option);
+    select.value = patient.id;
+    // AI использует только пациента открытой карты, независимо от истории запросов.
     await loadAIForPatient();
   } catch (error) {
-    if (epoch === aiLoadEpoch) showMessage("ai-workspace-status", error.message);
+    if (epoch === aiLoadEpoch && state.view === "clinical") showMessage("ai-workspace-status", error.message);
   }
 }
 
@@ -1574,12 +1787,10 @@ async function loadAIForPatient() {
   aiPendingKey = null;
   $("ai-files").replaceChildren();
   $("ai-requests").replaceChildren();
+  $("ai-response").textContent = "Выберите сохранённый запрос, чтобы просмотреть ответ агента.";
   if (!patientId || state.user?.role !== "doctor") return;
-  state.clinicalPatient = {
-    id: patientId, alias: $("ai-patient-select").selectedOptions[0]?.textContent || patientId,
-  };
-  // Единый выбранный пациент для клинических экранов и области AI.
-  $("sidebar-patient-select").value = patientId;
+  // Пациента выбирает только общая карта. AI не может подменить выбор.
+  if (state.clinicalPatient?.id !== patientId) return;
   showMessage("ai-workspace-status", "Загрузка рабочей области…");
   try {
     const [info, files, requests] = await Promise.all([
@@ -1587,19 +1798,16 @@ async function loadAIForPatient() {
       api(`/patients/${encodeURIComponent(patientId)}/attachments`),
       api(`/patients/${encodeURIComponent(patientId)}/ai-requests`),
     ]);
-    if (epoch !== aiLoadEpoch || state.view !== "ai" ||
+    if (epoch !== aiLoadEpoch || state.view !== "clinical" ||
+        state.clinicalPatient?.id !== patientId ||
         $("ai-patient-select").value !== patientId) return;
-    if (info.dispatch_enabled || info.llm_connected) {
-      showMessage("ai-workspace-status", "Режим интеграции изменился — обновите страницу.");
-      return;
-    }
     syntheticReviewEnabled = info.synthetic_review_enabled === true;
     $("ai-review-workspace").hidden = !syntheticReviewEnabled;
     renderAIFiles(files);
     renderAIRequests(requests);
     showMessage(
       "ai-workspace-status",
-      "Автоматический вызов AI из кабинета не подключён. Внешний черновик можно просмотреть в истории запросов.",
+      "Рабочая область синхронизирована с картой пациента. Ответы внешнего агента доступны в истории запросов.",
       true
     );
   } catch (error) {
@@ -1631,7 +1839,7 @@ function renderAIFiles(files) {
     title.textContent = file.filename;
     label.append(checkbox, title);
     const status = document.createElement("small");
-    status.textContent = "Документ не передан AI. Проверка содержимого для анализа не подключена.";
+    status.textContent = "Файл сохранён. Содержимое не включено в AI-контекст без проверки.";
     row.append(label, status);
     target.append(row);
   }
@@ -1644,28 +1852,29 @@ function renderAIRequests(requests) {
     target.textContent = "Подготовленных запросов ещё нет.";
     return;
   }
-  for (const item of requests) {
+  for (const item of [...requests].sort((a,b) => new Date(b.created_at) - new Date(a.created_at))) {
     const row = document.createElement("div");
     row.className = "admin-entry";
     const detail = document.createElement("div");
     const title = document.createElement("strong");
-    title.textContent = `${formatDate(item.created_at)} · Подготовлен, не отправлен`;
+    title.textContent = `${formatDateTime(item.created_at)} · Запрос врача`;
     const question = document.createElement("p");
     question.textContent = item.question;
     const meta = document.createElement("small");
     const attachmentCount = item.attachment_manifest?.length || 0;
     meta.textContent = attachmentCount
-      ? `Прикреплено документов: ${attachmentCount} · содержимое не передавалось AI`
-      : "Ожидает AI-анализа";
+      ? `Прикреплено документов: ${attachmentCount} · содержимое исключено из контекста до проверки`
+      : `ID запроса: ${item.id}`;
     detail.append(title, question, meta);
     const analysisButton = document.createElement("button");
     analysisButton.type = "button";
     analysisButton.className = "button subtle";
-    analysisButton.textContent = "Посмотреть черновик AI-анализа";
+    analysisButton.textContent = "Открыть сохранённый AI-анализ";
     const analysisOutput = document.createElement("div");
     analysisOutput.className = "ai-analysis-result";
     analysisButton.addEventListener("click", async () => {
-      if (state.user?.role !== "doctor") return;
+      if (state.user?.role !== "doctor" || state.clinicalPatient?.id !== item.patient_id) return;
+      const epoch = aiLoadEpoch;
       analysisButton.disabled = true;
       analysisOutput.replaceChildren();
       try {
@@ -1673,13 +1882,17 @@ function renderAIRequests(requests) {
           `/patients/${encodeURIComponent(item.patient_id)}` +
           `/ai-requests/${encodeURIComponent(item.id)}/demo-analysis`
         );
+        if (epoch !== aiLoadEpoch || state.clinicalPatient?.id !== item.patient_id) return;
         const analysis = result.analysis;
         const heading = document.createElement("strong");
-        heading.textContent = "Черновик AI — требуется врачебная проверка. Не назначение.";
+        heading.textContent = `Сохранённый тестовый AI-анализ · ${formatDateTime(result.submitted_at)} · требуется проверка врача`;
         analysisOutput.append(heading);
         const summary = document.createElement("p");
         summary.textContent = analysis.summary;
         analysisOutput.append(summary);
+        const provenance = document.createElement("small");
+        provenance.textContent = `Пациент: ${item.patient_id} · Врач: ${item.doctor_id} · запрос: ${item.id}`;
+        analysisOutput.append(provenance);
         const section = (label, entries) => {
           if (!Array.isArray(entries) || !entries.length) return;
           const head = document.createElement("strong");
@@ -1699,8 +1912,13 @@ function renderAIRequests(requests) {
         section("Предлагаемые обследования", analysis.suggested_examinations);
         section("Источники (проверить самостоятельно)", analysis.sources);
         section("Ограничения анализа", analysis.limitations);
+        $("ai-response").replaceChildren(analysisOutput.cloneNode(true));
       } catch (error) {
-        analysisOutput.textContent = `Черновик недоступен: ${error.message}`;
+        if (epoch === aiLoadEpoch && state.clinicalPatient?.id === item.patient_id) {
+          analysisOutput.textContent = error.status === 404
+            ? "Для этого запроса пока нет сохранённого AI-ответа."
+            : `Не удалось получить AI-ответ: ${error.message}`;
+        }
       } finally {
         analysisButton.disabled = false;
       }
@@ -1710,7 +1928,7 @@ function renderAIRequests(requests) {
       const open = document.createElement("button");
       open.type = "button";
       open.className = "button subtle";
-      open.textContent = "Открыть тренировочное согласование";
+      open.textContent = "Проверить предложения";
       open.addEventListener("click", () => openAIReview(item.id));
       row.append(open);
     }
@@ -1719,11 +1937,8 @@ function renderAIRequests(requests) {
   }
 }
 
-$("clinical-open-ai").addEventListener("click", () => showView("ai"));
-$("ai-patient-select").addEventListener("change", () => {
-  $("ai-question").value = "";
-  $("ai-upload").value = "";
-  loadAIForPatient();
+$("clinical-open-ai").addEventListener("click", () => {
+  $("doctor-ai-column").scrollIntoView({behavior:"smooth",block:"start"});
 });
 $("ai-question").addEventListener("input", () => { aiPendingKey = null; });
 $("ai-refresh-files").addEventListener("click", () => loadAIForPatient());
@@ -1742,13 +1957,15 @@ $("ai-upload-button").addEventListener("click", async () => {
     await api(`/patients/${encodeURIComponent(patientId)}/attachments`, {
       method: "POST", body: data,
     });
-    if (state.user?.role === "doctor" && $("ai-patient-select").value === patientId) {
+    if (state.user?.role === "doctor" && state.clinicalPatient?.id === patientId) {
       $("ai-upload").value = "";
       await loadAIForPatient();
-      showMessage("ai-workspace-status", "Документ загружен. Его содержимое пока недоступно для AI-анализа.", true);
+      if (state.clinicalPatient?.id === patientId)
+        showMessage("ai-workspace-status", "Документ сохранён. Для AI-контекста содержимое требует отдельной проверки.", true);
     }
   } catch (error) {
-    showMessage("ai-workspace-status", `Ошибка вложения: ${error.message}`);
+    if (state.clinicalPatient?.id === patientId)
+      showMessage("ai-workspace-status", `Ошибка вложения: ${error.message}`);
   } finally {
     button.disabled = false;
   }
@@ -1782,17 +1999,18 @@ $("ai-request-form").addEventListener("submit", async (event) => {
       aiPendingKey = null;
       await loadAIForPatient();
       showMessage("ai-workspace-status",
-        `Запрос ${result.id} сохранён. AI не вызывался, назначения не создавались.`, true);
+        `Запрос ${result.id} сохранён с контекстом пациента. Для получения анализа используйте подключённого агента.`, true);
     }
   } catch (error) {
-    showMessage("ai-workspace-status", `Не удалось сохранить запрос: ${error.message}`);
+    if (state.clinicalPatient?.id === patientId)
+      showMessage("ai-workspace-status", `Не удалось сохранить запрос: ${error.message}`);
   } finally {
     button.disabled = false;
   }
 });
 
 
-// UI-4B — локальное согласование строго учебных структурированных предложений.
+// Врачебная проверка сохранённых структурированных предложений.
 let reviewRequestId = null;
 let reviewDraft = null;
 let reviewPreview = null;
@@ -1809,6 +2027,8 @@ function clearAIReview() {
   $("ai-review-preview-result").replaceChildren();
   $("ai-review-request-label").textContent = "Выберите подготовленный запрос в истории ниже.";
   $("ai-edit-reason").value = "";
+  $("ai-clinician-order-details").hidden = true;
+  $("ai-clinician-order-form").reset();
   for (const id of ["ai-demo-create", "ai-draft-revise", "ai-review-reject",
                     "ai-review-preview", "ai-review-approve"]) $(id).disabled = true;
   showMessage("ai-review-status", "");
@@ -1819,34 +2039,6 @@ function reviewPath(suffix = "") {
     `/ai-requests/${encodeURIComponent(reviewRequestId)}/review${suffix}`;
 }
 
-function makeDemoProposals() {
-  const sample = (name, kind, key) => ({
-    id: crypto.randomUUID(),
-    kind,
-    alternative_group: kind === "medication" ? "учебные_альтернативы_1" : null,
-    evidence_status: "unverified_demo",
-    order: {
-      request_key: key, kind, name, indication: "Учебная демонстрация — не лечение",
-      rationale: "Вымышленный учебный пример, без медицинской доказательности",
-      source_reference: "Тренировочный сценарий, не клинический источник",
-      ...(kind === "medication" ? {
-        active_ingredient: "Условное вещество", dosage_form: "Учебная форма",
-        strength: "Условная", dose_value: "1", dose_unit: "условная единица",
-        route: "Учебный способ", frequency_per_day: 1,
-        times_local: ["09:00"], timezone: "Europe/Moscow",
-        start_date: new Date().toISOString().slice(0,10), duration_days: 1,
-      } : {examination_details: "Условное учебное обследование"}),
-    },
-  });
-  const a = sample("Учебный препарат А (вымышленный)", "medication", crypto.randomUUID());
-  const b = sample("Учебный препарат Б (альтернатива А)", "medication", crypto.randomUUID());
-  const c = sample("Учебное обследование", "examination", crypto.randomUUID());
-  return [
-    a, b, c,
-    {id: crypto.randomUUID(), kind: "demo_test", test_id: "DEMO_ANX_7",
-     evidence_status: "unverified_demo", alternative_group: null},
-  ];
-}
 
 const reviewFieldLabels = {
   name: "Название", active_ingredient: "Действующее вещество",
@@ -1874,6 +2066,23 @@ function readEditedOrder(card, original) {
   return data;
 }
 
+function readEditedHistory(card, original) {
+  const history = structuredClone(original);
+  for (const input of card.querySelectorAll("[data-fact-field]")) {
+    history.fact[input.dataset.factField] = input.value.trim();
+  }
+  return history;
+}
+
+function readEditedObservation(card, original) {
+  const observation = structuredClone(original);
+  const code = card.querySelector("[data-observation-code]");
+  const value = card.querySelector("[data-observation-value]");
+  if (code) observation.code = code.value.trim();
+  if (value) observation.value = JSON.parse(value.value);
+  return observation;
+}
+
 function collectAISelections() {
   const selected = [];
   for (const item of reviewDraft.proposals) {
@@ -1882,6 +2091,8 @@ function collectAISelections() {
     if (!card?.querySelector(".ai-select-proposal").checked) continue;
     const entry = {proposal_id: item.id};
     if (item.order) entry.order = readEditedOrder(card, item.order);
+    if (item.history) entry.history = readEditedHistory(card, item.history);
+    if (item.observation) entry.observation = readEditedObservation(card, item.observation);
     selected.push(entry);
   }
   if (!selected.length) throw new Error("Выберите хотя бы одно предложение.");
@@ -1909,7 +2120,10 @@ function renderReviewDraft() {
     : "Для выбранного запроса пока нет предложений.";
   $("ai-demo-create").disabled = !syntheticReviewEnabled || !reviewRequestId || Boolean(reviewDraft);
   const editing = reviewDraft?.status === "open";
-  for (const id of ["ai-draft-revise", "ai-review-reject", "ai-review-preview"]) $(id).disabled = !editing;
+  for (const id of ["ai-review-reject", "ai-review-preview"]) $(id).disabled = !editing;
+  $("ai-draft-revise").hidden = reviewDraft?.origin !== "synthetic_manual_test";
+  $("ai-draft-revise").disabled = !editing || reviewDraft?.origin !== "synthetic_manual_test";
+  $("ai-clinician-order-details").hidden = !editing || reviewDraft?.origin !== "site_builder_analysis_v1";
   if (!reviewDraft) return;
   const history = document.createElement("div");
   history.className = "actions";
@@ -1946,7 +2160,7 @@ function renderReviewDraft() {
   if (reviewDraft.approved_result) {
     const summary = document.createElement("p");
     summary.textContent = `Подтверждено: ${reviewDraft.approved_result.records.length} записей. ` +
-      "Каждая запись доступна в соответствующем разделе. Учебный пример, не ответ AI.";
+      "Каждая запись доступна в соответствующем разделе карты пациента.";
     target.append(summary);
   }
   for (const proposal of reviewDraft.proposals) {
@@ -1958,10 +2172,24 @@ function renderReviewDraft() {
     choice.type = "checkbox";
     choice.className = "ai-select-proposal";
     choice.disabled = !editing;
+    const kindTitles = {
+      demo_test: "Тест", medication: "Препарат", examination: "Обследование",
+      history_event: "Клиническая заметка", observation: "Наблюдение",
+    };
+    const proposalTitle = proposal.order?.name || proposal.test_id ||
+      proposal.history?.fact?.title || proposal.history?.fact?.medication ||
+      proposal.observation?.code || "Предложение";
     label.append(choice, document.createTextNode(
-      ` ${proposal.order?.name || proposal.test_id} · ${proposal.kind === "demo_test" ?
-        "Учебный тест" : proposal.kind === "medication" ? "Препарат" : "Обследование"}`
+      ` Принять: ${proposalTitle} · ${kindTitles[proposal.kind] || proposal.kind}`
     ));
+    if (proposal.source_locator) {
+      const provenance = document.createElement("small");
+      provenance.className = "clinical-hint";
+      provenance.textContent = proposal.evidence_status === "clinician_added"
+        ? "Источник: вручную добавленное врачом предложение, не из AI."
+        : `Источник: сохранённый AI-анализ, ${proposal.source_locator}. До проверки врача не является клиническим фактом.`;
+      card.append(provenance);
+    }
     card.append(label);
     if (proposal.alternative_group) {
       const small = document.createElement("p");
@@ -1989,15 +2217,56 @@ function renderReviewDraft() {
         input.dataset.orderField = name;
         input.value = Array.isArray(proposal.order[name])
           ? proposal.order[name].join(", ") : (proposal.order[name] ?? "");
-        input.disabled = !editing;
+        input.disabled = !editing || (name === "source_reference" &&
+          reviewDraft.origin === "site_builder_analysis_v1");
         field.append(input);
         fields.append(field);
       }
       details.append(fields);
       card.append(details);
+    } else if (proposal.history) {
+      const details = document.createElement("details");
+      details.open = false;
+      const summary = document.createElement("summary");
+      summary.textContent = "Сведения и редактирование врачом";
+      details.append(summary);
+      const fields = document.createElement("div");
+      fields.className = "ai-proposal-fields";
+      for (const [key, value] of Object.entries(proposal.history.fact)) {
+        const field = document.createElement("label");
+        field.textContent = key;
+        const input = document.createElement(typeof value === "string" && value.length > 100 ?
+          "textarea" : "input");
+        if (typeof value === "string" && !["classification","confidence","severity"].includes(key)) {
+          input.dataset.factField = key;
+        } else {
+          input.disabled = true;
+        }
+        input.value = String(value);
+        input.disabled ||= !editing;
+        field.append(input);
+        fields.append(field);
+      }
+      details.append(fields);
+      card.append(details);
+    } else if (proposal.observation) {
+      const details = document.createElement("details");
+      const summary = document.createElement("summary");
+      summary.textContent = "Показатель и значение";
+      details.append(summary);
+      const code = document.createElement("input");
+      code.dataset.observationCode = "";
+      code.value = proposal.observation.code;
+      code.disabled = !editing;
+      const value = document.createElement("textarea");
+      value.dataset.observationValue = "";
+      value.value = JSON.stringify(proposal.observation.value, null, 2);
+      value.disabled = !editing;
+      details.append(code, value);
+      card.append(details);
     } else {
       const note = document.createElement("small");
-      note.textContent = "Учебный опросник из встроенного каталога.";
+      note.textContent = "Опросник из каталога тестов.";
       card.append(note);
     }
     card.addEventListener("input", invalidateAIReviewPreview);
@@ -2007,46 +2276,102 @@ function renderReviewDraft() {
 }
 
 async function openAIReview(requestId) {
+  // Очистка предыдущего запроса исключает показ старых предложений во время загрузки.
+  clearAIReview();
   reviewRequestId = requestId;
-  reviewDraft = null;
-  reviewPreview = null;
-  reviewSelections = null;
   const epoch = ++reviewEpoch;
-  showMessage("ai-review-status", "Загрузка учебного черновика…");
+  showMessage("ai-review-status", "Загрузка предложений на проверку…");
   try {
     const data = await api(reviewPath());
     if (epoch !== reviewEpoch) return;
     reviewDraft = data;
-    showMessage("ai-review-status", "Загружен учебный черновик. Это не ответ модели.", true);
+    showMessage("ai-review-status", data.origin === "site_builder_analysis_v1"
+      ? "Предложения связаны с сохранённым AI-ответом. Врач должен проверить каждый пункт."
+      : "Загружен ранее созданный ручной тестовый черновик.", true);
   } catch (error) {
     if (epoch !== reviewEpoch) return;
     if (error.status !== 404) showMessage("ai-review-status", error.message);
-    else showMessage("ai-review-status", "Предложений нет. В тренировочном режиме можно создать пример.");
+    else showMessage("ai-review-status", "Предложений пока нет. Можно сформировать их из сохранённого AI-анализа.");
   }
   if (epoch === reviewEpoch) renderReviewDraft();
 }
 
 $("ai-demo-create").addEventListener("click", async () => {
   if (!syntheticReviewEnabled || !reviewRequestId) return;
+  const requestId = reviewRequestId;
+  const patientId = $("ai-patient-select").value;
+  const epoch = reviewEpoch;
+  const button = $("ai-demo-create");
+  button.disabled = true;
   try {
-    const data = await api(reviewPath(), {
-      method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({origin: "synthetic_manual_test", proposals: makeDemoProposals()}),
-    });
+    const data = await api(reviewPath("/from-analysis"), {method:"POST"});
+    if (epoch !== reviewEpoch || reviewRequestId !== requestId ||
+        patientId !== $("ai-patient-select").value) return;
     reviewDraft = data;
     renderReviewDraft();
-    showMessage("ai-review-status", "Тренировочный черновик создан. AI-анализ не выполнялся.", true);
-  } catch (error) {showMessage("ai-review-status", error.message);}
+    showMessage("ai-review-status",
+      "Предложения извлечены из сохранённого AI-ответа. Дозировок в действующем формате ответа нет.", true);
+  } catch (error) {
+    if (epoch === reviewEpoch) showMessage("ai-review-status", error.message);
+  } finally {
+    if (epoch === reviewEpoch) button.disabled = Boolean(reviewDraft);
+  }
+});
+
+$("ai-clinician-order-form").addEventListener("submit", async (event) => {
+  event.preventDefault();
+  if (reviewDraft?.status !== "open" ||
+      reviewDraft.origin !== "site_builder_analysis_v1") return;
+  const requestId = reviewRequestId;
+  const epoch = reviewEpoch;
+  const form = event.currentTarget;
+  const fields = new FormData(form);
+  const text = (name) => String(fields.get(name) || "").trim();
+  const button = form.querySelector('button[type="submit"]');
+  button.disabled = true;
+  try {
+    const order = {
+      request_key: crypto.randomUUID(),
+      kind: "medication",
+      name: text("name"), active_ingredient: text("active_ingredient"),
+      dosage_form: text("dosage_form"), strength: text("strength"),
+      dose_value: text("dose_value"), dose_unit: text("dose_unit"),
+      route: text("route"), frequency_per_day: Number(text("frequency_per_day")),
+      times_local: text("times_local").split(",").map(x => x.trim()),
+      timezone: text("timezone"), start_date: text("start_date"),
+      duration_days: Number(text("duration_days")),
+      administration_notes: text("administration_notes") || null,
+      indication: text("indication"), contraindications: text("contraindications") || null,
+      rationale: text("rationale"), source_reference: text("source_reference"),
+    };
+    const result = await api(reviewPath("/clinician-medication"), {
+      method:"POST", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({expected_version:reviewDraft.version, order}),
+    });
+    if (epoch !== reviewEpoch || requestId !== reviewRequestId) return;
+    reviewDraft = result;
+    form.reset();
+    renderReviewDraft();
+    showMessage("ai-review-status",
+      "Врачебное лекарственное предложение добавлено. Оно не является ответом AI и ещё не назначено.", true);
+  } catch (error) {
+    if (epoch === reviewEpoch) showMessage("ai-review-status", error.message);
+  } finally {
+    button.disabled = false;
+  }
 });
 
 $("ai-draft-revise").addEventListener("click", async () => {
-  if (reviewDraft?.status !== "open") return;
+  if (reviewDraft?.status !== "open" ||
+      reviewDraft.origin !== "synthetic_manual_test") return;
   try {
     const proposals = reviewDraft.proposals.map(item => {
-      if (!item.order) return item;
       const card = [...$("ai-proposal-cards").querySelectorAll("[data-proposal-id]")]
         .find(x => x.dataset.proposalId === item.id);
-      return {...item, order: readEditedOrder(card, item.order)};
+      if (item.order) return {...item, order: readEditedOrder(card, item.order)};
+      if (item.history) return {...item, history: readEditedHistory(card, item.history)};
+      if (item.observation) return {...item, observation: readEditedObservation(card, item.observation)};
+      return item;
     });
     const data = await api(reviewPath(), {
       method: "POST", headers: {"Content-Type":"application/json"},
@@ -2061,38 +2386,47 @@ $("ai-draft-revise").addEventListener("click", async () => {
 });
 
 $("ai-review-preview").addEventListener("click", async () => {
+  const epoch = reviewEpoch;
+  const requestId = reviewRequestId;
+  const patientId = $("ai-patient-select").value;
   try {
     const selection = collectAISelections();
     const data = await api(reviewPath("/preview"), {
       method: "POST", headers: {"Content-Type":"application/json"},
       body: JSON.stringify(selection),
     });
+    if (epoch !== reviewEpoch || requestId !== reviewRequestId ||
+        patientId !== $("ai-patient-select").value) return;
     reviewSelections = selection;
     reviewPreview = data;
     const output = $("ai-review-preview-result");
     output.replaceChildren();
     const title = document.createElement("h3");
-    title.textContent = `Проверьте выбранные назначения (${data.changes.length})`;
+    title.textContent = `Проверьте выбранные изменения (${data.changes.length})`;
     output.append(title);
     const explanation = document.createElement("p");
     explanation.className = "clinical-hint";
     explanation.textContent =
-      "После вашего подтверждения выбранные назначения появятся у пациента. " +
-      "Неотмеченные предложения останутся только в истории рассмотрения.";
+      "После подтверждения изменится только выбранное. " +
+      "Неотмеченные предложения останутся в журнале без изменений карты.";
     output.append(explanation);
     for (const change of data.changes) {
       const section = document.createElement("section");
       section.className = "ai-preview-item";
       const heading = document.createElement("h4");
-      heading.textContent = `${change.table === "questionnaire_assignments" ?
-        "Психологический тест" : change.final?.kind === "medication" ? "Препарат" : "Обследование"}: ` +
-        `${change.final?.name || clinicalPreviewValue("test_id", change.final?.test_id)}`;
+      const label = {
+        questionnaire_assignments: "Тест", clinical_orders: "Назначение",
+        history_events: "Клиническая заметка", medical_observations: "Наблюдение",
+      }[change.table] || "Изменение";
+      heading.textContent = `${label}: ${change.final?.name ||
+        change.final?.fact?.title || change.final?.fact?.medication ||
+        change.final?.code || change.final?.test_id || ""}`;
       section.append(heading);
       const status = document.createElement("p");
       status.className = "clinical-hint";
       status.textContent = change.edited
         ? "Врач внёс изменения. Изменённые поля отмечены."
-        : "Без изменений по сравнению с учебным предложением.";
+        : "Без изменений по сравнению с исходным предложением.";
       section.append(status);
 
       const proposed = document.createElement("details");
@@ -2102,13 +2436,14 @@ $("ai-review-preview").addEventListener("click", async () => {
       section.append(proposed);
 
       const finalTitle = document.createElement("h5");
-      finalTitle.textContent = "Итоговое назначение";
+      finalTitle.textContent = "Состояние после подтверждения";
       section.append(finalTitle, renderClinicalPreviewFields(change.final, change.original));
       output.append(section);
     }
     $("ai-review-approve").disabled = false;
-    showMessage("ai-review-status", "Проверьте дозы, ограничения и расписание каждого выбранного назначения.", true);
+    showMessage("ai-review-status", "Проверьте источник, исходные и изменённые поля каждого пункта.", true);
   } catch (error) {
+    if (epoch !== reviewEpoch) return;
     invalidateAIReviewPreview();
     showMessage("ai-review-status", error.message);
   }
@@ -2116,7 +2451,10 @@ $("ai-review-preview").addEventListener("click", async () => {
 
 $("ai-review-approve").addEventListener("click", async () => {
   if (!reviewPreview || !reviewSelections) return;
-  if (!window.confirm("Утвердить выбранные учебные записи и показать назначения пациенту?")) return;
+  const epoch = reviewEpoch;
+  const requestId = reviewRequestId;
+  const patientId = $("ai-patient-select").value;
+  if (!window.confirm("Подтвердить выбранные записи? Одобренные назначения будут доступны пациенту.")) return;
   $("ai-review-approve").disabled = true;
   try {
     const result = await api(reviewPath("/approve"), {
@@ -2126,23 +2464,42 @@ $("ai-review-approve").addEventListener("click", async () => {
         confirm_patient_visibility:true, confirm_clinical_review:true,
       }),
     });
+    if (epoch !== reviewEpoch || requestId !== reviewRequestId ||
+        patientId !== $("ai-patient-select").value) return;
     showMessage("ai-review-status",
-      `Утверждено назначений и тестов: ${result.records.length}. Они доступны пациенту.`, true);
-    await openAIReview(reviewRequestId);
-  } catch (error) {showMessage("ai-review-status", error.message);}
+      `Применено записей: ${result.records.length}. Назначения и тесты доступны в соответствующих разделах.`, true);
+    await loadClinical();
+    if (requestId === reviewRequestId && patientId === $("ai-patient-select").value) {
+      await openAIReview(requestId);
+    }
+  } catch (error) {
+    if (epoch === reviewEpoch) showMessage("ai-review-status", error.message);
+  }
 });
 
 $("ai-review-reject").addEventListener("click", async () => {
   if (reviewDraft?.status !== "open") return;
-  const reason = window.prompt("Причина отклонения учебного черновика:");
+  const epoch = reviewEpoch;
+  const requestId = reviewRequestId;
+  const patientId = $("ai-patient-select").value;
+  const reason = window.prompt("Причина отклонения предложений:");
   if (reason === null) return;
+  const button = $("ai-review-reject");
+  button.disabled = true;
   try {
     const data = await api(reviewPath("/reject"), {
       method:"POST", headers:{"Content-Type":"application/json"},
       body:JSON.stringify({expected_version:reviewDraft.version, reason}),
     });
+    if (epoch !== reviewEpoch || requestId !== reviewRequestId ||
+        patientId !== $("ai-patient-select").value) return;
     reviewDraft = data;
     renderReviewDraft();
-    showMessage("ai-review-status", "Черновик отклонён. В назначения ничего не добавлено.", true);
-  } catch (error) {showMessage("ai-review-status", error.message);}
+    showMessage("ai-review-status", "Предложения отклонены. Медицинская карта не изменена.", true);
+  } catch (error) {
+    if (epoch === reviewEpoch && patientId === $("ai-patient-select").value)
+      showMessage("ai-review-status", error.message);
+  } finally {
+    if (epoch === reviewEpoch) button.disabled = reviewDraft?.status !== "open";
+  }
 });

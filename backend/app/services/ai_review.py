@@ -1,24 +1,37 @@
-"""UI-4B: транзакционное ручное согласование ТОЛЬКО синтетических предложений."""
+"""Транзакционное врачебное согласование структурированных предложений."""
 
 import hashlib
 import json
-import os
 from uuid import UUID, uuid5
 
 from app.clinical.demo_test_catalog import definition
-from app.core.config import settings
 from app.db.base import utc_now
+from app.models.ai_demo_bridge import AIDemoAnalysis
 from app.models.ai_review import AIReviewCase, AIReviewEvent, AIReviewVersion
 from app.models.ai_workspace import AIRequest
+from app.models.clinical_entry_audit import ClinicalEntryAudit
 from app.models.clinical_order import ClinicalOrder
+from app.models.history_event import HistoryEvent
+from app.models.medical_record import MedicalObservation
 from app.models.patient import Patient
 from app.models.questionnaire_assignment import (
     QuestionnaireAssignment,
     QuestionnaireAssignmentAudit,
 )
-from app.schemas.ai_review import DraftImport, DraftRead, RejectDraft, ReviewAction, ReviewCommit
+from app.schemas.ai_demo_bridge import DemoAnalysisSubmit
+from app.schemas.ai_review import (
+    ClinicianOrderSupplement,
+    DraftImport,
+    DraftRead,
+    Proposal,
+    RejectDraft,
+    ReviewAction,
+    ReviewCommit,
+)
+from app.schemas.clinical_entry import ManualHistoryCreate, ManualObservationCreate
 from app.schemas.clinical_order import OrderDraftCreate
 from app.services.ai_agent_context import current_orders_match
+from app.services.clinical_entries import _encounter
 from app.services.clinical_order import _audit as audit_order
 from app.services.clinical_order import _check_ready
 from app.services.context_builder import ContextBuilder
@@ -29,27 +42,14 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 
-def _enabled() -> bool:
-    return (
-        settings.app_env != "production"
-        and os.getenv("AIDOCTOR_ALLOW_SYNTHETIC_AI_DRAFTS", "0") == "1"
-    )
-
-
 def enabled_for_patient(db: Session, patient_id: str) -> bool:
+    """Совместимый с ai-workspace.v1 признак доступности review.
+
+    Авторизация врача и принадлежность пациента проверяются в маршруте.
+    Демонстрационный маркер пациента и APP_ENV не определяют права доступа.
+    """
     patient = db.get(Patient, patient_id)
-    return bool(
-        _enabled()
-        and patient is not None
-        and patient.deleted_at is None
-        and isinstance(patient.demographics_json, dict)
-        and patient.demographics_json.get("synthetic") is True
-    )
-
-
-def _require_demo(db: Session, patient_id: str) -> None:
-    if not enabled_for_patient(db, patient_id):
-        raise HTTPException(403, "Тестовые AI-черновики выключены или пациент не синтетический")
+    return patient is not None and patient.deleted_at is None
 
 
 def _request(db: Session, request_id: str, doctor_id: str, patient_id: str) -> AIRequest:
@@ -110,13 +110,13 @@ def _read(db: Session, case: AIReviewCase) -> DraftRead:
         status=case.status,
         version=case.current_version,
         proposals=_version(db, case).proposals_json,
+        origin=_version(db, case).origin,
         versions_available=list(versions),
         approved_result=case.approved_result,
     )
 
 
 def get_draft(db: Session, patient_id: str, doctor_id: str, request_id: str) -> DraftRead:
-    _require_demo(db, patient_id)
     _request(db, request_id, doctor_id, patient_id)
     return _read(db, _case(db, request_id))
 
@@ -124,7 +124,6 @@ def get_draft(db: Session, patient_id: str, doctor_id: str, request_id: str) -> 
 def get_historical_version(
     db: Session, patient_id: str, doctor_id: str, request_id: str, version: int
 ) -> DraftRead:
-    _require_demo(db, patient_id)
     _request(db, request_id, doctor_id, patient_id)
     case = _case(db, request_id)
     row = db.scalar(
@@ -146,6 +145,7 @@ def get_historical_version(
         status="historical",
         version=version,
         proposals=row.proposals_json,
+        origin=row.origin,
         versions_available=list(all_versions),
     )
 
@@ -153,7 +153,6 @@ def get_historical_version(
 def import_draft(
     db: Session, patient_id: str, doctor_id: str, request_id: str, payload: DraftImport
 ) -> DraftRead:
-    _require_demo(db, patient_id)
     _request(db, request_id, doctor_id, patient_id)
     case = db.scalar(
         select(AIReviewCase).where(AIReviewCase.request_id == request_id).with_for_update()
@@ -166,6 +165,8 @@ def import_draft(
         db.flush()
         action = "imported_test"
     else:
+        if _version(db, case).origin != "synthetic_manual_test":
+            raise HTTPException(409, "AI-предложения меняются только через врачебный предпросмотр")
         if case.status != "open" or payload.expected_version != case.current_version:
             raise HTTPException(409, "Версия или статус изменились")
         case.current_version += 1
@@ -186,6 +187,225 @@ def import_draft(
     except IntegrityError as exc:
         db.rollback()
         raise HTTPException(409, "Конфликт создания или версии черновика") from exc
+    return _read(db, case)
+
+
+def _proposals_from_analysis(row: AIDemoAnalysis) -> list[Proposal]:
+    """Без домысливания: v1 содержит обследования, гипотезы и лекарственные риски, но НЕ дозы."""
+    source = DemoAnalysisSubmit.model_validate(row.payload_json)
+    namespace = UUID(row.id)
+    proposals: list[Proposal] = []
+    for index, item in enumerate(source.suggested_examinations):
+        order = OrderDraftCreate(
+            request_key=uuid5(namespace, f"exam-order:{index}"),
+            kind="examination",
+            name=item.name,
+            examination_details=item.rationale,
+            indication="Оценка целесообразности обследования врачом",
+            rationale=item.rationale,
+            source_reference=f"AI-анализ {row.id}; {row.payload_sha256[:16]}",
+        )
+        proposals.append(
+            Proposal(
+                id=uuid5(namespace, f"exam:{index}"),
+                kind="examination",
+                order=order,
+                evidence_status="unverified_ai",
+                source_locator=f"suggested_examinations[{index}]",
+            )
+        )
+    for index, item in enumerate(source.hypotheses):
+        proposals.append(
+            Proposal(
+                id=uuid5(namespace, f"hypothesis:{index}"),
+                kind="history_event",
+                history=ManualHistoryCreate(
+                    category="ai_diagnostic_hypothesis",
+                    fact={
+                        "title": item.title,
+                        "rationale": item.rationale,
+                        "confidence": item.confidence,
+                        "classification": "предложение AI, не подтверждённый диагноз",
+                    },
+                ),
+                evidence_status="unverified_ai",
+                source_locator=f"hypotheses[{index}]",
+            )
+        )
+    for index, item in enumerate(source.medication_risks):
+        proposals.append(
+            Proposal(
+                id=uuid5(namespace, f"medication-risk:{index}"),
+                kind="history_event",
+                history=ManualHistoryCreate(
+                    category="ai_medication_risk",
+                    fact={
+                        "medication": item.medication,
+                        "risk": item.risk,
+                        "severity": item.severity,
+                        "classification": "сообщённый AI риск; требует проверки",
+                    },
+                ),
+                evidence_status="unverified_ai",
+                source_locator=f"medication_risks[{index}]",
+            )
+        )
+    return proposals
+
+
+def import_from_analysis(
+    db: Session, patient_id: str, doctor_id: str, request_id: str
+) -> DraftRead:
+    """Конверсия неизменяемого ответа Site Builder в review; без назначения лечения."""
+    request = _request(db, request_id, doctor_id, patient_id)
+    analysis = db.scalar(
+        select(AIDemoAnalysis).where(
+            AIDemoAnalysis.request_id == request_id,
+            AIDemoAnalysis.patient_id == patient_id,
+            AIDemoAnalysis.doctor_id == doctor_id,
+        )
+    )
+    if analysis is None:
+        raise HTTPException(404, "Сохранённый AI-анализ ещё не получен")
+    if (
+        analysis.context_sha256 != request.context_sha256
+        or analysis.orders_sha256 != request.review_orders_sha256
+    ):
+        raise HTTPException(409, "AI-анализ относится к другой версии запроса")
+    # Если черновик уже создан, повторный вызов не переписывает врачебные решения.
+    case = db.scalar(
+        select(AIReviewCase).where(AIReviewCase.request_id == request_id).with_for_update()
+    )
+    if case is not None:
+        version = _version(db, case)
+        if version.origin != "site_builder_analysis_v1":
+            raise HTTPException(409, "У запроса уже есть отдельный ручной черновик")
+        events = db.scalars(
+            select(AIReviewEvent).where(
+                AIReviewEvent.case_id == case.id,
+                AIReviewEvent.action == "imported_ai",
+            )
+        ).all()
+        if not any(
+            e.payload_json.get("analysis_id") == analysis.id
+            and e.payload_json.get("payload_sha256") == analysis.payload_sha256
+            for e in events
+        ):
+            raise HTTPException(409, "Источник предложений изменился")
+        return _read(db, case)
+    _fresh(db, request)
+    proposals = _proposals_from_analysis(analysis)
+    if not proposals:
+        raise HTTPException(
+            422,
+            "В ответе нет структурируемых обследований, гипотез или рисков. "
+            "Текст анализа сохранён без создания медицинских предложений.",
+        )
+    case = AIReviewCase(request_id=request_id, current_version=1, status="open")
+    db.add(case)
+    try:
+        db.flush()
+        db.add(
+            AIReviewVersion(
+                case_id=case.id,
+                version=1,
+                created_by_id=doctor_id,
+                origin="site_builder_analysis_v1",
+                proposals_json=[p.model_dump(mode="json") for p in proposals],
+            )
+        )
+        _event(
+            db,
+            case,
+            doctor_id,
+            "imported_ai",
+            {
+                "analysis_id": analysis.id,
+                "payload_sha256": analysis.payload_sha256,
+                "proposal_count": len(proposals),
+            },
+        )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "Предложения уже созданы другим запросом") from exc
+    except Exception:
+        db.rollback()
+        raise
+    return _read(db, case)
+
+
+def add_clinician_order(
+    db: Session,
+    patient_id: str,
+    doctor_id: str,
+    request_id: str,
+    payload: ClinicianOrderSupplement,
+) -> DraftRead:
+    """Добавление проверяемого врачебного назначения в связанные с AI версии."""
+    request = _request(db, request_id, doctor_id, patient_id)
+    case = _case(db, request_id, lock=True)
+    if case.status != "open" or case.current_version != payload.expected_version:
+        raise HTTPException(409, "Версия предложений изменилась")
+    previous = _version(db, case)
+    if previous.origin != "site_builder_analysis_v1":
+        raise HTTPException(409, "Добавление доступно для сохранённого AI-анализа")
+    _fresh(db, request)
+    order = payload.order
+    if order.kind != "medication":
+        raise HTTPException(422, "Здесь допускается только врачебное лекарственное предложение")
+    if not order.source_reference or not order.source_reference.strip():
+        raise HTTPException(422, "Укажите источник назначения (например, клинический кейс)")
+    proposed_order = ClinicalOrder(
+        **order.model_dump(exclude={"request_key"}),
+        request_key=str(order.request_key),
+        patient_id=patient_id,
+        author_id=doctor_id,
+        status="draft",
+        version=1,
+    )
+    _check_ready(proposed_order)
+    existing = list(previous.proposals_json)
+    if len(existing) >= 36:
+        raise HTTPException(422, "Достигнуто максимальное число предложений")
+    proposal = Proposal(
+        id=uuid5(UUID(case.id), f"clinician:{case.current_version}:{order.request_key}"),
+        kind="medication",
+        order=order,
+        evidence_status="clinician_added",
+        source_locator="clinician_input",
+    )
+    if any(x["id"] == str(proposal.id) for x in existing):
+        raise HTTPException(409, "Такое предложение уже добавлено")
+    case.current_version += 1
+    db.add(
+        AIReviewVersion(
+            case_id=case.id,
+            version=case.current_version,
+            created_by_id=doctor_id,
+            origin=previous.origin,
+            proposals_json=[*existing, proposal.model_dump(mode="json")],
+        )
+    )
+    _event(
+        db,
+        case,
+        doctor_id,
+        "clinician_added",
+        {
+            "proposal_id": str(proposal.id),
+            "source": "doctor_input",
+            "source_reference": order.source_reference,
+        },
+    )
+    try:
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "Версия уже создана параллельным запросом") from exc
+    except Exception:
+        db.rollback()
+        raise
     return _read(db, case)
 
 
@@ -232,7 +452,9 @@ def _fresh(db: Session, request: AIRequest) -> None:
 def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: ReviewAction) -> dict:
     if case.status != "open" or case.current_version != payload.expected_version:
         raise HTTPException(409, "Черновик изменён или уже рассмотрен")
-    proposals = {item["id"]: item for item in _version(db, case).proposals_json}
+    version = _version(db, case)
+    origin = getattr(version, "origin", "synthetic_manual_test")
+    proposals = {item["id"]: item for item in version.proposals_json}
     selections = []
     alt_groups: set[str] = set()
     changed = False
@@ -245,24 +467,30 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
             if group in alt_groups:
                 raise HTTPException(422, "Нельзя одновременно одобрить альтернативные предложения")
             alt_groups.add(group)
-        if item["kind"] == "demo_test":
-            if entry.order is not None or (
+        kind = item["kind"]
+        if kind == "demo_test":
+            if any((entry.order, entry.history, entry.observation)) or (
                 entry.test_id is not None and entry.test_id != item["test_id"]
             ):
                 raise HTTPException(422, "Тест можно выбрать, но не заменить другим")
             definition(item["test_id"])
             data = {"test_id": item["test_id"], "test_version": definition(item["test_id"]).version}
+            original = {"test_id": item["test_id"]}
             edited = False
             table = "questionnaire_assignments"
-        else:
-            if entry.test_id is not None:
+        elif kind in ("medication", "examination"):
+            if any((entry.test_id, entry.history, entry.observation)):
                 raise HTTPException(422, "Неверный тип редактирования")
             order = entry.order or OrderDraftCreate.model_validate(item["order"])
-            if order.kind != item["kind"]:
+            if order.kind != kind:
                 raise HTTPException(422, "Нельзя изменять вид назначения")
-            edited = order.model_dump(mode="json") != item["order"]
+            original = item["order"]
+            # Источник AI нельзя удалить или подменить редактированием полей.
+            if origin == "site_builder_analysis_v1":
+                order = order.model_copy(update={"source_reference": original["source_reference"]})
             data = order.model_dump(mode="json")
             data["request_key"] = str(uuid5(UUID(case.id), item["id"]))
+            edited = any(data.get(k) != v for k, v in original.items() if k != "request_key")
             model = ClinicalOrder(
                 **order.model_dump(exclude={"request_key"}),
                 request_key=data["request_key"],
@@ -273,17 +501,52 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
             )
             _check_ready(model)
             table = "clinical_orders"
+        elif kind == "history_event":
+            if any((entry.order, entry.test_id, entry.observation)):
+                raise HTTPException(422, "Неверный тип редактирования истории")
+            history = entry.history or ManualHistoryCreate.model_validate(item["history"])
+            if origin == "site_builder_analysis_v1" and (
+                history.category != item["history"]["category"]
+                or history.encounter_id is not None
+                or history.occurred_at is not None
+                or history.fact.get("classification")
+                != item["history"]["fact"].get("classification")
+            ):
+                raise HTTPException(422, "Категорию и дату AI-предложения нельзя менять")
+            _encounter(
+                db, request.patient_id, str(history.encounter_id) if history.encounter_id else None
+            )
+            original = item["history"]
+            data = history.model_dump(mode="json")
+            edited = data != original
+            table = "history_events"
+        elif kind == "observation":
+            if any((entry.order, entry.test_id, entry.history)):
+                raise HTTPException(422, "Неверный тип редактирования наблюдения")
+            observation = entry.observation or ManualObservationCreate.model_validate(
+                item["observation"]
+            )
+            _encounter(
+                db,
+                request.patient_id,
+                str(observation.encounter_id) if observation.encounter_id else None,
+            )
+            original = item["observation"]
+            data = observation.model_dump(mode="json")
+            edited = data != original
+            table = "medical_observations"
+        else:
+            raise HTTPException(422, "Неизвестный тип предложения")
         changed |= edited
         selections.append(
             {
                 "proposal_id": item["id"],
                 "table": table,
-                "original": item["order"]
-                if item["kind"] != "demo_test"
-                else {"test_id": item["test_id"]},
+                "original": original,
                 "final": data,
                 "edited": edited,
                 "alternative_group": group,
+                "source_locator": item.get("source_locator"),
             }
         )
     if changed and not (payload.edit_reason and len(payload.edit_reason.strip()) >= 3):
@@ -296,7 +559,9 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
         "context_sha256": request.context_sha256,
         "current_records_sha256": _fingerprint(db, request.patient_id),
         "changes": selections,
+        "not_selected": sorted(set(proposals) - {e["proposal_id"] for e in selections}),
         "edit_reason": payload.edit_reason if changed else None,
+        "origin": origin,
     }
     body["preview_sha256"] = _sha(body)
     return body
@@ -305,7 +570,6 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
 def preview(
     db: Session, patient_id: str, doctor_id: str, request_id: str, payload: ReviewAction
 ) -> dict:
-    _require_demo(db, patient_id)
     request = _request(db, request_id, doctor_id, patient_id)
     return _prepare(db, _case(db, request_id), request, payload)
 
@@ -313,7 +577,6 @@ def preview(
 def approve(
     db: Session, patient_id: str, doctor_id: str, request_id: str, payload: ReviewCommit
 ) -> dict:
-    _require_demo(db, patient_id)
     request = _request(db, request_id, doctor_id, patient_id)
     case = _case(db, request_id, lock=True)
     if case.status == "approved" and case.approved_hash == payload.preview_sha256:
@@ -341,6 +604,68 @@ def approve(
                 db.add(row)
                 db.flush()
                 audit_order(db, row, doctor_id, "ai_review_approved")
+            elif item["table"] == "history_events":
+                data = ManualHistoryCreate.model_validate(item["final"])
+                row = HistoryEvent(
+                    patient_id=patient_id,
+                    encounter_id=str(data.encounter_id) if data.encounter_id else None,
+                    category=data.category,
+                    fact_json=data.fact,
+                    occurred_at=data.occurred_at or utc_now(),
+                    priority=data.priority,
+                    source_ref=f"ai_review:{case.id}:{item['proposal_id']}",
+                )
+                db.add(row)
+                db.flush()
+                db.add(
+                    ClinicalEntryAudit(
+                        patient_id=patient_id,
+                        actor_id=doctor_id,
+                        record_type="history_event",
+                        record_id=row.id,
+                        action="ai_review_approved",
+                        source_ref=row.source_ref,
+                        details_json={
+                            "request_id": request_id,
+                            "proposal_id": item["proposal_id"],
+                            "original": item["original"],
+                            "final": item["final"],
+                            "source_locator": item["source_locator"],
+                            "edit_reason": summary["edit_reason"] if item["edited"] else None,
+                        },
+                    )
+                )
+            elif item["table"] == "medical_observations":
+                data = ManualObservationCreate.model_validate(item["final"])
+                row = MedicalObservation(
+                    patient_id=patient_id,
+                    encounter_id=str(data.encounter_id) if data.encounter_id else None,
+                    code_system=data.code_system,
+                    code=data.code,
+                    value_json=data.value,
+                    observed_at=data.observed_at or utc_now(),
+                    source_ref=f"ai_review:{case.id}:{item['proposal_id']}",
+                )
+                db.add(row)
+                db.flush()
+                db.add(
+                    ClinicalEntryAudit(
+                        patient_id=patient_id,
+                        actor_id=doctor_id,
+                        record_type="medical_observation",
+                        record_id=row.id,
+                        action="ai_review_approved",
+                        source_ref=row.source_ref,
+                        details_json={
+                            "request_id": request_id,
+                            "proposal_id": item["proposal_id"],
+                            "original": item["original"],
+                            "final": item["final"],
+                            "source_locator": item["source_locator"],
+                            "edit_reason": summary["edit_reason"] if item["edited"] else None,
+                        },
+                    )
+                )
             else:
                 row = QuestionnaireAssignment(
                     patient_id=patient_id,
@@ -385,6 +710,19 @@ def approve(
                 "results": results,
                 "edited": [x["proposal_id"] for x in summary["changes"] if x["edited"]],
                 "edit_reason": summary["edit_reason"],
+                "not_selected": summary["not_selected"],
+                "decisions": [
+                    {
+                        "proposal_id": x["proposal_id"],
+                        "decision": "edited_and_accepted" if x["edited"] else "accepted",
+                        "source_locator": x["source_locator"],
+                    }
+                    for x in summary["changes"]
+                ]
+                + [
+                    {"proposal_id": proposal_id, "decision": "not_selected"}
+                    for proposal_id in summary["not_selected"]
+                ],
             },
         )
         db.commit()
@@ -400,7 +738,6 @@ def approve(
 def reject(
     db: Session, patient_id: str, doctor_id: str, request_id: str, payload: RejectDraft
 ) -> DraftRead:
-    _require_demo(db, patient_id)
     _request(db, request_id, doctor_id, patient_id)
     case = _case(db, request_id, lock=True)
     if case.status != "open" or case.current_version != payload.expected_version:
