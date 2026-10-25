@@ -1,0 +1,49 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "20_psychosis",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "Рабочая гипотеза ГТР; новые признаки требуют повторной диагностики",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "emergency",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Психотические симптомы",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Оценка непосредственной опасности и экстренная психиатрическая помощь.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [
+    {
+      "priority": "emergency",
+      "reason_code": "20_PSYCHOSIS",
+      "message": "Психотические симптомы",
+      "requires_acknowledgement": true,
+      "dispatch": "proposed_not_sent"
+    }
+  ],
+  "referrals": [],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Оценка непосредственной опасности и экстренная психиатрическая помощь.",
+    "patient": "При угрозе безопасности немедленно обращайтесь за экстренной помощью."
+  }
+}

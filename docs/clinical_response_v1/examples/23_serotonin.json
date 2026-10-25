@@ -1,0 +1,56 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "23_serotonin",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "Рабочая гипотеза ГТР; новые признаки требуют повторной диагностики",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "emergency",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Подозрение на тяжёлую лекарственную реакцию",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Срочно оценить гипертермию, ригидность, сознание, лекарственные сочетания.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [
+    {
+      "priority": "emergency",
+      "reason_code": "23_SEROTONIN",
+      "message": "Подозрение на тяжёлую лекарственную реакцию",
+      "requires_acknowledgement": true,
+      "dispatch": "proposed_not_sent"
+    }
+  ],
+  "referrals": [
+    {
+      "specialty": "emergency_services",
+      "priority": "emergency",
+      "reason": "Подозрение на тяжёлую лекарственную реакцию",
+      "status": "proposed_requires_clinician"
+    }
+  ],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Срочно оценить гипертермию, ригидность, сознание, лекарственные сочетания.",
+    "patient": "При высокой температуре, спутанности и мышечной ригидности вызывайте экстренную помощь."
+  }
+}

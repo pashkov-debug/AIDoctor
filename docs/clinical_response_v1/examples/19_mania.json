@@ -1,0 +1,49 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "19_mania",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "Рабочая гипотеза ГТР; новые признаки требуют повторной диагностики",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "urgent",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Признаки мании",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Срочная психиатрическая оценка и диагностический пересмотр.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [
+    {
+      "priority": "urgent",
+      "reason_code": "19_MANIA",
+      "message": "Признаки мании",
+      "requires_acknowledgement": true,
+      "dispatch": "proposed_not_sent"
+    }
+  ],
+  "referrals": [],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Срочная психиатрическая оценка и диагностический пересмотр.",
+    "patient": "Необходима срочная очная оценка психического состояния."
+  }
+}

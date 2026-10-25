@@ -1,0 +1,48 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "15_interaction",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "ГТР в синтетическом кейсе",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "review",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Добавлен новый лекарственный препарат",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Проверить взаимодействия по действующим официальным инструкциям.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [],
+  "referrals": [
+    {
+      "specialty": "psychiatrist",
+      "priority": "desirable",
+      "reason": "Добавлен новый лекарственный препарат",
+      "status": "proposed_requires_clinician"
+    }
+  ],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Проверить взаимодействия по действующим официальным инструкциям.",
+    "patient": "Сообщите врачу название и дозу нового препарата."
+  }
+}

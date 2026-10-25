@@ -1,0 +1,49 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "17_suicidal_ideation",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "Рабочая гипотеза ГТР; новые признаки требуют повторной диагностики",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "emergency",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Сообщение о суицидальных мыслях",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Немедленная оценка риска и организация экстренной очной помощи.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [
+    {
+      "priority": "emergency",
+      "reason_code": "17_SUICIDAL_IDEATION",
+      "message": "Сообщение о суицидальных мыслях",
+      "requires_acknowledgement": true,
+      "dispatch": "proposed_not_sent"
+    }
+  ],
+  "referrals": [],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Немедленная оценка риска и организация экстренной очной помощи.",
+    "patient": "Если есть непосредственная опасность, обратитесь в экстренные службы сейчас."
+  }
+}

@@ -1,0 +1,49 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "18_suicidal_plan",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "Рабочая гипотеза ГТР; новые признаки требуют повторной диагностики",
+    "confidence_percent": null,
+    "confidence_kind": "not_estimated",
+    "risk_level": "emergency",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Суицидальный план и доступ к средствам",
+    "objective": "Данные шкал на этом этапе отсутствуют",
+    "assessment": "Экстренная помощь, обеспечить непрерывную эскалацию; не ждать ответа врача в приложении.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [],
+  "observations": [],
+  "alerts": [
+    {
+      "priority": "emergency",
+      "reason_code": "18_SUICIDAL_PLAN",
+      "message": "Суицидальный план и доступ к средствам",
+      "requires_acknowledgement": true,
+      "dispatch": "proposed_not_sent"
+    }
+  ],
+  "referrals": [],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Экстренная помощь, обеспечить непрерывную эскалацию; не ждать ответа врача в приложении.",
+    "patient": "Немедленно обратитесь в экстренные службы; не оставайтесь одни."
+  }
+}

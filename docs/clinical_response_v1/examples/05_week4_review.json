@@ -1,0 +1,69 @@
+{
+  "schema_version": "aidoctor_clinical_response.v1",
+  "scenario_id": "05_week4_review",
+  "provenance": {
+    "synthetic": true,
+    "request_id": null,
+    "patient_id": null,
+    "context_sha256": null,
+    "orders_sha256": null,
+    "evidence_status": "unverified_ai"
+  },
+  "assessment": {
+    "diagnosis_code": "F41.1",
+    "hypothesis": "ГТР в синтетическом кейсе",
+    "confidence_percent": 90,
+    "confidence_kind": "illustrative_not_calibrated",
+    "risk_level": "routine",
+    "therapy_evidence": "limited"
+  },
+  "history_draft": {
+    "subjective": "Неделя 4: оценка частичного ответа",
+    "objective": "GAD-7: 10/21",
+    "assessment": "Провести плановый пересмотр схемы с врачом.",
+    "plan": "Черновик для клинического рассмотрения. Без автоматических назначений.",
+    "status": "draft_requires_review"
+  },
+  "medication_proposals": [
+    {
+      "ingredient": "маритупирдин",
+      "brand": "Авиандр",
+      "action": "continue_existing",
+      "dose_mg": 20,
+      "frequency_per_day": 2,
+      "route": "oral",
+      "duration_days": null,
+      "verification": "source_case_only",
+      "status": "pending_physician_approval",
+      "reason": "Существующий режим из синтетического кейса; не новое назначение."
+    }
+  ],
+  "observations": [
+    {
+      "code": "GAD7",
+      "value": 10,
+      "unit": "points",
+      "source": "case_data",
+      "record_status": "unverified_draft"
+    }
+  ],
+  "alerts": [],
+  "referrals": [
+    {
+      "specialty": "psychiatrist",
+      "priority": "desirable",
+      "reason": "Неделя 4: оценка частичного ответа",
+      "status": "proposed_requires_clinician"
+    }
+  ],
+  "workflow": {
+    "requires_physician_approval": true,
+    "auto_apply_orders": false,
+    "auto_publish_history": false,
+    "backend_should_run_safety_rules": true
+  },
+  "display": {
+    "physician": "Провести плановый пересмотр схемы с врачом.",
+    "patient": "Шкала тревоги снизилась; решение о лечении принимает врач."
+  }
+}
