@@ -28,6 +28,7 @@ from app.schemas.ai_review import (
     ReviewAction,
     ReviewCommit,
 )
+from app.schemas.ai_structured_proposals import StructuredProposalSubmit
 from app.schemas.clinical_entry import ManualHistoryCreate, ManualObservationCreate
 from app.schemas.clinical_order import OrderDraftCreate
 from app.services.ai_agent_context import current_orders_match
@@ -335,6 +336,117 @@ def import_from_analysis(
     return _read(db, case)
 
 
+def import_structured_proposals(
+    db: Session,
+    patient_id: str,
+    doctor_id: str,
+    request_id: str,
+    payload: StructuredProposalSubmit,
+) -> DraftRead:
+    """AI-предложения из того же MCP-агента, привязанные к уже сохранённому анализу.
+
+    Источник данных проверяется, ID предложений и source_reference задаёт сервер.
+    Повторный вызов с тем же JSON не создаёт новый черновик.
+    """
+    if str(payload.patient_id) != patient_id or str(payload.request_id) != request_id:
+        raise HTTPException(409, "Несоответствие пациента или запроса")
+    request = _request(db, request_id, doctor_id, patient_id)
+    analysis = db.scalar(
+        select(AIDemoAnalysis).where(
+            AIDemoAnalysis.request_id == request_id,
+            AIDemoAnalysis.patient_id == patient_id,
+            AIDemoAnalysis.doctor_id == doctor_id,
+        )
+    )
+    if analysis is None:
+        raise HTTPException(409, "Сначала сохраните анализ через submit_demo_analysis")
+    if any(
+        (
+            payload.context_sha256 != request.context_sha256,
+            payload.orders_sha256 != request.review_orders_sha256,
+            payload.analysis_payload_sha256 != analysis.payload_sha256,
+        )
+    ):
+        raise HTTPException(409, "Указаны хеши другого анализа или контекста")
+    _fresh(db, request)
+
+    from hashlib import sha256
+
+    canonical = payload.model_dump_json(exclude_none=False)
+    digest = sha256(canonical.encode("utf-8")).hexdigest()
+
+    case = db.scalar(
+        select(AIReviewCase).where(AIReviewCase.request_id == request_id).with_for_update()
+    )
+    if case is not None:
+        version = _version(db, case)
+        if version.origin != "site_builder_structured_v1":
+            raise HTTPException(409, "Для этого запроса уже имеется другой review")
+        event = db.scalar(
+            select(AIReviewEvent).where(
+                AIReviewEvent.case_id == case.id,
+                AIReviewEvent.action == "imported_ai",
+            )
+        )
+        if event is None or event.payload_json.get("structured_payload_sha256") != digest:
+            raise HTTPException(409, "Содержимое ранее полученного ответа отличается")
+        return _read(db, case)
+
+    # Агент не может назначить метку clinician_added или подменить ссылку на источник.
+    proposals = []
+    for i, item in enumerate(payload.proposals):
+        order = item.order
+        if order is not None:
+            order = order.model_copy(
+                update={
+                    "source_reference": f"AI MCP {analysis.id} / {analysis.payload_sha256[:16]}",
+                }
+            )
+        proposals.append(
+            item.model_copy(
+                update={
+                    "id": uuid5(UUID(analysis.id), f"structured:{i}"),
+                    "order": order,
+                    "source_locator": f"structured_proposals[{i}]",
+                    "evidence_status": "unverified_ai",
+                }
+            )
+        )
+    case = AIReviewCase(request_id=request_id, current_version=1, status="open")
+    db.add(case)
+    try:
+        db.flush()
+        db.add(
+            AIReviewVersion(
+                case_id=case.id,
+                version=1,
+                created_by_id=doctor_id,
+                origin="site_builder_structured_v1",
+                proposals_json=[p.model_dump(mode="json") for p in proposals],
+            )
+        )
+        _event(
+            db,
+            case,
+            doctor_id,
+            "imported_ai",
+            {
+                "analysis_id": analysis.id,
+                "payload_sha256": analysis.payload_sha256,
+                "structured_payload_sha256": digest,
+                "proposal_count": len(proposals),
+            },
+        )
+        db.commit()
+    except IntegrityError as exc:
+        db.rollback()
+        raise HTTPException(409, "Конкурентное создание структурированного черновика") from exc
+    except Exception:
+        db.rollback()
+        raise
+    return _read(db, case)
+
+
 def add_clinician_order(
     db: Session,
     patient_id: str,
@@ -486,7 +598,7 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
                 raise HTTPException(422, "Нельзя изменять вид назначения")
             original = item["order"]
             # Источник AI нельзя удалить или подменить редактированием полей.
-            if origin == "site_builder_analysis_v1":
+            if origin in ("site_builder_analysis_v1", "site_builder_structured_v1"):
                 order = order.model_copy(update={"source_reference": original["source_reference"]})
             data = order.model_dump(mode="json")
             data["request_key"] = str(uuid5(UUID(case.id), item["id"]))
@@ -514,7 +626,9 @@ def _prepare(db: Session, case: AIReviewCase, request: AIRequest, payload: Revie
             ):
                 raise HTTPException(422, "Категорию и дату AI-предложения нельзя менять")
             _encounter(
-                db, request.patient_id, str(history.encounter_id) if history.encounter_id else None
+                db,
+                request.patient_id,
+                str(history.encounter_id) if history.encounter_id else None,
             )
             original = item["history"]
             data = history.model_dump(mode="json")

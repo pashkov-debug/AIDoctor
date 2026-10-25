@@ -492,3 +492,9 @@ button:focus-visible, summary:focus-visible {
   font-weight: 700;
   cursor: default;
 }
+
+
+/* Медицинские предупреждения не скрываем среди обычных уведомлений. */
+.clinical-safety-alert { border: 2px solid #bb4b31; border-radius: 12px; padding: 14px; margin: 12px 0; background: #fff1ea; color: #702619; }
+.clinical-safety-alert p { margin: 8px 0; }
+.clinical-safety-alert small { display: block; margin-top: 8px; }

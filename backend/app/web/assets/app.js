@@ -1138,6 +1138,7 @@ $("admin-bind-form").addEventListener("submit", (event) => {
 // UI-3A: отдельный контракт ручных назначений. Ни AI, ни автоматических решений.
 let orderEditing = null;
 let orderApproval = null;
+let orderSafetyAlerts = new Map();
 let orderPendingKey = null;
 const orderMedicationFields = {
   active_ingredient: "order-active-ingredient",
@@ -1341,7 +1342,11 @@ function orderRecord(item) {
     approve.addEventListener("click", () => {
       orderApproval = item;
       $("order-approval-preview").replaceChildren(renderClinicalPreviewFields(item));
-      showMessage("order-approval-status", "");
+      const safety = orderSafetyAlerts.get(item.id);
+      showMessage(
+        "order-approval-status",
+        safety ? `Внимание: ${safety.message} ${safety.basis}` : "",
+      );
       $("order-approval-dialog").showModal();
     });
     row.append(approve);
@@ -1357,6 +1362,39 @@ function orderRecord(item) {
   return row;
 }
 
+async function loadOrderSafetyAlerts(patientId, clinicalEpoch = null) {
+  const panel = $("clinical-order-safety-alerts");
+  panel.replaceChildren();
+  orderSafetyAlerts = new Map();
+  try {
+    const alerts = await api(`${orderEndpoint(patientId)}/safety-alerts`);
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
+    orderSafetyAlerts = new Map(alerts.map((item) => [item.order_id, item]));
+    for (const item of alerts) {
+      const block = document.createElement("div");
+      block.className = "clinical-safety-alert";
+      const heading = document.createElement("strong");
+      heading.textContent = `Проверка безопасности · ${item.order_name} · ${item.severity === "high" ? "Высокий приоритет" : "Проверить"}`;
+      const explanation = document.createElement("p");
+      explanation.textContent = `${item.message} ${item.basis}`;
+      const source = document.createElement("a");
+      source.href = item.source;
+      source.rel = "noopener noreferrer";
+      source.target = "_blank";
+      source.textContent = "Инструкция и источник";
+      const origin = document.createElement("small");
+      origin.textContent = "Автоматическая проверка правила; не ответ AI";
+      block.append(heading, explanation, source, origin);
+      panel.append(block);
+    }
+  } catch (error) {
+    if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
+        (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
+    panel.textContent = `Проверка безопасности назначений недоступна: ${error.message}. Проверьте назначения вручную.`;
+  }
+}
+
 async function loadClinicalOrders(patientId, clinicalEpoch = null) {
   $("clinical-orders-list").textContent = "Загрузка назначений…";
   try {
@@ -1368,6 +1406,7 @@ async function loadClinicalOrders(patientId, clinicalEpoch = null) {
       "clinical-orders-list", items, orderRecord,
       "Назначений нет. Создайте черновик ниже.",
     );
+    await loadOrderSafetyAlerts(patientId, clinicalEpoch);
   } catch (error) {
     if (state.view !== "clinical" || state.clinicalPatient?.id !== patientId ||
         (clinicalEpoch !== null && clinicalEpoch !== clinicalLoadEpoch)) return;
@@ -2304,13 +2343,24 @@ $("ai-demo-create").addEventListener("click", async () => {
   const button = $("ai-demo-create");
   button.disabled = true;
   try {
-    const data = await api(reviewPath("/from-analysis"), {method:"POST"});
+    let data;
+    try {
+      data = await api(reviewPath(""));
+    } catch (error) {
+      if (error.status !== 404) throw error;
+      data = await api(reviewPath("/from-analysis"), {method:"POST"});
+    }
     if (epoch !== reviewEpoch || reviewRequestId !== requestId ||
         patientId !== $("ai-patient-select").value) return;
     reviewDraft = data;
     renderReviewDraft();
-    showMessage("ai-review-status",
-      "Предложения извлечены из сохранённого AI-ответа. Дозировок в действующем формате ответа нет.", true);
+    showMessage(
+      "ai-review-status",
+      data.origin === "site_builder_structured_v1"
+        ? "Получены типизированные предложения действующего агента. Проверьте каждое поле."
+        : "Получены предложения из сохранённого анализа. Он не содержит дозировок.",
+      true,
+    );
   } catch (error) {
     if (epoch === reviewEpoch) showMessage("ai-review-status", error.message);
   } finally {

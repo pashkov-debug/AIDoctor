@@ -149,9 +149,9 @@ def _encounters(db: Session, patient_id: str, case: dict, through_week: int) -> 
             "source": case["source"]["document_title"],
         }
         values = {
-            "reason": "Первичный приём"
-            if week["week"] == 0
-            else f"Контроль — неделя {week['week']}",
+            "reason": (
+                "Первичный приём" if week["week"] == 0 else f"Контроль — неделя {week['week']}"
+            ),
             "status": "draft",
             "occurred_at": clinical_time(week["date"]),
             "payload_json": payload,
@@ -332,9 +332,8 @@ def _observation_specs(case: dict, through_week: int) -> list[dict]:
                         "score": point[scale],
                         "max": maximum,
                         "source_kind": "documented_historical_total_without_item_responses",
-                        "description": (
-                            "Итоговый балл из синтетического документа, не электронный тест"
-                        ),
+                        "description": "Итоговый балл из синтетического документа, "
+                        "не электронный тест",
                         "synthetic": True,
                     },
                 }
@@ -505,7 +504,13 @@ def _draft_order(db: Session, patient: Patient, doctor: User, case: dict) -> int
     return 1
 
 
-def seed_case(db: Session, case: dict, doctor: User, through_week: int = 8) -> dict:
+def seed_case(
+    db: Session,
+    case: dict,
+    doctor: User,
+    through_week: int = 8,
+    include_order_draft: bool = True,
+) -> dict:
     """Данные добавляются в текущую транзакцию; только вызывающий делает commit."""
     if not 0 <= through_week <= 8:
         raise ValueError("Номер недели должен находиться между 0 и 8")
@@ -520,7 +525,9 @@ def seed_case(db: Session, case: dict, doctor: User, through_week: int = 8) -> d
         "observations_created": _observations(
             db, patient.id, doctor.id, case, visits, through_week
         ),
-        "order_drafts_created": _draft_order(db, patient, doctor, case),
+        "order_drafts_created": (
+            _draft_order(db, patient, doctor, case) if include_order_draft else 0
+        ),
         "patient_id": patient.id,
         "doctor_id": doctor.id,
         "through_week": through_week,
@@ -539,6 +546,11 @@ def main() -> None:
     )
     parser.add_argument("--through-week", type=int, default=8, choices=range(9))
     parser.add_argument("--doctor", default="doctor_ui1", help="Имя существующего врача")
+    parser.add_argument(
+        "--without-medication-draft",
+        action="store_true",
+        help="Не создавать исходный лекарственный черновик: для AI-сценария",
+    )
     args = parser.parse_args()
     case = load_case()
     print(
@@ -551,7 +563,7 @@ def main() -> None:
             f"План импорта: {args.through_week + 1} визитов, "
             f"{len(_history_specs(case, args.through_week))} записей истории, "
             f"{len(_observation_specs(case, args.through_week))} наблюдений, "
-            "1 лекарственный черновик."
+            f"{0 if args.without_medication_draft else 1} лекарственный черновик."
         )
         print("Проверка пройдена; запись в БД не выполнялась. Для импорта нужен --apply.")
         return
@@ -569,7 +581,13 @@ def main() -> None:
             doctor = db.scalar(select(User).where(User.username == args.doctor))
             if doctor is None:
                 raise ValueError(f"Врач {args.doctor} не найден: сначала выполните базовый seed")
-            result = seed_case(db, case, doctor, args.through_week)
+            result = seed_case(
+                db,
+                case,
+                doctor,
+                args.through_week,
+                include_order_draft=not args.without_medication_draft,
+            )
             db.commit()
         except Exception:
             db.rollback()

@@ -105,7 +105,9 @@ class DraftRead(BaseModel):
     request_id: str
     status: str
     version: int
-    origin: Literal["synthetic_manual_test", "site_builder_analysis_v1"] = "synthetic_manual_test"
+    origin: Literal[
+        "synthetic_manual_test", "site_builder_analysis_v1", "site_builder_structured_v1"
+    ] = "synthetic_manual_test"
     proposals: list[Proposal]
     versions_available: list[int]
     approved_result: dict | None = None

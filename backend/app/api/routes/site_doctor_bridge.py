@@ -18,8 +18,10 @@ from app.models.ai_demo_bridge import AIDemoAnalysis
 from app.models.site_doctor_credential import SiteDoctorAccessAudit
 from app.schemas.ai_agent_context import AIAgentContextRead
 from app.schemas.ai_demo_bridge import DemoAnalysisRead, DemoAnalysisSubmit
+from app.schemas.ai_review import DraftRead
+from app.schemas.ai_structured_proposals import StructuredProposalSubmit
 from app.services.ai_agent_context import get_agent_context
-from app.services.ai_review import _fresh
+from app.services.ai_review import _fresh, import_structured_proposals
 from app.services.site_doctor_access import (
     authenticate_site_doctor,
     require_site_request,
@@ -122,3 +124,26 @@ async def submit_site_analysis(
         db.rollback()
         raise
     return _read(analysis)
+
+
+@router.post(
+    "/integrations/site-builder/v2/structured-proposals",
+    response_model=DraftRead,
+    status_code=201,
+)
+async def submit_site_structured_proposals(
+    payload: StructuredProposalSubmit,
+    request: Request,
+    response: Response,
+    db: DB,
+    doctor_key: DoctorKey = None,
+) -> DraftRead:
+    """Дополнительный инструмент того же MCP-агента; старый v1 не изменяется."""
+    response.headers["Cache-Control"] = "no-store"
+    if len(await request.body()) > MAX_BODY_BYTES:
+        raise HTTPException(413, "Превышен размер структурированных предложений")
+    doctor = authenticate_site_doctor(db, doctor_key)
+    patient_id = str(payload.patient_id)
+    request_id = str(payload.request_id)
+    require_site_request(db, doctor, patient_id, request_id)
+    return import_structured_proposals(db, patient_id, doctor.id, request_id, payload)
