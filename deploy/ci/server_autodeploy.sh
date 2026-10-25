@@ -110,19 +110,37 @@ cd "$repo"
   python /opt/aidoctor/backend/scripts/run_vds_migrations.py
 "${dc[@]}" up -d --no-deps --wait --wait-timeout 120 app
 
+echo "Проверка AIDoctor: /api/v1/health"
 curl --fail --silent --show-error --max-time 12 \
   "http://127.0.0.1:18080/api/v1/health" |
   python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status")=="ok" and d.get("environment")=="test", d'
-test "$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-    --max-time 12 http://127.0.0.1:18080/app)" = 200
+echo "OK: /api/v1/health"
+
+echo "Проверка AIDoctor: /app"
+app_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+    --max-time 12 http://127.0.0.1:18080/app)"
+echo "HTTP /app: $app_status"
+if [[ "$app_status" != "200" ]]; then
+  echo "ОШИБКА: /app вернул HTTP $app_status вместо 200." >&2
+  false
+fi
 
 # Инвариант: синтетические проекты не становятся назначениями.
-draft_leaks="$("${dc[@]}" exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
+draft_leaks="$("${dc[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U aidoctor -d aidoctor_synthetic -At \
   -c "SELECT count(*) FROM clinical_orders WHERE source_reference LIKE 'synthetic:ui5:v1:candidate:%' AND status <> 'draft';")"
-test "$draft_leaks" = 0
-patient_count="$("${dc[@]}" exec -T postgres psql -U aidoctor -d aidoctor_synthetic -At \
+echo "Ошибочно утверждённых синтетических черновиков: $draft_leaks"
+if [[ "$draft_leaks" != "0" ]]; then
+  echo "ОШИБКА: нарушен инвариант черновиков назначений." >&2
+  false
+fi
+
+patient_count="$("${dc[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U aidoctor -d aidoctor_synthetic -At \
   -c "SELECT count(*) FROM patients WHERE demographics_json ->> 'synthetic' = 'true';")"
-test "$patient_count" -ge 3
+echo "Синтетических пациентов в БД: $patient_count (ожидается не менее 3)"
+if [[ ! "$patient_count" =~ ^[0-9]+$ ]] || (( patient_count < 3 )); then
+  echo "ОШИБКА: проверка количества синтетических пациентов не пройдена." >&2
+  false
+fi
 
 trap - ERR
 printf '%s\n' "$commit" > "$root_dir/last_deployed_sha"
