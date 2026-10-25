@@ -66,8 +66,8 @@ def test_client_uses_server_flag_and_excludes_internal_ai_data():
 def test_adaptive_layout_and_cache_updates():
     html = (WEB / "index.html").read_text(encoding="utf-8")
     css = (WEB / "assets" / "style.css").read_text(encoding="utf-8")
-    assert "app.js?v=workspace-compass-1" in html
-    assert "style.css?v=workspace-compass-1" in html
+    assert "app.js?v=doctor-tabs-v1" in html
+    assert "style.css?v=doctor-tabs-v1" in html
     assert "ai-three-panels > .panel:last-child" in css
     assert ".visually-hidden" in css
     assert "prefers-reduced-motion" in css

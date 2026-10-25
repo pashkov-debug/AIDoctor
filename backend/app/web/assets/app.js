@@ -3,8 +3,92 @@
 // Токен только в оперативной памяти вкладки; после перезагрузки нужен новый вход.
 const state = { token: null, user: null, settings: null, view: "overview", clinicalPatient: null, clinicalPublications: [] };
 const $ = (id) => document.getElementById(id);
-// AI располагается непосредственно рядом с картой. ID и обработчики сохраняются.
+// Три независимые вкладки выбранного пациента. Все прежние ID и формы сохраняются.
 $("doctor-ai-column").append($("ai-view"));
+
+function moveToCard(parent, node, heading) {
+  const card = document.createElement("section");
+  card.className = "panel doctor-editor-card";
+  const title = document.createElement("h2");
+  title.textContent = heading;
+  card.append(title, node);
+  parent.append(card);
+  return card;
+}
+
+function initDoctorWorkspace() {
+  const grid = $("patient-workspace-grid");
+  const read = document.createElement("div");
+  read.id = "doctor-read-pane";
+  read.className = "doctor-tab-pane doctor-read-pane";
+  read.setAttribute("role", "tabpanel");
+  read.setAttribute("aria-labelledby", "doctor-tab-patient");
+
+  const records = document.createElement("div");
+  records.id = "doctor-records-pane";
+  records.className = "doctor-tab-pane doctor-records-pane";
+  records.setAttribute("role", "tabpanel");
+  records.setAttribute("aria-labelledby", "doctor-tab-records");
+  records.hidden = true;
+
+  const ai = $("doctor-ai-column");
+  ai.classList.add("doctor-tab-pane");
+  ai.setAttribute("role", "tabpanel");
+  ai.setAttribute("aria-labelledby", "doctor-tab-ai");
+  ai.hidden = true;
+
+  grid.prepend(read, records);
+  read.append($("clinical-timeline"), $("clinical-digest-section"),
+    $("clinical-visits-section"));
+
+  const history = $("clinical-history-section");
+  const observations = $("clinical-observations-section");
+
+  const visitForm = $("clinical-encounter-form");
+  const visitCard = moveToCard(records, visitForm, "Новый визит");
+  const visitDetails = document.createElement("details");
+  visitDetails.className = "doctor-editor-disclosure";
+  const visitSummary = document.createElement("summary");
+  visitSummary.textContent = "Открыть форму нового визита";
+  visitDetails.append(visitSummary, visitForm);
+  visitCard.append(visitDetails);
+  const notes = moveToCard(records, $("clinical-history-entry"), "Заметка в историю");
+  notes.classList.add("doctor-primary-editor");
+  $("clinical-history-entry").open = true;
+  moveToCard(records, $("clinical-observation-entry"), "Новое наблюдение");
+  const approvals = document.createElement("div");
+  approvals.id = "doctor-history-approvals-list";
+  approvals.className = "clinical-list doctor-approvals-list";
+  moveToCard(records, approvals, "Проверка записей истории");
+
+  const publication = moveToCard(records, $("clinical-publication-form"),
+    "Публикация записи пациенту");
+  publication.append($("clinical-publication-status"));
+
+  for (const item of [history, observations]) {
+    const wrapper = document.createElement("details");
+    wrapper.className = "doctor-reading-details";
+    const summary = document.createElement("summary");
+    summary.textContent = item === history
+      ? "История болезни — подробные записи"
+      : "Шкалы и медицинские наблюдения";
+    wrapper.append(summary, item);
+    read.append(wrapper);
+  }
+  const orders = $("clinical-orders-section");
+  const orderForm = $("order-form");
+  const orderDisclosure = document.createElement("details");
+  orderDisclosure.id = "doctor-order-editor-details";
+  orderDisclosure.className = "doctor-editor-disclosure";
+  const orderSummary = document.createElement("summary");
+  orderSummary.textContent = "Создать или отредактировать назначение";
+  orderDisclosure.append(orderSummary, orderForm);
+  orders.append(orderDisclosure);
+  records.append(orders, $("clinical-tests-section"));
+
+  grid.querySelector(".patient-main-column").remove();
+}
+initDoctorWorkspace();
 const roleNames = { doctor: "Врач", patient: "Пациент", admin: "Администратор" };
 
 class ApiError extends Error {
@@ -27,6 +111,7 @@ function endSession(message = "") {
   doctorPatients = [];
   $("sidebar-patient-select").replaceChildren();
   activePanels.clinical = "visits";
+  activeDoctorTab = "patient";
   activePanels.patient = "profile";
   activePanels.admin = "users";
   clearAIWorkspace();
@@ -90,6 +175,7 @@ const panelNames = {
 };
 const activePanels = { clinical: "visits", patient: "profile", admin: "users" };
 let doctorPatients = [];
+let activeDoctorTab = "patient";
 
 function roleLayout(user) {
   const doctor = user.role === "doctor";
@@ -110,6 +196,23 @@ function roleLayout(user) {
   showView(doctor ? "overview" : user.role === "patient" ? "patient" : "admin");
 }
 
+function selectDoctorTab(tab, focus = false) {
+  if (!["patient", "records", "ai"].includes(tab)) return;
+  activeDoctorTab = tab;
+  for (const [name, paneId] of [
+    ["patient", "doctor-read-pane"],
+    ["records", "doctor-records-pane"],
+    ["ai", "doctor-ai-column"],
+  ]) {
+    const selected = name === tab;
+    $(paneId).hidden = !selected;
+    const button = $(`doctor-tab-${name}`);
+    button.setAttribute("aria-selected", String(selected));
+    button.tabIndex = selected ? 0 : -1;
+    if (focus && selected) button.focus();
+  }
+}
+
 function renderActivePanels(name) {
   document.querySelectorAll("[data-panel-group]").forEach((node) => {
     const selected = node.dataset.panelGroup === name
@@ -120,15 +223,22 @@ function renderActivePanels(name) {
   $("patient-workspace-grid").hidden = name !== "clinical" || !state.clinicalPatient;
   $("clinical-timeline").hidden = name !== "clinical" || !state.clinicalPatient;
   $("ai-view").hidden = name !== "clinical" || !state.clinicalPatient;
+  $("patient-workspace-grid").querySelectorAll(".doctor-tab-pane").forEach((pane) => {
+    pane.hidden = name !== "clinical" || !state.clinicalPatient ||
+      pane.id !== ({patient:"doctor-read-pane", records:"doctor-records-pane",
+        ai:"doctor-ai-column"})[activeDoctorTab];
+  });
   $("clinical-refresh").disabled = !state.clinicalPatient;
-  $("clinical-open-ai").disabled = !state.clinicalPatient;
+  document.querySelectorAll("[data-doctor-tab]").forEach((button) => {
+    button.disabled = !state.clinicalPatient;
+  });
 }
 
 function showView(name, panel = null) {
   if (!state.user) return;
   if (name === "ai") {
+    selectDoctorTab("ai");
     showView("clinical");
-    if (state.clinicalPatient) $("doctor-ai-column").scrollIntoView({behavior:"smooth",block:"start"});
     return;
   }
   const permitted = state.user.role === "doctor"
@@ -165,8 +275,9 @@ function showView(name, panel = null) {
     loadAIWorkspace();
   }
   if (name === "clinical" && panel && previousView === name) {
-    const target = $(`clinical-${panel}-section`);
-    if (target) target.scrollIntoView({behavior:"smooth",block:"start"});
+    selectDoctorTab(["visits", "history", "observations", "digest"].includes(panel)
+      ? "patient" : "records");
+    renderActivePanels(name);
   }
 }
 
@@ -185,6 +296,7 @@ function chooseDoctorPatient(id, openClinical = false) {
   }
   if (openClinical) {
     const wasClinical = state.view === "clinical";
+    selectDoctorTab("patient");
     showView("clinical", "visits");
     if (changed && wasClinical && patient) {
       loadClinical();
@@ -448,6 +560,8 @@ function renderClinicalFact(fact) {
 
 function renderClinicalHistory(items) {
   $("clinical-history-count").textContent = String(items.length);
+  const approvals = $("doctor-history-approvals-list");
+  approvals.replaceChildren();
   const records = new Map(state.clinicalPublications.map((p) => [p.history_event_id, p]));
   const superseded = new Set(items.map((item) => item.supersedes_id).filter(Boolean));
   showClinicalRecords("clinical-history", items, (item) => {
@@ -491,9 +605,18 @@ function renderClinicalHistory(items) {
     } else {
       return row;
     }
-    row.append(button);
+    const review = clinicalLine(
+      `${formatDate(item.occurred_at)} · ${item.category}`,
+      description.length > 180 ? `${description.slice(0, 180)}…` : description,
+      status.textContent,
+    );
+    review.append(button);
+    approvals.append(review);
     return row;
   }, "Событий пока нет.");
+  if (!approvals.children.length) {
+    approvals.textContent = "Нет записей, требующих решения врача.";
+  }
 }
 
 async function confirmHistory(eventId, button) {
@@ -523,6 +646,7 @@ function preparePublication(item, release) {
   $("clinical-publication-text").value = "";
   $("clinical-publication-confirm").checked = false;
   showMessage("clinical-publication-status", "Введите только те сведения, которые следует показать пациенту.");
+  selectDoctorTab("records");
   form.scrollIntoView({ behavior: "smooth", block: "center" });
 }
 
@@ -674,6 +798,7 @@ async function loadClinical() {
     $("clinical-timeline-caption").textContent = "Хронология временно недоступна.";
     $("clinical-visits-count").textContent = "—";
   }
+  state.clinicalPublications = publications || [];
   if (history) renderClinicalHistory(history.items || []);
   else {
     failed(1, "История");
@@ -695,7 +820,6 @@ async function loadClinical() {
     failed(3, "Сводка");
     $("clinical-context").textContent = "Не удалось загрузить клиническую сводку.";
   }
-  state.clinicalPublications = publications || [];
   if (!publications) failed(4, "Публикации");
 
   await Promise.all([
@@ -709,11 +833,21 @@ async function loadClinical() {
     : "Карта пациента обновлена.", failures.length === 0);
 }
 
-document.querySelectorAll("[data-clinical-target]").forEach((button) => {
+document.querySelectorAll("[data-doctor-tab]").forEach((button) => {
   button.addEventListener("click", () => {
-    if (state.view !== "clinical") return;
-    const target = $(button.dataset.clinicalTarget);
-    if (target) target.scrollIntoView({ behavior: "smooth", block: "start" });
+    if (state.view !== "clinical" || !state.clinicalPatient) return;
+    selectDoctorTab(button.dataset.doctorTab);
+    window.scrollTo(0, 0);
+  });
+  button.addEventListener("keydown", (event) => {
+    if (!["ArrowLeft", "ArrowRight", "Home", "End"].includes(event.key)) return;
+    if (!state.clinicalPatient) return;
+    event.preventDefault();
+    const tabs = ["patient", "records", "ai"];
+    const pos = tabs.indexOf(activeDoctorTab);
+    const next = event.key === "Home" ? 0 : event.key === "End" ? 2 :
+      (pos + (event.key === "ArrowRight" ? 1 : 2)) % 3;
+    selectDoctorTab(tabs[next], true);
   });
 });
 $("clinical-back").addEventListener("click", () => showView("overview"));
@@ -934,7 +1068,7 @@ document.querySelectorAll("[data-view]").forEach((node) => {
   node.addEventListener("click", () => showView(node.dataset.view, node.dataset.panel || null));
 });
 $("sidebar-patient-select").addEventListener("change", (event) => {
-  chooseDoctorPatient(event.currentTarget.value);
+  chooseDoctorPatient(event.currentTarget.value, Boolean(event.currentTarget.value));
 });
 $("clinical-select-from-overview").addEventListener("click", () => showView("overview"));
 document.querySelectorAll("[data-tab]").forEach((node) => {
@@ -1225,6 +1359,8 @@ function startOrderEdit(item) {
   $("order-save-button").textContent = "Сохранить изменения";
   $("order-edit-cancel").hidden = false;
   refreshOrderFields();
+  $("doctor-order-editor-details").open = true;
+  selectDoctorTab("records");
   $("order-form").scrollIntoView({ behavior: "smooth", block: "start" });
 }
 
@@ -1976,9 +2112,6 @@ function renderAIRequests(requests) {
   }
 }
 
-$("clinical-open-ai").addEventListener("click", () => {
-  $("doctor-ai-column").scrollIntoView({behavior:"smooth",block:"start"});
-});
 $("ai-question").addEventListener("input", () => { aiPendingKey = null; });
 $("ai-refresh-files").addEventListener("click", () => loadAIForPatient());
 $("ai-upload-button").addEventListener("click", async () => {

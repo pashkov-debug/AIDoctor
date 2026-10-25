@@ -51,10 +51,16 @@ def test_historical_entries_progress_without_future_data() -> None:
     start = _history_specs(case, 0)
     end = _history_specs(case, 8)
     assert len(start) == 12
-    assert len(end) == 44
+    assert len(case["milestone_events"]) == 7
+    assert len(_history_specs(case, 1)) > len(start)
+    assert not any("План v3" in event["text"] for event in start)
+    assert len(end) == 51
     assert all(x["date"] == "2026-08-03" for x in start)
     assert any(x["section"] == "Самостоятельный дневник пациента" for x in end)
     assert any("v3" in x["text"] for x in end)
+    milestones = [x for x in end if x["section"] == "Контрольные события и безопасность"]
+    assert len(milestones) == 7
+    assert all(x["date"] <= "2026-09-28" for x in milestones)
     assert len({x["key"] for x in end}) == len(end)
 
 

@@ -72,6 +72,21 @@ def load_case(path: Path = FIXTURE) -> dict:
         d = date.fromisoformat(entry["date"])
         if not START <= d <= END or not 0 <= entry["anxiety_score_0_10"] <= 10:
             raise ValueError("Дневник пациента содержит некорректные значения")
+    milestones = data.get("milestone_events", [])
+    milestone_ids = [entry["id"] for entry in milestones]
+    if len(set(milestone_ids)) != len(milestone_ids):
+        raise ValueError("Повторные идентификаторы контрольных событий")
+    if [entry["date"] for entry in milestones] != sorted(entry["date"] for entry in milestones):
+        raise ValueError("Контрольные события должны идти по датам")
+    for entry in milestones:
+        day = date.fromisoformat(entry["date"])
+        if (
+            not START <= day <= END
+            or entry["category"] not in {"clinical", "treatment", "observation"}
+            or not entry["title"].strip()
+            or not entry["text"].strip()
+        ):
+            raise ValueError("Некорректное контрольное событие")
     if len(data["laboratory_followup"]) != 7:
         raise ValueError("Ожидалось 7 показателей лабораторной/клинической динамики")
     for lab in data["laboratory_followup"]:
@@ -234,6 +249,22 @@ def _history_specs(case: dict, through_week: int) -> list[dict]:
                 "section": "Самостоятельный дневник пациента",
                 "anxiety_score_0_10": entry["anxiety_score_0_10"],
                 "sleep_text": entry["sleep_text"],
+            }
+        )
+    # Отдельные контрольные события из разделов 4–7 исходного документа.
+    # Сведения не выдумываются, не изменяют назначения и импортируются один раз.
+    for event in case.get("milestone_events", []):
+        event_date = date.fromisoformat(event["date"])
+        if event_date > cutoff:
+            continue
+        specs.append(
+            {
+                "key": f"{SOURCE_KEY}:history:milestone:{event['id']}",
+                "date": event["date"],
+                "week": (event_date - START).days // 7,
+                "category": event["category"],
+                "text": f"{event['title']}. {event['text']}",
+                "section": "Контрольные события и безопасность",
             }
         )
     if through_week == 8:

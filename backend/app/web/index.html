@@ -6,8 +6,8 @@
   <meta name="referrer" content="no-referrer">
   <meta name="color-scheme" content="light">
   <title>AIDoctor — медицинский кабинет</title>
-  <link rel="stylesheet" href="/app/assets/style.css?v=workspace-compass-1">
-  <script defer src="/app/assets/app.js?v=workspace-compass-1"></script>
+  <link rel="stylesheet" href="/app/assets/style.css?v=doctor-tabs-v1">
+  <script defer src="/app/assets/app.js?v=doctor-tabs-v1"></script>
 </head>
 <body>
   <section id="login-screen" class="login-screen">
@@ -86,7 +86,7 @@
           </div>
           <div class="panel">
             <div class="panel-heading"><div><h2>Пациенты</h2><p>Выберите пациента, чтобы открыть его медицинскую карту.</p></div></div>
-            <p class="clinical-hint">После выбора пациента откроется единая карта: визиты, история, наблюдения, назначения, тесты и AI-анализ.</p>
+            <p class="clinical-hint">После выбора пациента откроются три раздела: история, работа врача и AI-помощник.</p>
             <div id="patients-list" class="patients-list"><p class="muted">Загрузка…</p></div>
           </div>
         </section>
@@ -102,14 +102,22 @@
             <button type="button" id="clinical-refresh" class="button subtle">Обновить карточку</button>
             <span id="clinical-card-status" role="status" aria-live="polite" class="message"></span>
           </div>
-          <nav class="case-shortcuts" aria-label="Разделы рабочего места">
-            <button type="button" data-clinical-target="clinical-visits-section">Визиты</button>
-            <button type="button" data-clinical-target="clinical-history-section">История</button>
-            <button type="button" data-clinical-target="clinical-observations-section">Наблюдения</button>
-            <button type="button" data-clinical-target="clinical-orders-section">Назначения</button>
-            <button type="button" data-clinical-target="clinical-tests-section">Тесты</button>
-            <button type="button" data-clinical-target="clinical-digest-section">Сводка</button>
-            <button type="button" id="clinical-open-ai" class="case-shortcut-ai">✧ AI-анализ</button>
+          <nav class="doctor-tabs" role="tablist" aria-label="Работа с выбранным пациентом">
+            <button type="button" role="tab" id="doctor-tab-patient" class="doctor-tab"
+              data-doctor-tab="patient" aria-controls="doctor-read-pane" aria-selected="true">
+              <span class="doctor-tab-number">01</span><span><strong>Пациент</strong>
+              <small>История, визиты и динамика</small></span>
+            </button>
+            <button type="button" role="tab" id="doctor-tab-records" class="doctor-tab"
+              data-doctor-tab="records" aria-controls="doctor-records-pane" aria-selected="false" tabindex="-1">
+              <span class="doctor-tab-number">02</span><span><strong>Работа врача</strong>
+              <small>Заметки, назначения и тесты</small></span>
+            </button>
+            <button type="button" role="tab" id="doctor-tab-ai" class="doctor-tab"
+              data-doctor-tab="ai" aria-controls="doctor-ai-column" aria-selected="false" tabindex="-1">
+              <span class="doctor-tab-number">03</span><span><strong>AI-помощник</strong>
+              <small>Вопросы и проверка предложений</small></span>
+            </button>
           </nav>
           <section id="clinical-timeline" class="case-timeline panel" aria-label="Хронология визитов">
             <div class="case-timeline-title"><strong>Хронология пациента</strong>
@@ -152,7 +160,7 @@
               </form>
             </section>
             <section class="panel" id="clinical-history-section" data-panel-group="clinical" data-panel="history">
-              <div class="panel-heading"><div><h2>События клинической истории <span id="clinical-history-count" class="count-marker">—</span></h2><p>Внутренние записи. Подтверждение и публикация пациенту — отдельные врачебные действия.</p></div></div>
+              <div class="panel-heading"><div><h2>История и события <span id="clinical-history-count" class="count-marker">—</span></h2><p>Внутренние записи. Подтверждение и публикация пациенту — отдельные врачебные действия.</p></div></div>
               <div id="clinical-history" class="clinical-list"></div>
               <details class="case-entry-details" id="clinical-history-entry">
                 <summary>Добавить клиническую запись</summary>
@@ -309,7 +317,7 @@
         <section id="ai-view" class="page" hidden>
           <div class="page-intro case-ai-heading">
             <span class="eyebrow">КЛИНИЧЕСКИЙ ПОМОЩНИК</span>
-            <h2>AI-анализ пациента</h2>
+            <h2>Разбор клинического вопроса</h2>
             <p>Контекст вопроса связан с текущей картой. Ответ агента сохраняется отдельно до проверки врачом.</p>
           </div>
           <div class="visually-hidden">

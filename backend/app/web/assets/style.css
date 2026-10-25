@@ -498,3 +498,95 @@ button:focus-visible, summary:focus-visible {
 .clinical-safety-alert { border: 2px solid #bb4b31; border-radius: 12px; padding: 14px; margin: 12px 0; background: #fff1ea; color: #702619; }
 .clinical-safety-alert p { margin: 8px 0; }
 .clinical-safety-alert small { display: block; margin-top: 8px; }
+
+
+/* Врачебное рабочее место: три раздела вместо длинного двухколоночного полотна. */
+.doctor-tabs {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+.doctor-tab {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  min-height: 80px;
+  padding: 15px 18px;
+  border: 1px solid #d4e2e7;
+  border-radius: 16px;
+  background: #fff;
+  color: #244556;
+  text-align: left;
+  cursor: pointer;
+  transition: background .15s, border-color .15s;
+}
+.doctor-tab[aria-selected="true"] {
+  border: 2px solid #188578;
+  background: #e8f7f3;
+  color: #085d55;
+}
+.doctor-tab:hover:not(:disabled) { border-color: #188578; }
+.doctor-tab:focus-visible,
+.doctor-reading-details > summary:focus-visible,
+.doctor-editor-disclosure > summary:focus-visible {
+  outline: 3px solid #168678;
+  outline-offset: 3px;
+}
+.doctor-tab:disabled { opacity: .5; cursor: not-allowed; }
+.doctor-tab-number { font-size: 1.45rem; font-weight: 800; opacity: .7; }
+.doctor-tab strong { display: block; font-size: 1rem; }
+.doctor-tab small { display: block; margin-top: 4px; color: #57727f; font-size: .78rem; }
+
+#patient-workspace-grid { display: block; min-width: 0; }
+.doctor-tab-pane { width: 100%; min-width: 0; }
+.doctor-read-pane, .doctor-records-pane { max-width: 1120px; margin: 0 auto; }
+.doctor-read-pane > .panel,
+.doctor-records-pane > .panel { margin-bottom: 18px; }
+.doctor-read-pane #clinical-digest-section { margin-top: 0; }
+.doctor-read-pane #clinical-visits-section { max-width: none; }
+.doctor-records-pane > .doctor-editor-card { padding: 20px 24px; }
+.doctor-records-pane .doctor-editor-card > h2 { margin: 0 0 12px; font-size: 1.1rem; }
+.doctor-records-pane .admin-form { margin-top: 8px; }
+.doctor-records-pane .doctor-approvals-list { max-height: 370px; overflow-y: auto; }
+.doctor-reading-details, .doctor-editor-disclosure {
+  border: 1px solid #d7e5e9;
+  border-radius: 14px;
+  background: #fff;
+  margin: 0 0 16px;
+  overflow: hidden;
+}
+.doctor-reading-details > summary, .doctor-editor-disclosure > summary {
+  cursor: pointer;
+  padding: 16px 20px;
+  color: #235866;
+  font-weight: 750;
+}
+.doctor-reading-details > .panel { margin: 0; border: 0; border-top: 1px solid #e4edef; box-shadow: none; }
+.doctor-editor-disclosure > #order-form { margin: 0 20px 20px; }
+.doctor-records-pane #clinical-history-entry,
+.doctor-records-pane #clinical-observation-entry { margin-top: 0; }
+#doctor-ai-column { max-width: 1120px; margin: 0 auto; }
+#doctor-ai-column #ai-view .ai-three-panels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 18px;
+}
+#doctor-ai-column #ai-view .ai-three-panels > .panel:last-child {
+  grid-column: 1 / -1;
+}
+#doctor-ai-column #ai-view #ai-response,
+#doctor-ai-column #ai-view #ai-requests {
+  max-height: none;
+  overflow: visible;
+}
+#doctor-ai-column #ai-view .ai-proposal-fields {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+@media(max-width: 850px) {
+  .doctor-tabs { grid-template-columns: 1fr; gap: 7px; }
+  .doctor-tab { min-height: 58px; padding: 10px 14px; }
+  #doctor-ai-column #ai-view .ai-three-panels,
+  #doctor-ai-column #ai-view .ai-proposal-fields { grid-template-columns: 1fr; }
+  #doctor-ai-column #ai-view .ai-three-panels > .panel:last-child { grid-column: auto; }
+}
