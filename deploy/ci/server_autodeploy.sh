@@ -84,63 +84,131 @@ if docker image inspect aidoctor:vds-test >/dev/null 2>&1; then
   old_image_exists=1
 fi
 
+# Метка операции помогает установить причину без вывода секретов из окружения.
+stage="Подготовка развёртывания"
 rollback() {
   local rc=$?
   trap - ERR
-  echo "ОШИБКА деплоя ($rc). Восстанавливаем предыдущую версию приложения." >&2
-  git -C "$repo" checkout --force --detach "$old_sha" || true
-  if [[ "$old_image_exists" -eq 1 ]]; then
-    docker image tag "$rollback_tag" aidoctor:vds-test || true
-    "${dc[@]}" up -d --no-deps --wait --wait-timeout 120 app || true
+  echo "ОШИБКА АВТОДЕПЛОЯ: этап «$stage», код $rc." >&2
+  echo "Возврат к предыдущему приложению ${old_sha:0:12}." >&2
+  if ! git -C "$repo" checkout --force --detach "$old_sha"; then
+    echo "КРИТИЧНО: не удалось восстановить Git checkout!" >&2
   fi
+  if [[ "$old_image_exists" -eq 1 ]]; then
+    if ! docker image tag "$rollback_tag" aidoctor:vds-test; then
+      echo "КРИТИЧНО: не удалось восстановить Docker image!" >&2
+    elif ! timeout --kill-after=5s 150s "${dc[@]}" up -d --no-deps --wait --wait-timeout 120 app; then
+      echo "КРИТИЧНО: прежний контейнер не восстановился автоматически!" >&2
+    else
+      echo "ОТКАТ: прежний Docker-контейнер запущен."
+    fi
+  else
+    echo "ВНИМАНИЕ: образ прежней версии отсутствовал, автоматический откат образа невозможен." >&2
+  fi
+  echo "Версия checkout после попытки отката: $(git -C "$repo" rev-parse --short HEAD 2>/dev/null || echo unknown)"
   echo "ВНИМАНИЕ: миграции БД автоматически НЕ откатываются." >&2
   echo "Резервная копия: $backup_file" >&2
   exit "$rc"
 }
 trap rollback ERR
 
+
+stage="Checkout нового коммита"
 git -C "$repo" checkout --force --detach "$commit"
 cd "$repo"
+
+stage="Проверка конфигурации Docker Compose"
 "${dc[@]}" config --format json | python3 /usr/local/libexec/aidoctor-verify-compose
 "${dc[@]}" config --quiet
 
-# Никакого повторного seed: аккаунты, карточки и проекты лекарств сохраняются.
+# Никогда не пересоздаём данные с помощью seed во время деплоя.
+stage="Сборка Docker"
 "${dc[@]}" build app
+
+stage="Миграция PostgreSQL"
 "${dc[@]}" run --rm --no-deps --workdir /opt/aidoctor app \
   python /opt/aidoctor/backend/scripts/run_vds_migrations.py
+
+stage="Запуск FastAPI"
 "${dc[@]}" up -d --no-deps --wait --wait-timeout 120 app
 
-echo "Проверка AIDoctor: /api/v1/health"
-curl --fail --silent --show-error --max-time 12 \
-  "http://127.0.0.1:18080/api/v1/health" |
-  python3 -c 'import json,sys; d=json.load(sys.stdin); assert d.get("status")=="ok" and d.get("environment")=="test", d'
-echo "OK: /api/v1/health"
+stage="HTTP API /api/v1/health"
+echo "POSTCHECK: $stage"
+health_ok=0
+for attempt in 1 2 3 4 5; do
+  if health_json="$(curl --fail --silent --show-error --max-time 5 \
+      http://127.0.0.1:18080/api/v1/health)" && \
+     python3 -c '
+import json
+import sys
+try:
+    value = json.load(sys.stdin)
+except ValueError:
+    raise SystemExit("Health вернул некорректный JSON")
+if value.get("status") != "ok" or value.get("environment") != "test":
+    raise SystemExit("Health: ожидаются status=ok и environment=test")
+' <<< "$health_json"; then
+    health_ok=1
+    break
+  fi
+  echo "POSTCHECK: /health попытка $attempt/5 не прошла"
+  if [[ "$attempt" -lt 5 ]]; then sleep 2; fi
+done
+if [[ "$health_ok" -ne 1 ]]; then
+  echo "POSTCHECK FAIL: /health не подтвердил status=ok, environment=test." >&2
+  false
+fi
+echo "POSTCHECK OK: /api/v1/health"
 
-echo "Проверка AIDoctor: /app"
-app_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
-    --max-time 12 http://127.0.0.1:18080/app)"
-echo "HTTP /app: $app_status"
+stage="HTTP страница /app"
+echo "POSTCHECK: $stage"
+app_status=""
+for attempt in 1 2 3 4 5; do
+  if app_status="$(curl --silent --show-error --output /dev/null --write-out '%{http_code}' \
+      --max-time 5 http://127.0.0.1:18080/app)" && \
+      [[ "$app_status" == "200" ]]; then
+    break
+  fi
+  echo "POSTCHECK: /app попытка $attempt/5, HTTP ${app_status:-нет ответа}"
+  if [[ "$attempt" -lt 5 ]]; then sleep 2; fi
+done
+echo "POSTCHECK: /app HTTP ${app_status:-нет ответа}"
 if [[ "$app_status" != "200" ]]; then
-  echo "ОШИБКА: /app вернул HTTP $app_status вместо 200." >&2
+  echo "POSTCHECK FAIL: /app вернул HTTP ${app_status:-нет ответа} вместо 200." >&2
   false
 fi
+echo "POSTCHECK OK: /app"
 
-# Инвариант: синтетические проекты не становятся назначениями.
-draft_leaks="$("${dc[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U aidoctor -d aidoctor_synthetic -At \
-  -c "SELECT count(*) FROM clinical_orders WHERE source_reference LIKE 'synthetic:ui5:v1:candidate:%' AND status <> 'draft';")"
-echo "Ошибочно утверждённых синтетических черновиков: $draft_leaks"
+# Ограничиваем время запросов к PostgreSQL, чтобы Actions не висел бесконечно.
+db_scalar() {
+  local value
+  if ! value="$(timeout --kill-after=3s 25s "${dc[@]}" exec -T postgres \
+      psql -X -v ON_ERROR_STOP=1 -U aidoctor -d aidoctor_synthetic -At -c "$1")"; then
+    echo "POSTCHECK FAIL: PostgreSQL не ответила вовремя или запрос завершился ошибкой." >&2
+    return 1
+  fi
+  printf '%s' "$value"
+}
+
+stage="Инвариант клинических черновиков"
+echo "POSTCHECK: $stage"
+draft_leaks="$(db_scalar "SELECT count(*) FROM clinical_orders WHERE source_reference LIKE 'synthetic:ui5:v1:candidate:%' AND status <> 'draft';")"
+echo "POSTCHECK: утверждённых учебных черновиков-кандидатов: $draft_leaks"
 if [[ "$draft_leaks" != "0" ]]; then
-  echo "ОШИБКА: нарушен инвариант черновиков назначений." >&2
+  echo "Нарушен инвариант: учебные черновики-кандидаты не должны быть утверждёнными." >&2
   false
 fi
+echo "POSTCHECK OK: клинические черновики"
 
-patient_count="$("${dc[@]}" exec -T postgres psql -X -v ON_ERROR_STOP=1 -U aidoctor -d aidoctor_synthetic -At \
-  -c "SELECT count(*) FROM patients WHERE demographics_json ->> 'synthetic' = 'true';")"
-echo "Синтетических пациентов в БД: $patient_count (ожидается не менее 3)"
+stage="Количество синтетических пациентов"
+echo "POSTCHECK: $stage"
+patient_count="$(db_scalar "SELECT count(*) FROM patients WHERE demographics_json ->> 'synthetic' = 'true';")"
+echo "POSTCHECK: синтетических пациентов $patient_count (минимум 3)"
 if [[ ! "$patient_count" =~ ^[0-9]+$ ]] || (( patient_count < 3 )); then
-  echo "ОШИБКА: проверка количества синтетических пациентов не пройдена." >&2
+  echo "Проверка синтетических пациентов: ожидалось >= 3, получено '$patient_count'." >&2
   false
 fi
+echo "POSTCHECK OK: пациенты"
 
 trap - ERR
 printf '%s\n' "$commit" > "$root_dir/last_deployed_sha"
