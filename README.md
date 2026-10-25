@@ -2570,6 +2570,7 @@ python -m ruff format --check backend
 python -m pytest backend/tests/test_ci_autodeploy_unit.py backend/tests/test_vds_migrations_unit.py -q
 ```
 
+
 Если проверки прошли, выполнить Commit и Push в `master` через PyCharm.
 Изменения в серверных скриптах и настройках GitHub Secrets не требуются.
 Текущая ошибка CI остановила запуск до обновления VDS.
